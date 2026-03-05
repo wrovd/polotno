@@ -23,23 +23,28 @@ module.exports = async function handler(req, res) {
       return send(res, 400, { error: "Password must be at least 6 chars" });
     }
 
+    const users = await listUsers();
+    const hasUsers = users.length > 0;
     const token = getBearerToken(req);
     const authUser = verifyToken(token);
     const isAdminByRole = authUser?.role === "admin";
     const isAdminByKey = Boolean(process.env.ADMIN_KEY) && adminKey === process.env.ADMIN_KEY;
 
-    if (!isAdminByRole && !isAdminByKey) {
+    if (hasUsers && !isAdminByRole && !isAdminByKey) {
       return send(res, 403, { error: "Admin access required" });
     }
 
-    const users = await listUsers();
+    if (!hasUsers && !isAdminByKey) {
+      return send(res, 403, { error: "Provide valid ADMIN_KEY to create first admin account" });
+    }
+
     const exists = users.some((u) => u.email.toLowerCase() === email);
     if (exists) {
       return send(res, 409, { error: "User already exists" });
     }
 
     const roleRaw = String(body.role || "staff").toLowerCase();
-    const role = roleRaw === "admin" ? "admin" : "staff";
+    const role = hasUsers ? (roleRaw === "admin" ? "admin" : "staff") : "admin";
 
     await createUser({
       email,
