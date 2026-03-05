@@ -565,6 +565,14 @@ td .actions {
   padding: 3px 8px;
 }
 
+.role-hint {
+  border-style: dashed;
+  background: #f8fbff;
+  color: #4a628f;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 @keyframes fadeUp {
   from {
     opacity: 0;

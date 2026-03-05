@@ -43,7 +43,7 @@ Telegram MiniApp for consumables accounting with:
 
 - For personal alerts, each user should have `telegram_chat_id` in `users` sheet.
 - If `telegram_chat_id` is empty, backend uses `TELEGRAM_DEFAULT_CHAT_ID`.
-- Frontend has a fallback demo mode when backend is unreachable.
+- Frontend works in DB/API mode only (Google Sheets via Vercel API).
 - Role model:
   - `admin`: can create/edit/delete items and users, can run stock adjustments.
   - `staff`: can view items/history and consume stock.

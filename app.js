@@ -1,27 +1,10 @@
-const seedItems = [
-  {
-    id: "SUP-001",
-    name: "Крафт-пакет M",
-    qty: 42,
-    threshold: 25,
-    notes: "Склад A, полка 3",
-  },
-  {
-    id: "SUP-002",
-    name: "Термолента 58мм",
-    qty: 8,
-    threshold: 12,
-    notes: "Касса и отгрузка",
-  },
-];
-
 const state = {
   authTab: "login",
   moduleView: "home",
   inventoryTab: "main",
   token: localStorage.getItem("sf_token") || "",
   user: safeParse(localStorage.getItem("sf_user")) || null,
-  items: [...seedItems],
+  items: [],
   history: [],
   historyFiltered: [],
   historyFilters: {
@@ -34,6 +17,7 @@ const state = {
   stream: null,
   scanTimer: null,
   editingItemId: "",
+  desktopPrint: true,
 };
 
 const ONBOARDING_KEY = "polotno_onboarding_seen_v1";
@@ -59,6 +43,7 @@ const refs = {
   toolsTab: document.getElementById("toolsTab"),
   historyTab: document.getElementById("historyTab"),
   historyList: document.getElementById("historyList"),
+  roleHint: document.getElementById("roleHint"),
   historyItemFilter: document.getElementById("historyItemFilter"),
   historyUserFilter: document.getElementById("historyUserFilter"),
   historyReasonFilter: document.getElementById("historyReasonFilter"),
@@ -255,7 +240,8 @@ function setInventoryTab(tab) {
 
 function updateAuthButton() {
   if (state.user?.email) {
-    refs.openAuthBtn.textContent = state.user.email;
+    const role = String(state.user.role || "staff").toLowerCase();
+    refs.openAuthBtn.textContent = `${state.user.email} • ${role}`;
     refs.openAuthBtn.classList.remove("primary-btn");
     refs.openAuthBtn.classList.add("glass-btn");
     return;
@@ -269,6 +255,26 @@ function updateAuthButton() {
 function canAdmin() {
   if (!state.user) return true;
   return String(state.user.role || "staff").toLowerCase() === "admin";
+}
+
+function detectDesktopPrint() {
+  const ua = navigator.userAgent || "";
+  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
+  const viewport = Math.min(window.innerWidth || 0, window.screen?.width || Infinity);
+  const touch = Number(navigator.maxTouchPoints || 0) > 1;
+  return !(isMobileUA || viewport < 980 || (touch && viewport < 1200));
+}
+
+function canDesktopPrint() {
+  return state.desktopPrint;
+}
+
+function applyPrintAccess() {
+  state.desktopPrint = detectDesktopPrint();
+
+  refs.printAllBtn.disabled = !state.desktopPrint;
+  refs.printAllBtn.classList.toggle("is-hidden", !state.desktopPrint);
+  refs.printAllBtn.title = state.desktopPrint ? "" : "Печать доступна только на ПК";
 }
 
 function applyRoleAccess() {
@@ -286,6 +292,22 @@ function applyRoleAccess() {
   if (!canManageUsers && state.authTab === "register") {
     setAuthTab("login");
   }
+
+  if (!state.user) {
+    refs.roleHint.classList.add("is-hidden");
+    refs.roleHint.textContent = "";
+    return;
+  }
+
+  if (canManageUsers) {
+    refs.roleHint.classList.add("is-hidden");
+    refs.roleHint.textContent = "";
+    return;
+  }
+
+  refs.roleHint.classList.remove("is-hidden");
+  refs.roleHint.textContent =
+    "Роль: staff. Доступны просмотр, история и списание (-1). Функции администратора (создание, редактирование, удаление, корректировка) скрыты.";
 }
 
 function openOnboarding() {
@@ -338,6 +360,12 @@ async function qrDataUrl(text) {
 }
 
 async function printLabels(items) {
+  if (!canDesktopPrint()) {
+    showToast("Печать этикеток доступна только на ПК");
+    hapticWarning();
+    return;
+  }
+
   const cards = [];
   for (const item of items) {
     const src = await qrDataUrl(itemPayload(item));
@@ -378,15 +406,22 @@ async function printLabels(items) {
 
   wnd.document.close();
   wnd.focus();
-  wnd.print();
+  wnd.onload = () => {
+    setTimeout(() => {
+      wnd.print();
+    }, 120);
+  };
 }
 
 function renderTable(list = state.items) {
+  applyPrintAccess();
   refs.itemsTableBody.innerHTML = "";
 
   if (!list.length) {
-    refs.itemsTableBody.innerHTML =
-      '<tr><td colspan="5" class="muted">Ничего не найдено. Добавьте новый расходник.</td></tr>';
+    const emptyMessage = state.token
+      ? "Ничего не найдено. Добавьте новый расходник."
+      : "Для загрузки каталога выполните вход в систему.";
+    refs.itemsTableBody.innerHTML = `<tr><td colspan="5" class="muted">${emptyMessage}</td></tr>`;
     return;
   }
 
@@ -399,7 +434,7 @@ function renderTable(list = state.items) {
       <td data-label="QR-код">${item.id}<br />${statusBadge(item)}</td>
       <td data-label="Действия">
         <div class="actions">
-          <button class="secondary-btn" data-action="print" data-id="${item.id}" type="button">Печать QR</button>
+          <button class="secondary-btn ${canDesktopPrint() ? "" : "is-hidden"}" data-action="print" data-id="${item.id}" type="button">Печать QR</button>
           <button class="secondary-btn ${canAdmin() ? "" : "is-hidden"}" data-action="plus-one" data-id="${item.id}" type="button">+1</button>
           <button class="secondary-btn ${canAdmin() ? "" : "is-hidden"}" data-action="edit" data-id="${item.id}" type="button">Редактировать</button>
           <button class="glass-btn ${canAdmin() ? "" : "is-hidden"}" data-action="delete" data-id="${item.id}" type="button">Удалить</button>
@@ -627,9 +662,10 @@ async function exportHistoryCsv() {
 
 async function loadItems() {
   if (!state.token) {
-    state.items = [...seedItems];
+    state.items = [];
     renderTable();
     renderAlerts();
+    refreshAdjustItemOptions();
     return;
   }
 
@@ -637,8 +673,8 @@ async function loadItems() {
     const data = await apiRequest("/api/inventory/list");
     state.items = data.items || [];
   } catch {
-    state.items = [...seedItems];
-    showToast("API недоступен, демо-режим");
+    state.items = [];
+    showToast("Не удалось загрузить расходники");
   }
 
   renderTable();
@@ -670,20 +706,11 @@ function refreshAdjustItemOptions() {
   }
 }
 
-function pushLocalHistory(entry) {
-  state.history.unshift(entry);
-  if (state.history.length > 200) {
-    state.history.length = 200;
-  }
-  applyHistoryFilters(state.history);
-  if (state.inventoryTab === "history") {
-    renderHistory();
-  }
-}
-
 async function loadHistory() {
   setHistoryFiltersFromInputs();
   if (!state.token) {
+    state.history = [];
+    state.historyFiltered = [];
     applyHistoryFilters(state.history);
     renderHistory();
     return;
@@ -719,35 +746,8 @@ function handleSearch() {
 }
 
 async function saveItem(item) {
-  const hasId = Boolean(item.id);
   if (!state.token) {
-    if (hasId) {
-      const index = state.items.findIndex((it) => it.id === item.id);
-      if (index !== -1) {
-        state.items[index] = { ...state.items[index], ...item };
-        pushLocalHistory({
-          item_id: item.id,
-          delta: 0,
-          reason: "update",
-          user_email: state.user?.email || "local",
-          created_at: new Date().toISOString(),
-        });
-      }
-    } else {
-      const next = state.items.length + 1;
-      const newId = `SUP-${String(next).padStart(3, "0")}`;
-      state.items.unshift({ id: newId, ...item });
-      pushLocalHistory({
-        item_id: newId,
-        delta: 0,
-        reason: "create",
-        user_email: state.user?.email || "local",
-        created_at: new Date().toISOString(),
-      });
-    }
-    renderTable();
-    renderAlerts();
-    return;
+    throw new Error("Требуется вход в систему");
   }
 
   await apiRequest("/api/inventory/upsert", { method: "POST", body: item });
@@ -760,17 +760,7 @@ async function consumeOne(id) {
   if (!item) return;
 
   if (!state.token) {
-    if (item.qty > 0) item.qty -= 1;
-    pushLocalHistory({
-      item_id: id,
-      delta: -1,
-      reason: "consume",
-      user_email: state.user?.email || "local",
-      created_at: new Date().toISOString(),
-    });
-    renderTable();
-    renderAlerts();
-    return;
+    throw new Error("Требуется вход в систему");
   }
 
   await apiRequest("/api/inventory/consume", {
@@ -785,20 +775,7 @@ async function adjustItem(id, delta) {
   if (!Number.isFinite(delta) || delta === 0) return;
 
   if (!state.token) {
-    const item = state.items.find((it) => it.id === id);
-    if (!item) return;
-    item.qty = Math.max(0, Number(item.qty) + delta);
-    pushLocalHistory({
-      item_id: id,
-      delta,
-      reason: "adjust",
-      user_email: state.user?.email || "local",
-      created_at: new Date().toISOString(),
-    });
-    renderTable();
-    renderAlerts();
-    refreshAdjustItemOptions();
-    return;
+    throw new Error("Требуется вход в систему");
   }
 
   await apiRequest("/api/inventory/adjust", {
@@ -813,20 +790,7 @@ async function deleteItem(id) {
   if (!id) return;
 
   if (!state.token) {
-    const idx = state.items.findIndex((it) => it.id === id);
-    if (idx === -1) return;
-    const [removed] = state.items.splice(idx, 1);
-    pushLocalHistory({
-      item_id: id,
-      delta: -Number(removed?.qty || 0),
-      reason: "delete",
-      user_email: state.user?.email || "local",
-      created_at: new Date().toISOString(),
-    });
-    renderTable();
-    renderAlerts();
-    refreshAdjustItemOptions();
-    return;
+    throw new Error("Требуется вход в систему");
   }
 
   await apiRequest("/api/inventory/delete", {
@@ -839,10 +803,7 @@ async function deleteItem(id) {
 
 async function checkLowStock() {
   if (!state.token) {
-    const low = state.items.filter((item) => Number(item.qty) <= Number(item.threshold));
-    renderAlerts(low);
-    showToast(low.length ? "Есть позиции для уведомления" : "Низких остатков нет");
-    return low;
+    throw new Error("Требуется вход в систему");
   }
 
   const data = await apiRequest("/api/alerts/low-stock");
@@ -854,8 +815,7 @@ async function checkLowStock() {
 
 async function notifyLowStock() {
   if (!state.token) {
-    showToast("Для уведомлений нужен вход");
-    return;
+    throw new Error("Требуется вход в систему");
   }
 
   const result = await apiRequest("/api/alerts/notify", { method: "POST" });
@@ -1237,11 +1197,17 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+window.addEventListener("resize", () => {
+  applyPrintAccess();
+  renderTable();
+});
+
 setAuthTab("login");
 setModuleView("home");
 setInventoryTab("main");
 updateAuthButton();
 applyRoleAccess();
+applyPrintAccess();
 loadItems();
 loadHistory();
 initTelegram();
