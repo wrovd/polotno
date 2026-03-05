@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#eef4ff" />
+    <title>SupplyFlow MiniApp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="bg-shape bg-shape-top" aria-hidden="true"></div>
+    <div class="bg-shape bg-shape-bottom" aria-hidden="true"></div>
+
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Telegram MiniApp • iOS UI</p>
+          <h1>SupplyFlow</h1>
+        </div>
+        <div class="topbar-actions">
+          <button class="glass-btn" id="openScannerBtn" type="button">Сканировать QR</button>
+          <button class="primary-btn" id="openAuthBtn" type="button">Войти</button>
+        </div>
+      </header>
+
+      <section class="hero-card">
+        <div class="hero-copy">
+          <p class="eyebrow">Учет расходников</p>
+          <h2>Остатки, QR-этикетки и личные уведомления</h2>
+          <p>
+            Добавляйте расходники, задавайте порог остатка, печатайте QR-этикетки для упаковок
+            и быстро списывайте позиции через камеру смартфона.
+          </p>
+        </div>
+        <div class="hero-actions">
+          <button class="primary-btn" id="focusCreateBtn" type="button">+ Новый расходник</button>
+          <button class="secondary-btn" id="printAllBtn" type="button">Печать всех QR</button>
+        </div>
+      </section>
+
+      <section class="panel search-panel">
+        <label for="searchInput">Поиск расходников</label>
+        <div class="search-row">
+          <input
+            id="searchInput"
+            type="search"
+            placeholder="Название, код, заметка"
+            autocomplete="off"
+          />
+          <button class="primary-btn" id="searchBtn" type="button">Найти</button>
+        </div>
+      </section>
+
+      <section class="layout-grid">
+        <section class="panel">
+          <div class="section-head">
+            <h3>Добавить расходник</h3>
+            <p>QR генерируется автоматически для печати и сканирования.</p>
+          </div>
+          <form class="stock-form" id="stockForm" novalidate>
+            <label>
+              Наименование
+              <input type="text" name="name" id="itemName" placeholder="Например, Пакет M" required />
+            </label>
+            <label>
+              Количество
+              <input type="number" name="qty" id="itemQty" min="0" step="1" required />
+            </label>
+            <label>
+              Предупреждать при остатке
+              <input type="number" name="threshold" id="itemThreshold" min="0" step="1" required />
+            </label>
+            <label>
+              Заметка
+              <textarea name="notes" id="itemNotes" rows="3" placeholder="Поставщик, место хранения"></textarea>
+            </label>
+            <button class="primary-btn full" type="submit">Сохранить расходник</button>
+          </form>
+        </section>
+
+        <section class="panel">
+          <div class="section-head">
+            <h3>Личные уведомления</h3>
+            <p>При низком остатке бот отправит сообщение сотруднику в личку.</p>
+          </div>
+          <div class="alert-box" id="alertsBox">
+            <p class="muted">Пока все в норме.</p>
+          </div>
+          <div class="hero-actions">
+            <button class="secondary-btn full" id="checkAlertsBtn" type="button">Проверить лимиты</button>
+            <button class="primary-btn full" id="notifyAlertsBtn" type="button">Отправить в личку</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <h3>Каталог расходников</h3>
+          <p>Нажмите на строку, чтобы открыть QR. Можно печатать этикетки по одной или все сразу.</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Расходник</th>
+                <th>Остаток</th>
+                <th>Лимит</th>
+                <th>QR-код</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody id="itemsTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <div class="auth-modal" id="authModal" hidden>
+      <div class="auth-backdrop" id="authBackdrop"></div>
+      <section class="auth-card" role="dialog" aria-modal="true" aria-label="Авторизация">
+        <button class="close-btn" id="closeAuthBtn" type="button" aria-label="Закрыть">×</button>
+
+        <div class="auth-tabs" role="tablist" aria-label="Формы входа">
+          <button class="tab-btn active" id="loginTab" type="button" data-tab="login" role="tab">Вход</button>
+          <button class="tab-btn" id="registerTab" type="button" data-tab="register" role="tab">Админ</button>
+        </div>
+
+        <form class="auth-form active" id="loginForm" novalidate>
+          <h3>Вход по почте и паролю</h3>
+          <label>
+            Email
+            <input type="email" name="email" placeholder="name@company.com" required />
+          </label>
+          <label>
+            Пароль
+            <input type="password" name="password" placeholder="••••••••" required minlength="6" />
+          </label>
+          <button class="primary-btn full" type="submit">Войти</button>
+        </form>
+
+        <form class="auth-form" id="registerForm" novalidate>
+          <h3>Создание аккаунта (только админ)</h3>
+          <p class="helper">Обычные сотрудники не могут регистрироваться самостоятельно.</p>
+          <label>
+            Имя сотрудника
+            <input type="text" name="name" placeholder="Иван Иванов" required />
+          </label>
+          <label>
+            Email нового сотрудника
+            <input type="email" name="email" placeholder="new@company.com" required />
+          </label>
+          <label>
+            Telegram Chat ID
+            <input type="text" name="telegramChatId" placeholder="123456789" />
+          </label>
+          <label>
+            Пароль
+            <input type="password" name="password" placeholder="Минимум 6 символов" required minlength="6" />
+          </label>
+          <label>
+            Админ-ключ
+            <input type="password" name="adminKey" placeholder="Секретный ключ" required minlength="6" />
+          </label>
+          <button class="primary-btn full" type="submit">Создать аккаунт</button>
+        </form>
+      </section>
+    </div>
+
+    <div class="scan-modal" id="scanModal" hidden>
+      <div class="auth-backdrop" id="scanBackdrop"></div>
+      <section class="scan-card" role="dialog" aria-modal="true" aria-label="Сканер QR">
+        <div class="scan-head">
+          <h3>Сканирование QR</h3>
+          <button class="close-btn" id="closeScannerBtn" type="button" aria-label="Закрыть">×</button>
+        </div>
+        <video id="scannerVideo" playsinline muted></video>
+        <p class="muted" id="scanStatus">Наведите камеру на QR-код расходника.</p>
+      </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
