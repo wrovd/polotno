@@ -526,7 +526,11 @@ refs.authBackdrop.addEventListener("click", closeAuthModal);
 refs.loginTab.addEventListener("click", () => setAuthTab("login"));
 refs.registerTab.addEventListener("click", () => setAuthTab("register"));
 
-refs.openInventoryTile.addEventListener("click", () => setModuleView("inventory"));
+refs.openInventoryTile.addEventListener("click", () => {
+  setModuleView("inventory");
+  setInventoryTab("main");
+  setTimeout(() => refs.searchInput.focus(), 120);
+});
 refs.homeBtn.addEventListener("click", () => setModuleView("home"));
 refs.mainTabBtn.addEventListener("click", () => setInventoryTab("main"));
 refs.toolsTabBtn.addEventListener("click", () => setInventoryTab("tools"));

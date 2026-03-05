@@ -16,25 +16,37 @@
 
     <main class="app-shell">
       <header class="topbar">
-        <div>
-          <p class="eyebrow">Telegram MiniApp • Apple Style</p>
-          <h1>Polotno</h1>
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <p class="eyebrow">Telegram MiniApp</p>
+            <h1>Polotno</h1>
+          </div>
         </div>
-        <button class="primary-btn" id="openAuthBtn" type="button">Войти</button>
+        <div class="top-controls">
+          <button class="seg-btn top-select" type="button">Dashboard</button>
+          <button class="primary-btn" id="openAuthBtn" type="button">Войти</button>
+        </div>
       </header>
 
       <section id="homeView" class="view active">
         <section class="hero-card">
           <div class="hero-copy">
             <p class="eyebrow">Главная</p>
-            <h2>Сервис управления внутренними процессами</h2>
-            <p>Выберите нужный модуль. Основной модуль сейчас: учет расходников.</p>
+            <h2>Управление процессами в одном месте</h2>
+            <p>Лаконичный интерфейс для быстрой работы с расходниками, QR и уведомлениями.</p>
           </div>
         </section>
 
         <section class="tile-grid">
           <button class="module-tile" id="openInventoryTile" type="button">
-            <span class="tile-icon" aria-hidden="true">📦</span>
+            <span class="tile-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
+                <path d="M12 3L20 7V17L12 21L4 17V7L12 3Z" stroke="currentColor" stroke-width="1.8" />
+                <path d="M4 7L12 11L20 7" stroke="currentColor" stroke-width="1.8" />
+                <path d="M12 11V21" stroke="currentColor" stroke-width="1.8" />
+              </svg>
+            </span>
             <span class="tile-title">Учет расходников</span>
             <span class="tile-caption">Остатки, QR, уведомления</span>
           </button>
