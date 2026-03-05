@@ -22,6 +22,15 @@ const state = {
   token: localStorage.getItem("sf_token") || "",
   user: safeParse(localStorage.getItem("sf_user")) || null,
   items: [...seedItems],
+  history: [],
+  historyFiltered: [],
+  historyFilters: {
+    itemId: "",
+    userEmail: "",
+    reason: "",
+    dateFrom: "",
+    dateTo: "",
+  },
   stream: null,
   scanTimer: null,
   editingItemId: "",
@@ -34,6 +43,7 @@ const refs = {
   authModal: document.getElementById("authModal"),
   authBackdrop: document.getElementById("authBackdrop"),
   closeAuthBtn: document.getElementById("closeAuthBtn"),
+  authTabs: document.getElementById("authTabs"),
   loginTab: document.getElementById("loginTab"),
   registerTab: document.getElementById("registerTab"),
   loginForm: document.getElementById("loginForm"),
@@ -44,8 +54,19 @@ const refs = {
   homeBtn: document.getElementById("homeBtn"),
   mainTabBtn: document.getElementById("mainTabBtn"),
   toolsTabBtn: document.getElementById("toolsTabBtn"),
+  historyTabBtn: document.getElementById("historyTabBtn"),
   mainTab: document.getElementById("mainTab"),
   toolsTab: document.getElementById("toolsTab"),
+  historyTab: document.getElementById("historyTab"),
+  historyList: document.getElementById("historyList"),
+  historyItemFilter: document.getElementById("historyItemFilter"),
+  historyUserFilter: document.getElementById("historyUserFilter"),
+  historyReasonFilter: document.getElementById("historyReasonFilter"),
+  historyDateFrom: document.getElementById("historyDateFrom"),
+  historyDateTo: document.getElementById("historyDateTo"),
+  historyApplyBtn: document.getElementById("historyApplyBtn"),
+  historyResetBtn: document.getElementById("historyResetBtn"),
+  historyExportBtn: document.getElementById("historyExportBtn"),
   toToolsBtn: document.getElementById("toToolsBtn"),
   searchInput: document.getElementById("searchInput"),
   searchBtn: document.getElementById("searchBtn"),
@@ -208,13 +229,21 @@ function setModuleView(view) {
 function setInventoryTab(tab) {
   state.inventoryTab = tab;
   const isMain = tab === "main";
+  const isTools = tab === "tools";
+  const isHistory = tab === "history";
 
   refs.mainTabBtn.classList.toggle("active", isMain);
-  refs.toolsTabBtn.classList.toggle("active", !isMain);
+  refs.toolsTabBtn.classList.toggle("active", isTools);
+  refs.historyTabBtn.classList.toggle("active", isHistory);
   refs.mainTab.classList.toggle("active", isMain);
-  refs.toolsTab.classList.toggle("active", !isMain);
+  refs.toolsTab.classList.toggle("active", isTools);
+  refs.historyTab.classList.toggle("active", isHistory);
   if (isMain) {
     stopScanner();
+  }
+  if (isHistory) {
+    stopScanner();
+    loadHistory();
   }
   hapticSelection();
 }
@@ -230,6 +259,15 @@ function updateAuthButton() {
   refs.openAuthBtn.textContent = "Войти";
   refs.openAuthBtn.classList.remove("glass-btn");
   refs.openAuthBtn.classList.add("primary-btn");
+}
+
+function applyRoleAccess() {
+  const canManageUsers = !state.user || state.user.role === "admin";
+  refs.registerTab.classList.toggle("is-hidden", !canManageUsers);
+  refs.authTabs.classList.toggle("admin-disabled", !canManageUsers);
+  if (!canManageUsers && state.authTab === "register") {
+    setAuthTab("login");
+  }
 }
 
 function openOnboarding() {
@@ -370,6 +408,147 @@ function renderAlerts(lowItems = null) {
   }
 }
 
+function formatHistoryDate(value) {
+  if (!value) return "дата неизвестна";
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return value;
+  return dt.toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function toIsoDate(dateText) {
+  if (!dateText) return "";
+  const dt = new Date(dateText);
+  if (Number.isNaN(dt.getTime())) return "";
+  return dt.toISOString();
+}
+
+function reasonLabel(reason) {
+  if (reason === "create") return "Создание";
+  if (reason === "update") return "Редактирование";
+  if (reason === "consume") return "Списание";
+  return reason || "Изменение";
+}
+
+function setHistoryFiltersFromInputs() {
+  state.historyFilters.itemId = refs.historyItemFilter.value.trim().toUpperCase();
+  state.historyFilters.userEmail = refs.historyUserFilter.value.trim().toLowerCase();
+  state.historyFilters.reason = refs.historyReasonFilter.value.trim().toLowerCase();
+  state.historyFilters.dateFrom = refs.historyDateFrom.value;
+  state.historyFilters.dateTo = refs.historyDateTo.value;
+}
+
+function applyHistoryFilters(list = state.history) {
+  const { itemId, userEmail, reason, dateFrom, dateTo } = state.historyFilters;
+  const fromIso = toIsoDate(dateFrom);
+  const toIso = toIsoDate(dateTo);
+  const toDate = toIso ? new Date(toIso) : null;
+  if (toDate) {
+    toDate.setHours(23, 59, 59, 999);
+  }
+
+  state.historyFiltered = list.filter((row) => {
+    if (itemId && !String(row.item_id || "").toUpperCase().includes(itemId)) return false;
+    if (userEmail && !String(row.user_email || "").toLowerCase().includes(userEmail)) return false;
+    if (reason && String(row.reason || "").toLowerCase() !== reason) return false;
+    if (fromIso || toDate) {
+      const dt = new Date(row.created_at || "");
+      if (Number.isNaN(dt.getTime())) return false;
+      if (fromIso && dt < new Date(fromIso)) return false;
+      if (toDate && dt > toDate) return false;
+    }
+    return true;
+  });
+}
+
+function historyQueryString() {
+  const params = new URLSearchParams();
+  params.set("limit", "120");
+  if (state.historyFilters.itemId) params.set("item_id", state.historyFilters.itemId);
+  if (state.historyFilters.userEmail) params.set("user_email", state.historyFilters.userEmail);
+  if (state.historyFilters.reason) params.set("reason", state.historyFilters.reason);
+  if (state.historyFilters.dateFrom) params.set("date_from", state.historyFilters.dateFrom);
+  if (state.historyFilters.dateTo) params.set("date_to", state.historyFilters.dateTo);
+  return params.toString();
+}
+
+function resetHistoryFilters() {
+  refs.historyItemFilter.value = "";
+  refs.historyUserFilter.value = "";
+  refs.historyReasonFilter.value = "";
+  refs.historyDateFrom.value = "";
+  refs.historyDateTo.value = "";
+  state.historyFilters = {
+    itemId: "",
+    userEmail: "",
+    reason: "",
+    dateFrom: "",
+    dateTo: "",
+  };
+}
+
+function renderHistory(list = state.historyFiltered) {
+  refs.historyList.innerHTML = "";
+  if (!list.length) {
+    refs.historyList.innerHTML = '<p class="muted">История пока пустая.</p>';
+    return;
+  }
+
+  for (const row of list) {
+    const item = state.items.find((it) => it.id === row.item_id);
+    const itemName = item?.name || row.item_id || "Без названия";
+    const block = document.createElement("article");
+    block.className = "history-item";
+    block.innerHTML = `
+      <div><strong>${itemName}</strong> <span class="history-reason">${reasonLabel(row.reason)}</span></div>
+      <div class="history-meta">ID: ${row.item_id || "-"} • Изменение: ${Number(row.delta || 0)}</div>
+      <div class="history-meta">Пользователь: ${row.user_email || "-"}</div>
+      <div class="history-meta">${formatHistoryDate(row.created_at)}</div>
+    `;
+    refs.historyList.appendChild(block);
+  }
+}
+
+function csvEscape(value) {
+  const text = String(value ?? "");
+  if (text.includes(",") || text.includes("\"") || text.includes("\n")) {
+    return `"${text.replace(/"/g, "\"\"")}"`;
+  }
+  return text;
+}
+
+function exportHistoryCsv() {
+  const rows = state.historyFiltered.length ? state.historyFiltered : state.history;
+  if (!rows.length) {
+    showToast("Нет данных для экспорта");
+    return;
+  }
+
+  const headers = ["item_id", "reason", "delta", "user_email", "created_at"];
+  const csv = [
+    headers.join(","),
+    ...rows.map((row) => headers.map((header) => csvEscape(row[header])).join(",")),
+  ].join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const stamp = new Date().toISOString().slice(0, 10);
+  link.href = url;
+  link.download = `polotno-history-${stamp}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  showToast("CSV экспортирован");
+  hapticSuccess();
+}
+
 async function loadItems() {
   if (!state.token) {
     state.items = [...seedItems];
@@ -388,6 +567,36 @@ async function loadItems() {
 
   renderTable();
   renderAlerts();
+}
+
+function pushLocalHistory(entry) {
+  state.history.unshift(entry);
+  if (state.history.length > 200) {
+    state.history.length = 200;
+  }
+  applyHistoryFilters(state.history);
+  if (state.inventoryTab === "history") {
+    renderHistory();
+  }
+}
+
+async function loadHistory() {
+  setHistoryFiltersFromInputs();
+  if (!state.token) {
+    applyHistoryFilters(state.history);
+    renderHistory();
+    return;
+  }
+
+  try {
+    const data = await apiRequest(`/api/inventory/history?${historyQueryString()}`);
+    state.history = data.movements || [];
+  } catch {
+    showToast("Не удалось загрузить историю");
+  }
+
+  applyHistoryFilters(state.history);
+  renderHistory();
 }
 
 function handleSearch() {
@@ -415,10 +624,25 @@ async function saveItem(item) {
       const index = state.items.findIndex((it) => it.id === item.id);
       if (index !== -1) {
         state.items[index] = { ...state.items[index], ...item };
+        pushLocalHistory({
+          item_id: item.id,
+          delta: 0,
+          reason: "update",
+          user_email: state.user?.email || "local",
+          created_at: new Date().toISOString(),
+        });
       }
     } else {
       const next = state.items.length + 1;
-      state.items.unshift({ id: `SUP-${String(next).padStart(3, "0")}`, ...item });
+      const newId = `SUP-${String(next).padStart(3, "0")}`;
+      state.items.unshift({ id: newId, ...item });
+      pushLocalHistory({
+        item_id: newId,
+        delta: 0,
+        reason: "create",
+        user_email: state.user?.email || "local",
+        created_at: new Date().toISOString(),
+      });
     }
     renderTable();
     renderAlerts();
@@ -427,6 +651,7 @@ async function saveItem(item) {
 
   await apiRequest("/api/inventory/upsert", { method: "POST", body: item });
   await loadItems();
+  await loadHistory();
 }
 
 async function consumeOne(id) {
@@ -435,6 +660,13 @@ async function consumeOne(id) {
 
   if (!state.token) {
     if (item.qty > 0) item.qty -= 1;
+    pushLocalHistory({
+      item_id: id,
+      delta: -1,
+      reason: "consume",
+      user_email: state.user?.email || "local",
+      created_at: new Date().toISOString(),
+    });
     renderTable();
     renderAlerts();
     return;
@@ -445,6 +677,7 @@ async function consumeOne(id) {
     body: { id, amount: 1 },
   });
   await loadItems();
+  await loadHistory();
 }
 
 async function checkLowStock() {
@@ -550,7 +783,9 @@ refs.openAuthBtn.addEventListener("click", () => {
     state.token = "";
     state.user = null;
     updateAuthButton();
+    applyRoleAccess();
     loadItems();
+    loadHistory();
     showToast("Вы вышли из аккаунта");
     hapticSuccess();
     return;
@@ -572,6 +807,7 @@ refs.openInventoryTile.addEventListener("click", () => {
 refs.homeBtn.addEventListener("click", () => setModuleView("home"));
 refs.mainTabBtn.addEventListener("click", () => setInventoryTab("main"));
 refs.toolsTabBtn.addEventListener("click", () => setInventoryTab("tools"));
+refs.historyTabBtn.addEventListener("click", () => setInventoryTab("history"));
 refs.toToolsBtn.addEventListener("click", () => setInventoryTab("tools"));
 refs.closeOnboardingBtn.addEventListener("click", closeOnboarding);
 
@@ -597,8 +833,10 @@ refs.loginForm.addEventListener("submit", async (event) => {
     localStorage.setItem("sf_user", JSON.stringify(data.user));
 
     updateAuthButton();
+    applyRoleAccess();
     closeAuthModal();
     await loadItems();
+    await loadHistory();
     showToast("Вход успешен");
     hapticSuccess();
   } catch (error) {
@@ -616,7 +854,6 @@ refs.registerForm.addEventListener("submit", async (event) => {
   try {
     await apiRequest("/api/auth/create-user", {
       method: "POST",
-      auth: false,
       body: {
         name: String(form.get("name") || "").trim(),
         email: String(form.get("email") || "").trim(),
@@ -748,6 +985,34 @@ refs.printAllBtn.addEventListener("click", async () => {
   }
 });
 
+refs.historyApplyBtn.addEventListener("click", async () => {
+  hapticSelection();
+  await loadHistory();
+});
+
+refs.historyResetBtn.addEventListener("click", async () => {
+  resetHistoryFilters();
+  hapticSelection();
+  await loadHistory();
+});
+
+refs.historyExportBtn.addEventListener("click", exportHistoryCsv);
+
+[refs.historyItemFilter, refs.historyUserFilter].forEach((input) => {
+  input.addEventListener("keydown", async (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      await loadHistory();
+    }
+  });
+});
+
+[refs.historyReasonFilter, refs.historyDateFrom, refs.historyDateTo].forEach((input) => {
+  input.addEventListener("change", async () => {
+    await loadHistory();
+  });
+});
+
 refs.startScannerBtn.addEventListener("click", startScanner);
 refs.stopScannerBtn.addEventListener("click", () => {
   stopScanner();
@@ -766,7 +1031,9 @@ setAuthTab("login");
 setModuleView("home");
 setInventoryTab("main");
 updateAuthButton();
+applyRoleAccess();
 loadItems();
+loadHistory();
 initTelegram();
 
 if (!localStorage.getItem(ONBOARDING_KEY)) {

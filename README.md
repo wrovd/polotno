@@ -31,6 +31,7 @@ Telegram MiniApp for consumables accounting with:
 - `POST /api/auth/login`
 - `POST /api/auth/create-user`
 - `GET /api/inventory/list`
+- `GET /api/inventory/history`
 - `POST /api/inventory/upsert`
 - `POST /api/inventory/consume`
 - `GET /api/alerts/low-stock`

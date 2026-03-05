@@ -24,7 +24,8 @@ module.exports = async function handler(req, res) {
   try {
     const body = parseJsonBody(req);
     const items = await listItems();
-    const id = String(body.id || "").trim() || nextId(items);
+    const incomingId = String(body.id || "").trim();
+    const id = incomingId || nextId(items);
     const name = String(body.name || "").trim();
     const qty = Number(body.qty || 0);
     const threshold = Number(body.threshold || 0);
@@ -33,6 +34,8 @@ module.exports = async function handler(req, res) {
     if (!name) {
       return send(res, 400, { error: "Item name is required" });
     }
+
+    const existed = items.some((row) => row.id === id);
 
     await upsertItem({
       id,
@@ -47,7 +50,7 @@ module.exports = async function handler(req, res) {
     await appendMovement({
       item_id: id,
       delta: 0,
-      reason: "upsert",
+      reason: existed ? "update" : "create",
       user_email: auth.user.email,
       created_at: new Date().toISOString(),
     });

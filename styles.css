@@ -221,6 +221,10 @@ h1 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.segmented-four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 button {
   font: inherit;
   border: 1px solid transparent;
@@ -325,8 +329,20 @@ textarea {
   outline: none;
 }
 
+select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 11px 12px;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+}
+
 input:focus,
-textarea:focus {
+textarea:focus,
+select:focus {
   border-color: #b7c7eb;
   box-shadow: 0 0 0 3px rgba(106, 151, 239, 0.14);
 }
@@ -491,6 +507,14 @@ td .actions {
   gap: 8px;
 }
 
+.auth-tabs.admin-disabled {
+  grid-template-columns: 1fr;
+}
+
+.is-hidden {
+  display: none !important;
+}
+
 .auth-form {
   display: none;
 }
@@ -502,6 +526,42 @@ td .actions {
 .helper {
   color: var(--muted);
   font-size: 13px;
+}
+
+.history-list {
+  display: grid;
+  gap: 8px;
+}
+
+.history-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.history-item {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fbfcfd;
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.history-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.history-reason {
+  display: inline-block;
+  border-radius: 999px;
+  background: #edf2ff;
+  color: #4a6499;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
 }
 
 @keyframes fadeUp {
@@ -546,7 +606,12 @@ td .actions {
   .search-row,
   .hero-actions,
   .segmented,
-  .segmented-three {
+  .segmented-three,
+  .segmented-four {
+    grid-template-columns: 1fr;
+  }
+
+  .history-filters {
     grid-template-columns: 1fr;
   }
 

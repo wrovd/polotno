@@ -1,5 +1,5 @@
 const { createUser, listUsers } = require("../../lib/sheets");
-const { hashPassword } = require("../../lib/security");
+const { hashPassword, getBearerToken, verifyToken } = require("../../lib/security");
 const { send, methodNotAllowed, parseJsonBody } = require("../../lib/http");
 
 module.exports = async function handler(req, res) {
@@ -23,8 +23,13 @@ module.exports = async function handler(req, res) {
       return send(res, 400, { error: "Password must be at least 6 chars" });
     }
 
-    if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
-      return send(res, 403, { error: "Invalid admin key" });
+    const token = getBearerToken(req);
+    const authUser = verifyToken(token);
+    const isAdminByRole = authUser?.role === "admin";
+    const isAdminByKey = Boolean(process.env.ADMIN_KEY) && adminKey === process.env.ADMIN_KEY;
+
+    if (!isAdminByRole && !isAdminByKey) {
+      return send(res, 403, { error: "Admin access required" });
     }
 
     const users = await listUsers();

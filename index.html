@@ -55,10 +55,11 @@
 
       <section id="inventoryView" class="view">
         <section class="panel nav-panel">
-          <div class="segmented segmented-three">
+          <div class="segmented segmented-four">
             <button class="seg-btn" id="homeBtn" type="button">Главная</button>
             <button class="seg-btn active" id="mainTabBtn" type="button">Основное</button>
             <button class="seg-btn" id="toolsTabBtn" type="button">Инструменты</button>
+            <button class="seg-btn" id="historyTabBtn" type="button">История</button>
           </div>
         </section>
 
@@ -162,6 +163,33 @@
             </section>
           </section>
         </section>
+
+        <section id="historyTab" class="tab-panel">
+          <section class="panel">
+            <div class="section-head">
+              <h3>История движений</h3>
+              <p>Журнал изменений: создание, редактирование и списания расходников.</p>
+            </div>
+            <div class="history-filters">
+              <input type="search" id="historyItemFilter" placeholder="Фильтр по ID расходника (SUP-...)" />
+              <input type="search" id="historyUserFilter" placeholder="Фильтр по пользователю (email)" />
+              <select id="historyReasonFilter">
+                <option value="">Все действия</option>
+                <option value="create">Создание</option>
+                <option value="update">Редактирование</option>
+                <option value="consume">Списание</option>
+              </select>
+              <input type="date" id="historyDateFrom" />
+              <input type="date" id="historyDateTo" />
+              <button class="secondary-btn" id="historyApplyBtn" type="button">Применить</button>
+              <button class="glass-btn" id="historyResetBtn" type="button">Сбросить</button>
+              <button class="primary-btn" id="historyExportBtn" type="button">Экспорт CSV</button>
+            </div>
+            <div class="history-list" id="historyList">
+              <p class="muted">История пока пустая.</p>
+            </div>
+          </section>
+        </section>
       </section>
     </main>
 
@@ -214,7 +242,7 @@
       <section class="auth-card" role="dialog" aria-modal="true" aria-label="Авторизация">
         <button class="close-btn" id="closeAuthBtn" type="button" aria-label="Закрыть">×</button>
 
-        <div class="auth-tabs" role="tablist" aria-label="Формы входа">
+        <div class="auth-tabs" id="authTabs" role="tablist" aria-label="Формы входа">
           <button class="tab-btn active" id="loginTab" type="button" data-tab="login" role="tab">Вход</button>
           <button class="tab-btn" id="registerTab" type="button" data-tab="register" role="tab">Админ</button>
         </div>
