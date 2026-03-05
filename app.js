@@ -16,24 +16,36 @@ const seedItems = [
 ];
 
 const state = {
-  activeTab: "login",
+  authTab: "login",
+  moduleView: "home",
+  inventoryTab: "main",
   token: localStorage.getItem("sf_token") || "",
   user: safeParse(localStorage.getItem("sf_user")) || null,
   items: [...seedItems],
   stream: null,
   scanTimer: null,
-  apiAvailable: true,
 };
 
+const ONBOARDING_KEY = "polotno_onboarding_seen_v1";
+
 const refs = {
+  openAuthBtn: document.getElementById("openAuthBtn"),
   authModal: document.getElementById("authModal"),
   authBackdrop: document.getElementById("authBackdrop"),
-  openAuthBtn: document.getElementById("openAuthBtn"),
   closeAuthBtn: document.getElementById("closeAuthBtn"),
   loginTab: document.getElementById("loginTab"),
   registerTab: document.getElementById("registerTab"),
   loginForm: document.getElementById("loginForm"),
   registerForm: document.getElementById("registerForm"),
+  homeView: document.getElementById("homeView"),
+  inventoryView: document.getElementById("inventoryView"),
+  openInventoryTile: document.getElementById("openInventoryTile"),
+  homeBtn: document.getElementById("homeBtn"),
+  mainTabBtn: document.getElementById("mainTabBtn"),
+  toolsTabBtn: document.getElementById("toolsTabBtn"),
+  mainTab: document.getElementById("mainTab"),
+  toolsTab: document.getElementById("toolsTab"),
+  toToolsBtn: document.getElementById("toToolsBtn"),
   searchInput: document.getElementById("searchInput"),
   searchBtn: document.getElementById("searchBtn"),
   stockForm: document.getElementById("stockForm"),
@@ -46,13 +58,12 @@ const refs = {
   checkAlertsBtn: document.getElementById("checkAlertsBtn"),
   notifyAlertsBtn: document.getElementById("notifyAlertsBtn"),
   printAllBtn: document.getElementById("printAllBtn"),
-  focusCreateBtn: document.getElementById("focusCreateBtn"),
-  openScannerBtn: document.getElementById("openScannerBtn"),
-  closeScannerBtn: document.getElementById("closeScannerBtn"),
-  scanModal: document.getElementById("scanModal"),
-  scanBackdrop: document.getElementById("scanBackdrop"),
+  startScannerBtn: document.getElementById("startScannerBtn"),
+  stopScannerBtn: document.getElementById("stopScannerBtn"),
   scannerVideo: document.getElementById("scannerVideo"),
   scanStatus: document.getElementById("scanStatus"),
+  onboarding: document.getElementById("onboarding"),
+  closeOnboardingBtn: document.getElementById("closeOnboardingBtn"),
 };
 
 function safeParse(text) {
@@ -82,54 +93,140 @@ function showToast(message) {
   setTimeout(() => toast.remove(), 2200);
 }
 
+function getHaptic() {
+  return window.Telegram?.WebApp?.HapticFeedback || null;
+}
+
+function hapticSelection() {
+  const haptic = getHaptic();
+  if (!haptic) return;
+  try {
+    haptic.selectionChanged();
+  } catch {
+    // haptic not available in current environment
+  }
+}
+
+function hapticSuccess() {
+  const haptic = getHaptic();
+  if (!haptic) return;
+  try {
+    haptic.notificationOccurred("success");
+  } catch {
+    // haptic not available in current environment
+  }
+}
+
+function hapticWarning() {
+  const haptic = getHaptic();
+  if (!haptic) return;
+  try {
+    haptic.notificationOccurred("warning");
+  } catch {
+    // haptic not available in current environment
+  }
+}
+
 async function apiRequest(path, options = {}) {
   const { method = "GET", body, auth = true } = options;
-
   const headers = { "Content-Type": "application/json" };
+
   if (auth && state.token) {
     headers.Authorization = `Bearer ${state.token}`;
   }
 
-  try {
-    const response = await fetch(path, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
+  const response = await fetch(path, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
 
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      const error = payload.error || `HTTP ${response.status}`;
-      throw new Error(error);
-    }
-
-    state.apiAvailable = true;
-    return response.json();
-  } catch (error) {
-    if (String(error.message).includes("Failed to fetch")) {
-      state.apiAvailable = false;
-    }
-    throw error;
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error || `HTTP ${response.status}`);
   }
+
+  return response.json();
 }
 
-function openModal() {
+function openAuthModal() {
   refs.authModal.hidden = false;
   document.body.style.overflow = "hidden";
 }
 
-function closeModal() {
+function closeAuthModal() {
   refs.authModal.hidden = true;
   document.body.style.overflow = "";
 }
 
-function setTab(tab) {
-  state.activeTab = tab;
-  const login = tab === "login";
-  refs.loginTab.classList.toggle("active", login);
-  refs.registerTab.classList.toggle("active", !login);
-  refs.loginForm.classList.toggle("active", login);
-  refs.registerForm.classList.toggle("active", !login);
+function setAuthTab(tab) {
+  state.authTab = tab;
+  const isLogin = tab === "login";
+  refs.loginTab.classList.toggle("active", isLogin);
+  refs.registerTab.classList.toggle("active", !isLogin);
+  refs.loginForm.classList.toggle("active", isLogin);
+  refs.registerForm.classList.toggle("active", !isLogin);
+}
+
+function setModuleView(view) {
+  state.moduleView = view;
+  const showHome = view === "home";
+
+  refs.homeView.classList.toggle("active", showHome);
+  refs.inventoryView.classList.toggle("active", !showHome);
+  if (showHome) {
+    stopScanner();
+  }
+  hapticSelection();
+}
+
+function setInventoryTab(tab) {
+  state.inventoryTab = tab;
+  const isMain = tab === "main";
+
+  refs.mainTabBtn.classList.toggle("active", isMain);
+  refs.toolsTabBtn.classList.toggle("active", !isMain);
+  refs.mainTab.classList.toggle("active", isMain);
+  refs.toolsTab.classList.toggle("active", !isMain);
+  if (isMain) {
+    stopScanner();
+  }
+  hapticSelection();
+}
+
+function updateAuthButton() {
+  if (state.user?.email) {
+    refs.openAuthBtn.textContent = state.user.email;
+    refs.openAuthBtn.classList.remove("primary-btn");
+    refs.openAuthBtn.classList.add("glass-btn");
+    return;
+  }
+
+  refs.openAuthBtn.textContent = "Войти";
+  refs.openAuthBtn.classList.remove("glass-btn");
+  refs.openAuthBtn.classList.add("primary-btn");
+}
+
+function openOnboarding() {
+  refs.onboarding.hidden = false;
+  hapticSelection();
+}
+
+function closeOnboarding() {
+  refs.onboarding.hidden = true;
+  localStorage.setItem(ONBOARDING_KEY, "1");
+  hapticSuccess();
+}
+
+function initTelegram() {
+  const webApp = window.Telegram?.WebApp;
+  if (!webApp) return;
+  try {
+    webApp.ready();
+    webApp.expand();
+  } catch {
+    // safe fallback for non-telegram browser
+  }
 }
 
 function itemPayload(item) {
@@ -147,13 +244,11 @@ async function qrDataUrl(text) {
   if (!window.QRCode || !window.QRCode.toDataURL) {
     throw new Error("QR library missing");
   }
+
   return window.QRCode.toDataURL(text, {
     width: 220,
     margin: 1,
-    color: {
-      dark: "#0f172a",
-      light: "#ffffff",
-    },
+    color: { dark: "#0f172a", light: "#ffffff" },
   });
 }
 
@@ -187,24 +282,21 @@ async function printLabels(items) {
         <div class="grid">
           ${cards
             .map(
-              ({ item, src }) => `
-              <div class="card">
-                <img src="${src}" alt="${item.id}" />
-                <h4>${item.name}</h4>
-                <p>${item.id}</p>
-              </div>`
+              ({ item, src }) =>
+                `<div class="card"><img src="${src}" alt="${item.id}" /><h4>${item.name}</h4><p>${item.id}</p></div>`
             )
             .join("")}
         </div>
       </body>
     </html>
   `);
+
   wnd.document.close();
   wnd.focus();
   wnd.print();
 }
 
-async function renderTable(list = state.items) {
+function renderTable(list = state.items) {
   refs.itemsTableBody.innerHTML = "";
 
   if (!list.length) {
@@ -241,10 +333,10 @@ function renderAlerts(lowItems = null) {
   }
 
   for (const item of low) {
-    const el = document.createElement("div");
-    el.className = "alert-item";
-    el.textContent = `Личное уведомление: ${item.name} (${item.qty} шт, лимит ${item.threshold}).`;
-    refs.alertsBox.appendChild(el);
+    const itemEl = document.createElement("div");
+    itemEl.className = "alert-item";
+    itemEl.textContent = `Личное уведомление: ${item.name} (${item.qty} шт, лимит ${item.threshold}).`;
+    refs.alertsBox.appendChild(itemEl);
   }
 }
 
@@ -259,14 +351,13 @@ async function loadItems() {
   try {
     const data = await apiRequest("/api/inventory/list");
     state.items = data.items || [];
-    renderTable();
-    renderAlerts();
-  } catch (error) {
-    showToast(`API недоступен, демо-режим: ${error.message}`);
+  } catch {
     state.items = [...seedItems];
-    renderTable();
-    renderAlerts();
+    showToast("API недоступен, демо-режим");
   }
+
+  renderTable();
+  renderAlerts();
 }
 
 function handleSearch() {
@@ -287,6 +378,19 @@ function handleSearch() {
   renderTable(filtered);
 }
 
+async function saveItem(item) {
+  if (!state.token) {
+    const next = state.items.length + 1;
+    state.items.unshift({ id: `SUP-${String(next).padStart(3, "0")}`, ...item });
+    renderTable();
+    renderAlerts();
+    return;
+  }
+
+  await apiRequest("/api/inventory/upsert", { method: "POST", body: item });
+  await loadItems();
+}
+
 async function consumeOne(id) {
   const item = state.items.find((it) => it.id === id);
   if (!item) return;
@@ -298,40 +402,11 @@ async function consumeOne(id) {
     return;
   }
 
-  try {
-    await apiRequest("/api/inventory/consume", {
-      method: "POST",
-      body: { id, amount: 1 },
-    });
-    await loadItems();
-  } catch (error) {
-    showToast(error.message);
-  }
-}
-
-async function saveItem(item) {
-  if (!state.token) {
-    const next = state.items.length + 1;
-    state.items.unshift({
-      id: `SUP-${String(next).padStart(3, "0")}`,
-      ...item,
-    });
-    renderTable();
-    renderAlerts();
-    return;
-  }
-
-  await apiRequest("/api/inventory/upsert", {
+  await apiRequest("/api/inventory/consume", {
     method: "POST",
-    body: item,
+    body: { id, amount: 1 },
   });
   await loadItems();
-}
-
-async function printOne(id) {
-  const item = state.items.find((it) => it.id === id);
-  if (!item) return;
-  await printLabels([item]);
 }
 
 async function checkLowStock() {
@@ -342,42 +417,27 @@ async function checkLowStock() {
     return low;
   }
 
-  try {
-    const data = await apiRequest("/api/alerts/low-stock");
-    const low = data.items || [];
-    renderAlerts(low);
-    showToast(low.length ? "Есть позиции для уведомления" : "Низких остатков нет");
-    return low;
-  } catch (error) {
-    showToast(error.message);
-    return [];
-  }
+  const data = await apiRequest("/api/alerts/low-stock");
+  const low = data.items || [];
+  renderAlerts(low);
+  showToast(low.length ? "Есть позиции для уведомления" : "Низких остатков нет");
+  return low;
 }
 
 async function notifyLowStock() {
   if (!state.token) {
-    showToast("Для уведомлений нужен вход в систему");
+    showToast("Для уведомлений нужен вход");
     return;
   }
 
-  try {
-    const result = await apiRequest("/api/alerts/notify", { method: "POST" });
-    if (!result.sent) {
-      showToast("Низких остатков нет");
-      return;
-    }
-    showToast(`Отправлено в личку: ${result.sent}`);
-  } catch (error) {
-    showToast(error.message);
-  }
+  const result = await apiRequest("/api/alerts/notify", { method: "POST" });
+  showToast(result.sent ? `Отправлено в личку: ${result.sent}` : "Низких остатков нет");
 }
 
-async function openScanner() {
-  refs.scanModal.hidden = false;
-  document.body.style.overflow = "hidden";
-
+async function startScanner() {
   if (!navigator.mediaDevices?.getUserMedia) {
     refs.scanStatus.textContent = "Камера недоступна в этом браузере.";
+    hapticWarning();
     return;
   }
 
@@ -386,13 +446,15 @@ async function openScanner() {
       video: { facingMode: { ideal: "environment" } },
       audio: false,
     });
+
     state.stream = stream;
     refs.scannerVideo.srcObject = stream;
     await refs.scannerVideo.play();
 
     if (!("BarcodeDetector" in window)) {
       refs.scanStatus.textContent =
-        "BarcodeDetector не поддерживается. Для iOS можно сканировать в Telegram встроенной камерой на следующем этапе.";
+        "BarcodeDetector не поддерживается. Для iOS подключим Telegram-сканер на следующем шаге.";
+      hapticWarning();
       return;
     }
 
@@ -403,53 +465,47 @@ async function openScanner() {
       try {
         const codes = await detector.detect(refs.scannerVideo);
         if (!codes.length) return;
+
         const text = codes[0].rawValue || "";
         const item = state.items.find((it) => text.includes(it.id));
+
         if (!item) {
           refs.scanStatus.textContent = "QR считан, но расходник не найден.";
           return;
         }
+
         await consumeOne(item.id);
         refs.scanStatus.textContent = `Списано 1 шт: ${item.name}`;
         showToast(`Сканировано: ${item.name} (-1)`);
+        hapticSuccess();
       } catch {
-        // ignore scanning frame errors
+        // frame-level errors are ignored
       }
     }, 900);
   } catch {
     refs.scanStatus.textContent = "Нет доступа к камере.";
+    hapticWarning();
   }
 }
 
-function closeScanner() {
-  refs.scanModal.hidden = true;
-  document.body.style.overflow = "";
+function stopScanner() {
   refs.scanStatus.textContent = "Наведите камеру на QR-код расходника.";
 
   if (state.scanTimer) {
-    window.clearInterval(state.scanTimer);
+    clearInterval(state.scanTimer);
     state.scanTimer = null;
   }
 
   if (state.stream) {
-    state.stream.getTracks().forEach((t) => t.stop());
+    state.stream.getTracks().forEach((track) => track.stop());
     state.stream = null;
   }
-}
 
-function updateAuthButton() {
-  if (state.user?.email) {
-    refs.openAuthBtn.textContent = `${state.user.email}`;
-    refs.openAuthBtn.classList.remove("primary-btn");
-    refs.openAuthBtn.classList.add("glass-btn");
-  } else {
-    refs.openAuthBtn.textContent = "Войти";
-    refs.openAuthBtn.classList.remove("glass-btn");
-    refs.openAuthBtn.classList.add("primary-btn");
-  }
+  refs.scannerVideo.srcObject = null;
 }
 
 refs.openAuthBtn.addEventListener("click", () => {
+  hapticSelection();
   if (state.user?.email) {
     localStorage.removeItem("sf_token");
     localStorage.removeItem("sf_user");
@@ -458,40 +514,54 @@ refs.openAuthBtn.addEventListener("click", () => {
     updateAuthButton();
     loadItems();
     showToast("Вы вышли из аккаунта");
+    hapticSuccess();
     return;
   }
-  openModal();
-});
-refs.closeAuthBtn.addEventListener("click", closeModal);
-refs.authBackdrop.addEventListener("click", closeModal);
 
-refs.loginTab.addEventListener("click", () => setTab("login"));
-refs.registerTab.addEventListener("click", () => setTab("register"));
+  openAuthModal();
+});
+
+refs.closeAuthBtn.addEventListener("click", closeAuthModal);
+refs.authBackdrop.addEventListener("click", closeAuthModal);
+refs.loginTab.addEventListener("click", () => setAuthTab("login"));
+refs.registerTab.addEventListener("click", () => setAuthTab("register"));
+
+refs.openInventoryTile.addEventListener("click", () => setModuleView("inventory"));
+refs.homeBtn.addEventListener("click", () => setModuleView("home"));
+refs.mainTabBtn.addEventListener("click", () => setInventoryTab("main"));
+refs.toolsTabBtn.addEventListener("click", () => setInventoryTab("tools"));
+refs.toToolsBtn.addEventListener("click", () => setInventoryTab("tools"));
+refs.closeOnboardingBtn.addEventListener("click", closeOnboarding);
 
 refs.loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!refs.loginForm.reportValidity()) return;
 
   const form = new FormData(refs.loginForm);
-  const email = String(form.get("email") || "").trim();
-  const password = String(form.get("password") || "");
 
   try {
     const data = await apiRequest("/api/auth/login", {
       method: "POST",
       auth: false,
-      body: { email, password },
+      body: {
+        email: String(form.get("email") || "").trim(),
+        password: String(form.get("password") || ""),
+      },
     });
+
     state.token = data.token;
     state.user = data.user;
     localStorage.setItem("sf_token", data.token);
     localStorage.setItem("sf_user", JSON.stringify(data.user));
+
     updateAuthButton();
-    closeModal();
+    closeAuthModal();
     await loadItems();
     showToast("Вход успешен");
+    hapticSuccess();
   } catch (error) {
     showToast(error.message);
+    hapticWarning();
   }
 });
 
@@ -500,23 +570,27 @@ refs.registerForm.addEventListener("submit", async (event) => {
   if (!refs.registerForm.reportValidity()) return;
 
   const form = new FormData(refs.registerForm);
-  const name = String(form.get("name") || "").trim();
-  const email = String(form.get("email") || "").trim();
-  const password = String(form.get("password") || "");
-  const adminKey = String(form.get("adminKey") || "");
-  const telegramChatId = String(form.get("telegramChatId") || "").trim();
 
   try {
     await apiRequest("/api/auth/create-user", {
       method: "POST",
       auth: false,
-      body: { name, email, password, adminKey, telegramChatId },
+      body: {
+        name: String(form.get("name") || "").trim(),
+        email: String(form.get("email") || "").trim(),
+        password: String(form.get("password") || ""),
+        adminKey: String(form.get("adminKey") || ""),
+        telegramChatId: String(form.get("telegramChatId") || "").trim(),
+      },
     });
+
     showToast("Аккаунт создан админом");
     refs.registerForm.reset();
-    setTab("login");
+    setAuthTab("login");
+    hapticSuccess();
   } catch (error) {
     showToast(error.message);
+    hapticWarning();
   }
 });
 
@@ -524,36 +598,44 @@ refs.stockForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!refs.stockForm.reportValidity()) return;
 
-  const item = {
-    name: refs.itemName.value.trim(),
-    qty: Number(refs.itemQty.value),
-    threshold: Number(refs.itemThreshold.value),
-    notes: refs.itemNotes.value.trim(),
-  };
-
   try {
-    await saveItem(item);
+    await saveItem({
+      name: refs.itemName.value.trim(),
+      qty: Number(refs.itemQty.value),
+      threshold: Number(refs.itemThreshold.value),
+      notes: refs.itemNotes.value.trim(),
+    });
+
     refs.stockForm.reset();
-    showToast(`Добавлено: ${item.name}`);
+    showToast("Расходник сохранен");
+    hapticSuccess();
   } catch (error) {
     showToast(error.message);
+    hapticWarning();
   }
 });
 
 refs.itemsTableBody.addEventListener("click", async (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
+
   const action = target.getAttribute("data-action");
   const id = target.getAttribute("data-id");
   if (!action || !id) return;
 
-  if (action === "consume") {
-    await consumeOne(id);
-    return;
-  }
+  try {
+    if (action === "consume") {
+      await consumeOne(id);
+      return;
+    }
 
-  if (action === "print") {
-    await printOne(id);
+    if (action === "print") {
+      const item = state.items.find((it) => it.id === id);
+      if (item) await printLabels([item]);
+    }
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
   }
 });
 
@@ -565,29 +647,53 @@ refs.searchInput.addEventListener("keydown", (event) => {
   }
 });
 
-refs.checkAlertsBtn.addEventListener("click", checkLowStock);
-refs.notifyAlertsBtn.addEventListener("click", notifyLowStock);
-
-refs.printAllBtn.addEventListener("click", async () => {
-  await printLabels(state.items);
-});
-
-refs.focusCreateBtn.addEventListener("click", () => {
-  refs.itemName.focus();
-  window.scrollTo({ top: refs.stockForm.offsetTop - 40, behavior: "smooth" });
-});
-
-refs.openScannerBtn.addEventListener("click", openScanner);
-refs.closeScannerBtn.addEventListener("click", closeScanner);
-refs.scanBackdrop.addEventListener("click", closeScanner);
-
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") {
-    closeModal();
-    closeScanner();
+refs.checkAlertsBtn.addEventListener("click", async () => {
+  try {
+    await checkLowStock();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
   }
 });
 
-setTab("login");
+refs.notifyAlertsBtn.addEventListener("click", async () => {
+  try {
+    await notifyLowStock();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+
+refs.printAllBtn.addEventListener("click", async () => {
+  try {
+    await printLabels(state.items);
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+
+refs.startScannerBtn.addEventListener("click", startScanner);
+refs.stopScannerBtn.addEventListener("click", () => {
+  stopScanner();
+  hapticSelection();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeAuthModal();
+    stopScanner();
+  }
+});
+
+setAuthTab("login");
+setModuleView("home");
+setInventoryTab("main");
 updateAuthButton();
 loadItems();
+initTelegram();
+
+if (!localStorage.getItem(ONBOARDING_KEY)) {
+  openOnboarding();
+}

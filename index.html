@@ -3,14 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#eef4ff" />
-    <title>SupplyFlow MiniApp</title>
+    <meta name="theme-color" content="#eef3ff" />
+    <title>Polotno MiniApp</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -20,106 +17,158 @@
     <main class="app-shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Telegram MiniApp • iOS UI</p>
-          <h1>SupplyFlow</h1>
+          <p class="eyebrow">Telegram MiniApp • Apple Style</p>
+          <h1>Polotno</h1>
         </div>
-        <div class="topbar-actions">
-          <button class="glass-btn" id="openScannerBtn" type="button">Сканировать QR</button>
-          <button class="primary-btn" id="openAuthBtn" type="button">Войти</button>
-        </div>
+        <button class="primary-btn" id="openAuthBtn" type="button">Войти</button>
       </header>
 
-      <section class="hero-card">
-        <div class="hero-copy">
-          <p class="eyebrow">Учет расходников</p>
-          <h2>Остатки, QR-этикетки и личные уведомления</h2>
-          <p>
-            Добавляйте расходники, задавайте порог остатка, печатайте QR-этикетки для упаковок
-            и быстро списывайте позиции через камеру смартфона.
-          </p>
-        </div>
-        <div class="hero-actions">
-          <button class="primary-btn" id="focusCreateBtn" type="button">+ Новый расходник</button>
-          <button class="secondary-btn" id="printAllBtn" type="button">Печать всех QR</button>
-        </div>
-      </section>
-
-      <section class="panel search-panel">
-        <label for="searchInput">Поиск расходников</label>
-        <div class="search-row">
-          <input
-            id="searchInput"
-            type="search"
-            placeholder="Название, код, заметка"
-            autocomplete="off"
-          />
-          <button class="primary-btn" id="searchBtn" type="button">Найти</button>
-        </div>
-      </section>
-
-      <section class="layout-grid">
-        <section class="panel">
-          <div class="section-head">
-            <h3>Добавить расходник</h3>
-            <p>QR генерируется автоматически для печати и сканирования.</p>
+      <section id="homeView" class="view active">
+        <section class="hero-card">
+          <div class="hero-copy">
+            <p class="eyebrow">Главная</p>
+            <h2>Сервис управления внутренними процессами</h2>
+            <p>Выберите нужный модуль. Основной модуль сейчас: учет расходников.</p>
           </div>
-          <form class="stock-form" id="stockForm" novalidate>
-            <label>
-              Наименование
-              <input type="text" name="name" id="itemName" placeholder="Например, Пакет M" required />
-            </label>
-            <label>
-              Количество
-              <input type="number" name="qty" id="itemQty" min="0" step="1" required />
-            </label>
-            <label>
-              Предупреждать при остатке
-              <input type="number" name="threshold" id="itemThreshold" min="0" step="1" required />
-            </label>
-            <label>
-              Заметка
-              <textarea name="notes" id="itemNotes" rows="3" placeholder="Поставщик, место хранения"></textarea>
-            </label>
-            <button class="primary-btn full" type="submit">Сохранить расходник</button>
-          </form>
         </section>
 
-        <section class="panel">
-          <div class="section-head">
-            <h3>Личные уведомления</h3>
-            <p>При низком остатке бот отправит сообщение сотруднику в личку.</p>
-          </div>
-          <div class="alert-box" id="alertsBox">
-            <p class="muted">Пока все в норме.</p>
-          </div>
-          <div class="hero-actions">
-            <button class="secondary-btn full" id="checkAlertsBtn" type="button">Проверить лимиты</button>
-            <button class="primary-btn full" id="notifyAlertsBtn" type="button">Отправить в личку</button>
-          </div>
+        <section class="tile-grid">
+          <button class="module-tile" id="openInventoryTile" type="button">
+            <span class="tile-icon" aria-hidden="true">📦</span>
+            <span class="tile-title">Учет расходников</span>
+            <span class="tile-caption">Остатки, QR, уведомления</span>
+          </button>
         </section>
       </section>
 
-      <section class="panel">
-        <div class="section-head">
-          <h3>Каталог расходников</h3>
-          <p>Нажмите на строку, чтобы открыть QR. Можно печатать этикетки по одной или все сразу.</p>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Расходник</th>
-                <th>Остаток</th>
-                <th>Лимит</th>
-                <th>QR-код</th>
-                <th>Действия</th>
-              </tr>
-            </thead>
-            <tbody id="itemsTableBody"></tbody>
-          </table>
-        </div>
+      <section id="inventoryView" class="view">
+        <section class="panel nav-panel">
+          <div class="segmented segmented-three">
+            <button class="seg-btn" id="homeBtn" type="button">Главная</button>
+            <button class="seg-btn active" id="mainTabBtn" type="button">Основное</button>
+            <button class="seg-btn" id="toolsTabBtn" type="button">Инструменты</button>
+          </div>
+        </section>
+
+        <section id="mainTab" class="tab-panel active">
+          <section class="panel search-panel">
+            <label for="searchInput">Поиск расходников</label>
+            <div class="search-row">
+              <input id="searchInput" type="search" placeholder="Название, код, заметка" autocomplete="off" />
+              <button class="primary-btn" id="searchBtn" type="button">Найти</button>
+            </div>
+          </section>
+
+          <section class="layout-grid">
+            <section class="panel">
+              <div class="section-head">
+                <h3>Добавить расходник</h3>
+                <p>QR генерируется автоматически для печати и сканирования.</p>
+              </div>
+              <form class="stock-form" id="stockForm" novalidate>
+                <label>
+                  Наименование
+                  <input type="text" name="name" id="itemName" placeholder="Например, Пакет M" required />
+                </label>
+                <label>
+                  Количество
+                  <input type="number" name="qty" id="itemQty" min="0" step="1" required />
+                </label>
+                <label>
+                  Предупреждать при остатке
+                  <input type="number" name="threshold" id="itemThreshold" min="0" step="1" required />
+                </label>
+                <label>
+                  Заметка
+                  <textarea name="notes" id="itemNotes" rows="3" placeholder="Поставщик, место хранения"></textarea>
+                </label>
+                <button class="primary-btn full" type="submit">Сохранить расходник</button>
+              </form>
+            </section>
+
+            <section class="panel">
+              <div class="section-head">
+                <h3>Быстрые действия</h3>
+                <p>Все второстепенные функции вынесены в отдельную вкладку «Инструменты».</p>
+              </div>
+              <div class="hero-actions">
+                <button class="secondary-btn full" id="toToolsBtn" type="button">Открыть Инструменты</button>
+              </div>
+            </section>
+          </section>
+
+          <section class="panel">
+            <div class="section-head">
+              <h3>Каталог расходников</h3>
+              <p>Нажмите на строку, чтобы распечатать QR или списать единицу.</p>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Расходник</th>
+                    <th>Остаток</th>
+                    <th>Лимит</th>
+                    <th>QR-код</th>
+                    <th>Действия</th>
+                  </tr>
+                </thead>
+                <tbody id="itemsTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section id="toolsTab" class="tab-panel">
+          <section class="layout-grid">
+            <section class="panel">
+              <div class="section-head">
+                <h3>Уведомления в личку</h3>
+                <p>Бот отправит вам сообщение, если остаток ниже лимита.</p>
+              </div>
+              <div class="alert-box" id="alertsBox">
+                <p class="muted">Пока все в норме.</p>
+              </div>
+              <div class="hero-actions">
+                <button class="secondary-btn full" id="checkAlertsBtn" type="button">Проверить лимиты</button>
+                <button class="primary-btn full" id="notifyAlertsBtn" type="button">Отправить в личку</button>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="section-head">
+                <h3>Этикетки и сканирование</h3>
+                <p>Сканер теперь встроен в экран, без всплывающего окна.</p>
+              </div>
+              <div class="hero-actions">
+                <button class="secondary-btn full" id="printAllBtn" type="button">Печать всех QR</button>
+                <button class="secondary-btn full" id="startScannerBtn" type="button">Запустить сканер</button>
+                <button class="glass-btn full" id="stopScannerBtn" type="button">Остановить сканер</button>
+              </div>
+              <video id="scannerVideo" playsinline muted></video>
+              <p class="muted" id="scanStatus">Наведите камеру на QR-код расходника.</p>
+            </section>
+          </section>
+        </section>
       </section>
     </main>
+
+    <section class="onboarding" id="onboarding" hidden>
+      <div class="onboarding-backdrop"></div>
+      <div class="onboarding-card">
+        <p class="eyebrow">Polotno</p>
+        <h2>Добро пожаловать</h2>
+        <p class="onboarding-text">
+          Короткий старт: учет расходников, QR-этикетки и личные уведомления теперь в одном MiniApp.
+        </p>
+        <div class="onboarding-list">
+          <p><strong>1.</strong> Откройте плитку «Учет расходников».</p>
+          <p><strong>2.</strong> Добавьте позиции и лимиты.</p>
+          <p><strong>3.</strong> В «Инструментах» используйте сканер и отправку уведомлений.</p>
+        </div>
+        <button class="primary-btn full" id="closeOnboardingBtn" type="button">Начать работу</button>
+      </div>
+    </section>
 
     <div class="auth-modal" id="authModal" hidden>
       <div class="auth-backdrop" id="authBackdrop"></div>
@@ -169,18 +218,6 @@
           </label>
           <button class="primary-btn full" type="submit">Создать аккаунт</button>
         </form>
-      </section>
-    </div>
-
-    <div class="scan-modal" id="scanModal" hidden>
-      <div class="auth-backdrop" id="scanBackdrop"></div>
-      <section class="scan-card" role="dialog" aria-modal="true" aria-label="Сканер QR">
-        <div class="scan-head">
-          <h3>Сканирование QR</h3>
-          <button class="close-btn" id="closeScannerBtn" type="button" aria-label="Закрыть">×</button>
-        </div>
-        <video id="scannerVideo" playsinline muted></video>
-        <p class="muted" id="scanStatus">Наведите камеру на QR-код расходника.</p>
       </section>
     </div>
 

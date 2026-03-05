@@ -1,4 +1,4 @@
-# SupplyFlow MiniApp
+# Polotno MiniApp
 
 Telegram MiniApp for consumables accounting with:
 - email/password auth (admin creates users)
