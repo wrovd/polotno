@@ -68,6 +68,11 @@ const refs = {
   historyResetBtn: document.getElementById("historyResetBtn"),
   historyExportBtn: document.getElementById("historyExportBtn"),
   toToolsBtn: document.getElementById("toToolsBtn"),
+  stockManagePanel: document.getElementById("stockManagePanel"),
+  adjustPanel: document.getElementById("adjustPanel"),
+  adjustForm: document.getElementById("adjustForm"),
+  adjustItemId: document.getElementById("adjustItemId"),
+  adjustDelta: document.getElementById("adjustDelta"),
   searchInput: document.getElementById("searchInput"),
   searchBtn: document.getElementById("searchBtn"),
   stockForm: document.getElementById("stockForm"),
@@ -261,10 +266,23 @@ function updateAuthButton() {
   refs.openAuthBtn.classList.add("primary-btn");
 }
 
+function canAdmin() {
+  if (!state.user) return true;
+  return String(state.user.role || "staff").toLowerCase() === "admin";
+}
+
 function applyRoleAccess() {
-  const canManageUsers = !state.user || state.user.role === "admin";
+  const canManageUsers = canAdmin();
   refs.registerTab.classList.toggle("is-hidden", !canManageUsers);
   refs.authTabs.classList.toggle("admin-disabled", !canManageUsers);
+  refs.adjustPanel.classList.toggle("is-hidden", !canManageUsers);
+
+  refs.stockManagePanel.classList.toggle("is-hidden", !canManageUsers);
+  refs.itemName.disabled = !canManageUsers;
+  refs.itemQty.disabled = !canManageUsers;
+  refs.itemThreshold.disabled = !canManageUsers;
+  refs.itemNotes.disabled = !canManageUsers;
+
   if (!canManageUsers && state.authTab === "register") {
     setAuthTab("login");
   }
@@ -382,7 +400,9 @@ function renderTable(list = state.items) {
       <td data-label="Действия">
         <div class="actions">
           <button class="secondary-btn" data-action="print" data-id="${item.id}" type="button">Печать QR</button>
-          <button class="secondary-btn" data-action="edit" data-id="${item.id}" type="button">Редактировать</button>
+          <button class="secondary-btn ${canAdmin() ? "" : "is-hidden"}" data-action="plus-one" data-id="${item.id}" type="button">+1</button>
+          <button class="secondary-btn ${canAdmin() ? "" : "is-hidden"}" data-action="edit" data-id="${item.id}" type="button">Редактировать</button>
+          <button class="glass-btn ${canAdmin() ? "" : "is-hidden"}" data-action="delete" data-id="${item.id}" type="button">Удалить</button>
           <button class="glass-btn" data-action="consume" data-id="${item.id}" type="button">-1</button>
         </div>
       </td>
@@ -432,6 +452,8 @@ function reasonLabel(reason) {
   if (reason === "create") return "Создание";
   if (reason === "update") return "Редактирование";
   if (reason === "consume") return "Списание";
+  if (reason === "adjust") return "Корректировка";
+  if (reason === "delete") return "Удаление";
   return reason || "Изменение";
 }
 
@@ -522,7 +544,61 @@ function csvEscape(value) {
   return text;
 }
 
-function exportHistoryCsv() {
+async function copyTextToClipboard(text) {
+  if (!navigator.clipboard?.writeText) return false;
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function downloadCsvWithFallback(fileName, csvText) {
+  if ("showSaveFilePicker" in window) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [{ description: "CSV File", accept: { "text/csv": [".csv"] } }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(csvText);
+      await writable.close();
+      return true;
+    } catch {
+      // continue fallback chain
+    }
+  }
+
+  try {
+    const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    return true;
+  } catch {
+    // continue fallback chain
+  }
+
+  try {
+    const dataUri = `data:text/csv;charset=utf-8,${encodeURIComponent(csvText)}`;
+    const popup = window.open(dataUri, "_blank");
+    if (popup) return true;
+  } catch {
+    // continue fallback chain
+  }
+
+  const copied = await copyTextToClipboard(csvText);
+  return copied;
+}
+
+async function exportHistoryCsv() {
   const rows = state.historyFiltered.length ? state.historyFiltered : state.history;
   if (!rows.length) {
     showToast("Нет данных для экспорта");
@@ -535,18 +611,18 @@ function exportHistoryCsv() {
     ...rows.map((row) => headers.map((header) => csvEscape(row[header])).join(",")),
   ].join("\n");
 
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
   const stamp = new Date().toISOString().slice(0, 10);
-  link.href = url;
-  link.download = `polotno-history-${stamp}.csv`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-  showToast("CSV экспортирован");
-  hapticSuccess();
+  const fileName = `polotno-history-${stamp}.csv`;
+  const ok = await downloadCsvWithFallback(fileName, csv);
+
+  if (ok) {
+    showToast("Экспорт готов");
+    hapticSuccess();
+    return;
+  }
+
+  showToast("Экспорт ограничен в этом браузере");
+  hapticWarning();
 }
 
 async function loadItems() {
@@ -567,6 +643,31 @@ async function loadItems() {
 
   renderTable();
   renderAlerts();
+  refreshAdjustItemOptions();
+}
+
+function refreshAdjustItemOptions() {
+  if (!refs.adjustItemId) return;
+  refs.adjustItemId.innerHTML = "";
+  if (!state.items.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "Нет расходников";
+    refs.adjustItemId.appendChild(option);
+    return;
+  }
+
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Выберите расходник";
+  refs.adjustItemId.appendChild(placeholder);
+
+  for (const item of state.items) {
+    const option = document.createElement("option");
+    option.value = item.id;
+    option.textContent = `${item.id} — ${item.name}`;
+    refs.adjustItemId.appendChild(option);
+  }
 }
 
 function pushLocalHistory(entry) {
@@ -675,6 +776,62 @@ async function consumeOne(id) {
   await apiRequest("/api/inventory/consume", {
     method: "POST",
     body: { id, amount: 1 },
+  });
+  await loadItems();
+  await loadHistory();
+}
+
+async function adjustItem(id, delta) {
+  if (!Number.isFinite(delta) || delta === 0) return;
+
+  if (!state.token) {
+    const item = state.items.find((it) => it.id === id);
+    if (!item) return;
+    item.qty = Math.max(0, Number(item.qty) + delta);
+    pushLocalHistory({
+      item_id: id,
+      delta,
+      reason: "adjust",
+      user_email: state.user?.email || "local",
+      created_at: new Date().toISOString(),
+    });
+    renderTable();
+    renderAlerts();
+    refreshAdjustItemOptions();
+    return;
+  }
+
+  await apiRequest("/api/inventory/adjust", {
+    method: "POST",
+    body: { id, delta },
+  });
+  await loadItems();
+  await loadHistory();
+}
+
+async function deleteItem(id) {
+  if (!id) return;
+
+  if (!state.token) {
+    const idx = state.items.findIndex((it) => it.id === id);
+    if (idx === -1) return;
+    const [removed] = state.items.splice(idx, 1);
+    pushLocalHistory({
+      item_id: id,
+      delta: -Number(removed?.qty || 0),
+      reason: "delete",
+      user_email: state.user?.email || "local",
+      created_at: new Date().toISOString(),
+    });
+    renderTable();
+    renderAlerts();
+    refreshAdjustItemOptions();
+    return;
+  }
+
+  await apiRequest("/api/inventory/delete", {
+    method: "POST",
+    body: { id },
   });
   await loadItems();
   await loadHistory();
@@ -860,6 +1017,7 @@ refs.registerForm.addEventListener("submit", async (event) => {
         password: String(form.get("password") || ""),
         adminKey: String(form.get("adminKey") || ""),
         telegramChatId: String(form.get("telegramChatId") || "").trim(),
+        role: String(form.get("role") || "staff"),
       },
     });
 
@@ -908,17 +1066,42 @@ refs.itemsTableBody.addEventListener("click", async (event) => {
       return;
     }
 
+    if (action === "plus-one") {
+      await adjustItem(id, 1);
+      showToast("Добавлено +1");
+      hapticSuccess();
+      return;
+    }
+
     if (action === "print") {
       const item = state.items.find((it) => it.id === id);
       if (item) await printLabels([item]);
     }
 
     if (action === "edit") {
+      if (!canAdmin()) {
+        showToast("Только для администратора");
+        hapticWarning();
+        return;
+      }
       const item = state.items.find((it) => it.id === id);
       if (item) {
         openEditModal(item);
         hapticSelection();
       }
+    }
+
+    if (action === "delete") {
+      if (!canAdmin()) {
+        showToast("Только для администратора");
+        hapticWarning();
+        return;
+      }
+      const ok = window.confirm(`Удалить расходник ${id}?`);
+      if (!ok) return;
+      await deleteItem(id);
+      showToast("Расходник удален");
+      hapticSuccess();
     }
   } catch (error) {
     showToast(error.message);
@@ -979,6 +1162,33 @@ refs.notifyAlertsBtn.addEventListener("click", async () => {
 refs.printAllBtn.addEventListener("click", async () => {
   try {
     await printLabels(state.items);
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+
+refs.adjustForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!canAdmin()) {
+    showToast("Только для администратора");
+    hapticWarning();
+    return;
+  }
+
+  const id = String(refs.adjustItemId.value || "").trim();
+  const delta = Number(refs.adjustDelta.value || 0);
+  if (!id || !Number.isFinite(delta) || delta === 0) {
+    showToast("Заполните расходник и изменение (+/-)");
+    hapticWarning();
+    return;
+  }
+
+  try {
+    await adjustItem(id, delta);
+    refs.adjustDelta.value = "";
+    showToast("Корректировка применена");
+    hapticSuccess();
   } catch (error) {
     showToast(error.message);
     hapticWarning();

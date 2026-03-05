@@ -73,7 +73,7 @@
           </section>
 
           <section class="layout-grid">
-            <section class="panel">
+            <section class="panel" id="stockManagePanel">
               <div class="section-head">
                 <h3>Добавить расходник</h3>
                 <p>QR генерируется автоматически для печати и сканирования.</p>
@@ -162,6 +162,18 @@
               <p class="muted" id="scanStatus">Наведите камеру на QR-код расходника.</p>
             </section>
           </section>
+
+          <section class="panel admin-only" id="adjustPanel">
+            <div class="section-head">
+              <h3>Корректировка остатков</h3>
+              <p>Для администратора: приход (+N) или списание (-N) с записью в историю.</p>
+            </div>
+            <form class="history-filters" id="adjustForm" novalidate>
+              <select id="adjustItemId" required></select>
+              <input type="number" id="adjustDelta" placeholder="Изменение, например +15 или -3" required />
+              <button class="primary-btn" type="submit">Применить корректировку</button>
+            </form>
+          </section>
         </section>
 
         <section id="historyTab" class="tab-panel">
@@ -178,6 +190,8 @@
                 <option value="create">Создание</option>
                 <option value="update">Редактирование</option>
                 <option value="consume">Списание</option>
+                <option value="adjust">Корректировка</option>
+                <option value="delete">Удаление</option>
               </select>
               <input type="date" id="historyDateFrom" />
               <input type="date" id="historyDateTo" />
@@ -274,6 +288,13 @@
           <label>
             Telegram Chat ID
             <input type="text" name="telegramChatId" placeholder="123456789" />
+          </label>
+          <label>
+            Роль
+            <select name="role">
+              <option value="staff">Сотрудник (staff)</option>
+              <option value="admin">Администратор (admin)</option>
+            </select>
           </label>
           <label>
             Пароль

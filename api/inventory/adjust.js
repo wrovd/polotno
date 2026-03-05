@@ -8,7 +8,7 @@ module.exports = async function handler(req, res) {
   }
 
   const auth = requireAuth(req);
-  const access = requireRole(auth, ["admin", "staff"]);
+  const access = requireRole(auth, ["admin"]);
   if (!access.ok) {
     return send(res, access.code, { error: access.error });
   }
@@ -16,10 +16,14 @@ module.exports = async function handler(req, res) {
   try {
     const body = parseJsonBody(req);
     const id = String(body.id || "").trim();
-    const amount = Math.max(1, Number(body.amount || 1));
+    const delta = Number(body.delta || 0);
 
     if (!id) {
       return send(res, 400, { error: "Item id is required" });
+    }
+
+    if (!Number.isFinite(delta) || delta === 0) {
+      return send(res, 400, { error: "Delta must be a non-zero number" });
     }
 
     const items = await listItems();
@@ -29,7 +33,7 @@ module.exports = async function handler(req, res) {
       return send(res, 404, { error: "Item not found" });
     }
 
-    const newQty = Math.max(0, Number(item.qty) - amount);
+    const newQty = Math.max(0, Number(item.qty) + delta);
 
     await upsertItem({
       id: item.id,
@@ -43,14 +47,14 @@ module.exports = async function handler(req, res) {
 
     await appendMovement({
       item_id: item.id,
-      delta: -amount,
-      reason: "consume",
+      delta,
+      reason: "adjust",
       user_email: auth.user.email,
       created_at: new Date().toISOString(),
     });
 
     return send(res, 200, { ok: true, item: { ...item, qty: newQty } });
   } catch (error) {
-    return send(res, 500, { error: error.message || "Failed to consume item" });
+    return send(res, 500, { error: error.message || "Failed to adjust item" });
   }
 };

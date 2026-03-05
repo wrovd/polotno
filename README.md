@@ -34,6 +34,8 @@ Telegram MiniApp for consumables accounting with:
 - `GET /api/inventory/history`
 - `POST /api/inventory/upsert`
 - `POST /api/inventory/consume`
+- `POST /api/inventory/adjust`
+- `POST /api/inventory/delete`
 - `GET /api/alerts/low-stock`
 - `POST /api/alerts/notify`
 
@@ -42,3 +44,6 @@ Telegram MiniApp for consumables accounting with:
 - For personal alerts, each user should have `telegram_chat_id` in `users` sheet.
 - If `telegram_chat_id` is empty, backend uses `TELEGRAM_DEFAULT_CHAT_ID`.
 - Frontend has a fallback demo mode when backend is unreachable.
+- Role model:
+  - `admin`: can create/edit/delete items and users, can run stock adjustments.
+  - `staff`: can view items/history and consume stock.

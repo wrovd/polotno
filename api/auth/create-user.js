@@ -38,11 +38,14 @@ module.exports = async function handler(req, res) {
       return send(res, 409, { error: "User already exists" });
     }
 
+    const roleRaw = String(body.role || "staff").toLowerCase();
+    const role = roleRaw === "admin" ? "admin" : "staff";
+
     await createUser({
       email,
       name,
       password_hash: hashPassword(password),
-      role: "staff",
+      role,
       telegram_chat_id: telegramChatId,
       created_at: new Date().toISOString(),
     });

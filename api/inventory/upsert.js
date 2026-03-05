@@ -1,5 +1,5 @@
 const { listItems, upsertItem, appendMovement } = require("../../lib/sheets");
-const { requireAuth } = require("../../lib/auth");
+const { requireAuth, requireRole } = require("../../lib/auth");
 const { send, methodNotAllowed, parseJsonBody } = require("../../lib/http");
 
 function nextId(items) {
@@ -17,8 +17,9 @@ module.exports = async function handler(req, res) {
   }
 
   const auth = requireAuth(req);
-  if (!auth.ok) {
-    return send(res, 401, { error: auth.error });
+  const access = requireRole(auth, ["admin"]);
+  if (!access.ok) {
+    return send(res, access.code, { error: access.error });
   }
 
   try {
