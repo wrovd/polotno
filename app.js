@@ -24,6 +24,7 @@ const state = {
   items: [...seedItems],
   stream: null,
   scanTimer: null,
+  editingItemId: "",
 };
 
 const ONBOARDING_KEY = "polotno_onboarding_seen_v1";
@@ -62,6 +63,14 @@ const refs = {
   stopScannerBtn: document.getElementById("stopScannerBtn"),
   scannerVideo: document.getElementById("scannerVideo"),
   scanStatus: document.getElementById("scanStatus"),
+  editModal: document.getElementById("editModal"),
+  editBackdrop: document.getElementById("editBackdrop"),
+  closeEditBtn: document.getElementById("closeEditBtn"),
+  editItemForm: document.getElementById("editItemForm"),
+  editItemName: document.getElementById("editItemName"),
+  editItemQty: document.getElementById("editItemQty"),
+  editItemThreshold: document.getElementById("editItemThreshold"),
+  editItemNotes: document.getElementById("editItemNotes"),
   onboarding: document.getElementById("onboarding"),
   closeOnboardingBtn: document.getElementById("closeOnboardingBtn"),
 };
@@ -159,6 +168,22 @@ function closeAuthModal() {
   document.body.style.overflow = "";
 }
 
+function openEditModal(item) {
+  state.editingItemId = item.id;
+  refs.editItemName.value = item.name || "";
+  refs.editItemQty.value = Number(item.qty || 0);
+  refs.editItemThreshold.value = Number(item.threshold || 0);
+  refs.editItemNotes.value = item.notes || "";
+  refs.editModal.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeEditModal() {
+  refs.editModal.hidden = true;
+  document.body.style.overflow = "";
+  state.editingItemId = "";
+}
+
 function setAuthTab(tab) {
   state.authTab = tab;
   const isLogin = tab === "login";
@@ -224,6 +249,10 @@ function initTelegram() {
   try {
     webApp.ready();
     webApp.expand();
+    const topInset =
+      Number(webApp.safeAreaInset?.top || 0) || Number(webApp.contentSafeAreaInset?.top || 0) || 0;
+    const manualTop = topInset > 0 ? topInset + 8 : 56;
+    document.documentElement.style.setProperty("--tg-top-offset", `${manualTop}px`);
   } catch {
     // safe fallback for non-telegram browser
   }
@@ -308,13 +337,14 @@ function renderTable(list = state.items) {
   for (const item of list) {
     const row = document.createElement("tr");
     row.innerHTML = `
-      <td><strong>${item.name}</strong><br /><span class="muted">${item.notes || "Без заметок"}</span></td>
-      <td>${item.qty}</td>
-      <td>${item.threshold}</td>
-      <td>${item.id}<br />${statusBadge(item)}</td>
-      <td>
+      <td data-label="Расходник"><strong>${item.name}</strong><br /><span class="muted">${item.notes || "Без заметок"}</span></td>
+      <td data-label="Остаток">${item.qty}</td>
+      <td data-label="Лимит">${item.threshold}</td>
+      <td data-label="QR-код">${item.id}<br />${statusBadge(item)}</td>
+      <td data-label="Действия">
         <div class="actions">
           <button class="secondary-btn" data-action="print" data-id="${item.id}" type="button">Печать QR</button>
+          <button class="secondary-btn" data-action="edit" data-id="${item.id}" type="button">Редактировать</button>
           <button class="glass-btn" data-action="consume" data-id="${item.id}" type="button">-1</button>
         </div>
       </td>
@@ -379,9 +409,17 @@ function handleSearch() {
 }
 
 async function saveItem(item) {
+  const hasId = Boolean(item.id);
   if (!state.token) {
-    const next = state.items.length + 1;
-    state.items.unshift({ id: `SUP-${String(next).padStart(3, "0")}`, ...item });
+    if (hasId) {
+      const index = state.items.findIndex((it) => it.id === item.id);
+      if (index !== -1) {
+        state.items[index] = { ...state.items[index], ...item };
+      }
+    } else {
+      const next = state.items.length + 1;
+      state.items.unshift({ id: `SUP-${String(next).padStart(3, "0")}`, ...item });
+    }
     renderTable();
     renderAlerts();
     return;
@@ -637,11 +675,43 @@ refs.itemsTableBody.addEventListener("click", async (event) => {
       const item = state.items.find((it) => it.id === id);
       if (item) await printLabels([item]);
     }
+
+    if (action === "edit") {
+      const item = state.items.find((it) => it.id === id);
+      if (item) {
+        openEditModal(item);
+        hapticSelection();
+      }
+    }
   } catch (error) {
     showToast(error.message);
     hapticWarning();
   }
 });
+
+refs.editItemForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!refs.editItemForm.reportValidity() || !state.editingItemId) return;
+
+  try {
+    await saveItem({
+      id: state.editingItemId,
+      name: refs.editItemName.value.trim(),
+      qty: Number(refs.editItemQty.value),
+      threshold: Number(refs.editItemThreshold.value),
+      notes: refs.editItemNotes.value.trim(),
+    });
+    closeEditModal();
+    showToast("Изменения сохранены");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+
+refs.closeEditBtn.addEventListener("click", closeEditModal);
+refs.editBackdrop.addEventListener("click", closeEditModal);
 
 refs.searchBtn.addEventListener("click", handleSearch);
 refs.searchInput.addEventListener("keydown", (event) => {
@@ -687,6 +757,7 @@ refs.stopScannerBtn.addEventListener("click", () => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeAuthModal();
+    closeEditModal();
     stopScanner();
   }
 });

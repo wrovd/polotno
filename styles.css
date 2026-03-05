@@ -13,6 +13,7 @@
   --radius-md: 14px;
   --shadow-soft: 0 6px 24px rgba(28, 35, 48, 0.06);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --tg-top-offset: 0px;
 }
 
 * {
@@ -75,6 +76,7 @@ p {
   margin: 0 auto;
   display: grid;
   gap: 14px;
+  padding-top: calc(env(safe-area-inset-top, 0px) + var(--tg-top-offset));
 }
 
 .topbar,
@@ -425,6 +427,7 @@ td .actions {
 }
 
 .auth-modal,
+.edit-modal,
 .onboarding {
   position: fixed;
   inset: 0;
@@ -524,9 +527,14 @@ td .actions {
     padding: 8px 8px 16px;
   }
 
+  .app-shell {
+    padding-top: calc(env(safe-area-inset-top, 0px) + max(var(--tg-top-offset), 52px));
+  }
+
   .topbar {
     align-items: start;
     flex-direction: column;
+    padding: 12px;
   }
 
   .top-controls {
@@ -542,15 +550,71 @@ td .actions {
     grid-template-columns: 1fr;
   }
 
+  .panel,
+  .hero-card {
+    padding: 12px;
+    border-radius: 18px;
+  }
+
   .top-select {
     min-width: 0;
   }
 
+  table,
+  thead,
+  tbody,
+  th,
+  tr,
+  td {
+    display: block;
+    width: 100%;
+  }
+
   table {
-    min-width: 650px;
+    min-width: 0;
+  }
+
+  thead {
+    display: none;
+  }
+
+  tbody tr {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fff;
+    padding: 8px;
+    margin-bottom: 8px;
+  }
+
+  td {
+    border-bottom: 0;
+    padding: 8px 6px;
+  }
+
+  td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    margin-bottom: 3px;
+    font-weight: 700;
   }
 
   td .actions {
     flex-direction: column;
+  }
+
+  td .actions button {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .auth-card,
+  .onboarding-card {
+    width: 100%;
+    border-radius: 18px;
+    padding: 14px;
   }
 }
