@@ -15,6 +15,11 @@ const state = {
     dateFrom: "",
     dateTo: "",
   },
+  mainFilters: {
+    search: "",
+    group: "",
+    stock: "",
+  },
   stream: null,
   scanTimer: null,
   scanRaf: null,
@@ -24,6 +29,7 @@ const state = {
   editingItemId: "",
   desktopPrint: true,
   loadingDepth: 0,
+  groups: [],
 };
 
 const ONBOARDING_KEY = "polotno_onboarding_seen_v1";
@@ -58,6 +64,7 @@ const refs = {
   settingsFirstName: document.getElementById("settingsFirstName"),
   settingsLastName: document.getElementById("settingsLastName"),
   settingsEmail: document.getElementById("settingsEmail"),
+  settingsTelegramChatId: document.getElementById("settingsTelegramChatId"),
   settingsPassword: document.getElementById("settingsPassword"),
   settingsLowStockToggle: document.getElementById("settingsLowStockToggle"),
   roleHint: document.getElementById("roleHint"),
@@ -69,6 +76,10 @@ const refs = {
   historyApplyBtn: document.getElementById("historyApplyBtn"),
   historyResetBtn: document.getElementById("historyResetBtn"),
   historyExportBtn: document.getElementById("historyExportBtn"),
+  mainGroupFilter: document.getElementById("mainGroupFilter"),
+  mainStockFilter: document.getElementById("mainStockFilter"),
+  applyMainFiltersBtn: document.getElementById("applyMainFiltersBtn"),
+  resetMainFiltersBtn: document.getElementById("resetMainFiltersBtn"),
   toToolsBtn: document.getElementById("toToolsBtn"),
   stockManagePanel: document.getElementById("stockManagePanel"),
   adjustPanel: document.getElementById("adjustPanel"),
@@ -78,7 +89,10 @@ const refs = {
   searchInput: document.getElementById("searchInput"),
   searchBtn: document.getElementById("searchBtn"),
   stockForm: document.getElementById("stockForm"),
+  groupForm: document.getElementById("groupForm"),
+  groupNameInput: document.getElementById("groupNameInput"),
   itemName: document.getElementById("itemName"),
+  itemGroup: document.getElementById("itemGroup"),
   itemQty: document.getElementById("itemQty"),
   itemThreshold: document.getElementById("itemThreshold"),
   itemNotes: document.getElementById("itemNotes"),
@@ -104,6 +118,7 @@ const refs = {
   editItemForm: document.getElementById("editItemForm"),
   editItemName: document.getElementById("editItemName"),
   editItemQty: document.getElementById("editItemQty"),
+  editItemGroup: document.getElementById("editItemGroup"),
   editItemThreshold: document.getElementById("editItemThreshold"),
   editItemNotes: document.getElementById("editItemNotes"),
   onboarding: document.getElementById("onboarding"),
@@ -264,6 +279,7 @@ function openEditModal(item) {
   state.editingItemId = item.id;
   refs.editItemName.value = item.name || "";
   refs.editItemQty.value = Number(item.qty || 0);
+  refs.editItemGroup.value = String(item.group_name || "");
   refs.editItemThreshold.value = Number(item.threshold || 0);
   refs.editItemNotes.value = item.notes || "";
   refs.editModal.hidden = false;
@@ -366,8 +382,50 @@ function fillSettingsForm() {
   refs.settingsFirstName.value = String(state.user.first_name || "").trim();
   refs.settingsLastName.value = String(state.user.last_name || "").trim();
   refs.settingsEmail.value = String(state.user.email || "").trim().toLowerCase();
+  refs.settingsTelegramChatId.value = String(state.user.telegram_chat_id || "").trim();
   refs.settingsPassword.value = "";
   refs.settingsLowStockToggle.checked = userNotifyEnabled();
+}
+
+function applyMainFiltersFromInputs() {
+  state.mainFilters.search = refs.searchInput.value.trim().toLowerCase();
+  state.mainFilters.group = String(refs.mainGroupFilter.value || "").trim().toLowerCase();
+  state.mainFilters.stock = String(refs.mainStockFilter.value || "").trim().toLowerCase();
+}
+
+function filteredItems() {
+  const { search, group, stock } = state.mainFilters;
+  return state.items.filter((item) => {
+    if (search) {
+      const matchSearch =
+        item.name.toLowerCase().includes(search) ||
+        String(item.id || "").toLowerCase().includes(search) ||
+        String(item.notes || "").toLowerCase().includes(search);
+      if (!matchSearch) return false;
+    }
+
+    if (group) {
+      const itemGroup = String(item.group_name || "").trim().toLowerCase();
+      if (itemGroup !== group) return false;
+    }
+
+    if (stock === "low" && Number(item.qty) > Number(item.threshold)) return false;
+    if (stock === "ok" && Number(item.qty) <= Number(item.threshold)) return false;
+    return true;
+  });
+}
+
+function renderMainByFilters() {
+  applyMainFiltersFromInputs();
+  renderTable(filteredItems());
+}
+
+function resetMainFilters() {
+  refs.searchInput.value = "";
+  refs.mainGroupFilter.value = "";
+  refs.mainStockFilter.value = "";
+  state.mainFilters = { search: "", group: "", stock: "" };
+  renderTable(state.items);
 }
 
 async function loadProfile() {
@@ -498,9 +556,11 @@ function applyRoleAccess() {
 
   refs.stockManagePanel.classList.toggle("is-hidden", !canManageUsers);
   refs.itemName.disabled = !canManageUsers;
+  refs.itemGroup.disabled = !canManageUsers;
   refs.itemQty.disabled = !canManageUsers;
   refs.itemThreshold.disabled = !canManageUsers;
   refs.itemNotes.disabled = !canManageUsers;
+  refs.groupNameInput.disabled = !canManageUsers;
 
   if (!canManageUsers && state.authTab === "register") {
     setAuthTab("login");
@@ -694,9 +754,12 @@ function renderTable(list = state.items) {
   }
 
   for (const item of list) {
+    const groupLine = item.group_name
+      ? `<span class="muted">Группа: ${item.group_name}</span><br />`
+      : "";
     const row = document.createElement("tr");
     row.innerHTML = `
-      <td data-label="Расходник"><strong>${item.name}</strong><br /><span class="muted">${item.notes || "Без заметок"}</span></td>
+      <td data-label="Расходник"><strong>${item.name}</strong><br />${groupLine}<span class="muted">${item.notes || "Без заметок"}</span></td>
       <td data-label="Остаток">${item.qty}</td>
       <td data-label="Лимит">${item.threshold}</td>
       <td data-label="QR-код">${item.id}<br />${statusBadge(item)}</td>
@@ -931,23 +994,65 @@ async function exportHistoryCsv() {
 async function loadItems() {
   if (!state.token) {
     state.items = [];
+    state.groups = [];
     renderTable();
     renderAlerts();
+    renderGroupOptions();
     refreshAdjustItemOptions();
     return;
   }
 
   try {
-    const data = await apiRequest("/api/inventory/list");
-    state.items = data.items || [];
+    const [itemsResult, groupsResult] = await Promise.allSettled([
+      apiRequest("/api/inventory/list"),
+      apiRequest("/api/inventory/groups"),
+    ]);
+    state.items = itemsResult.status === "fulfilled" ? itemsResult.value.items || [] : [];
+    state.groups = groupsResult.status === "fulfilled" ? groupsResult.value.groups || [] : [];
+    if (itemsResult.status !== "fulfilled") {
+      showToast("Не удалось загрузить расходники");
+    }
   } catch {
     state.items = [];
+    state.groups = [];
     showToast("Не удалось загрузить расходники");
   }
 
-  renderTable();
+  renderGroupOptions();
+  renderMainByFilters();
   renderAlerts();
   refreshAdjustItemOptions();
+}
+
+function renderGroupOptions() {
+  const fromDirectory = [...state.groups].map((g) => String(g.name || "").trim());
+  const fromItems = [...state.items].map((i) => String(i.group_name || "").trim());
+  const groups = [...new Set([...fromDirectory, ...fromItems])]
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, "ru"));
+
+  const fill = (select, allowEmptyLabel = "Без группы") => {
+    if (!select) return;
+    const current = String(select.value || "");
+    select.innerHTML = "";
+    const empty = document.createElement("option");
+    empty.value = "";
+    empty.textContent = allowEmptyLabel;
+    select.appendChild(empty);
+    groups.forEach((name) => {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      select.appendChild(option);
+    });
+    if ([...select.options].some((opt) => opt.value === current)) {
+      select.value = current;
+    }
+  };
+
+  fill(refs.itemGroup, "Без группы");
+  fill(refs.editItemGroup, "Без группы");
+  fill(refs.mainGroupFilter, "Все группы");
 }
 
 function refreshAdjustItemOptions() {
@@ -996,21 +1101,7 @@ async function loadHistory() {
 }
 
 function handleSearch() {
-  const value = refs.searchInput.value.trim().toLowerCase();
-  if (!value) {
-    renderTable(state.items);
-    return;
-  }
-
-  const filtered = state.items.filter((item) => {
-    return (
-      item.name.toLowerCase().includes(value) ||
-      item.id.toLowerCase().includes(value) ||
-      (item.notes || "").toLowerCase().includes(value)
-    );
-  });
-
-  renderTable(filtered);
+  renderMainByFilters();
 }
 
 async function saveItem(item) {
@@ -1091,7 +1182,7 @@ async function notifyLowStock() {
     showToast("Уведомления об остатках выключены в настройках");
     return;
   }
-  showToast(result.sent ? `Отправлено в личку: ${result.sent}` : "Низких остатков нет");
+  showToast(result.sent ? `Уведомления отправлены: ${result.sent}` : "Низких остатков нет");
 }
 
 function extractItemIdFromScan(rawValue) {
@@ -1146,6 +1237,46 @@ function stopScanLoops() {
   state.scanBusy = false;
 }
 
+function cameraScore(label = "") {
+  const text = String(label || "").toLowerCase();
+  let score = 0;
+  if (/back|rear|environment|world/.test(text)) score += 40;
+  if (/main|wide|standard|1x|camera 0/.test(text)) score += 18;
+  if (/ultra|tele|macro|depth|tof|front|user|selfie/.test(text)) score -= 22;
+  return score;
+}
+
+async function openPreferredCameraStream() {
+  const fallbackStream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: { ideal: "environment" } },
+    audio: false,
+  });
+
+  if (!navigator.mediaDevices?.enumerateDevices) {
+    return fallbackStream;
+  }
+
+  const devices = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput");
+  if (!devices.length) {
+    return fallbackStream;
+  }
+
+  const currentTrack = fallbackStream.getVideoTracks()[0];
+  const currentId = currentTrack?.getSettings?.().deviceId || "";
+  const withScores = devices.map((d) => ({ deviceId: d.deviceId, label: d.label || "", score: cameraScore(d.label) }));
+  withScores.sort((a, b) => b.score - a.score);
+  const best = withScores[0];
+  if (!best || !best.deviceId || best.score < 1 || best.deviceId === currentId) {
+    return fallbackStream;
+  }
+
+  fallbackStream.getTracks().forEach((track) => track.stop());
+  return navigator.mediaDevices.getUserMedia({
+    video: { deviceId: { exact: best.deviceId } },
+    audio: false,
+  });
+}
+
 async function startScanner() {
   const active = getActiveScannerRefs();
   if (!navigator.mediaDevices?.getUserMedia) {
@@ -1155,10 +1286,7 @@ async function startScanner() {
   }
 
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: "environment" } },
-      audio: false,
-    });
+    const stream = await openPreferredCameraStream();
 
     state.stream = stream;
     if (!active.video) {
@@ -1392,6 +1520,7 @@ refs.settingsForm.addEventListener("submit", async (event) => {
             firstName: refs.settingsFirstName.value.trim(),
             lastName: refs.settingsLastName.value.trim(),
             email: refs.settingsEmail.value.trim().toLowerCase(),
+            telegramChatId: refs.settingsTelegramChatId.value.trim(),
             password: refs.settingsPassword.value,
             lowStockNotifications: refs.settingsLowStockToggle.checked,
           },
@@ -1418,6 +1547,7 @@ refs.stockForm.addEventListener("submit", async (event) => {
       () =>
         saveItem({
           name: refs.itemName.value.trim(),
+          groupName: refs.itemGroup.value,
           qty: Number(refs.itemQty.value),
           threshold: Number(refs.itemThreshold.value),
           notes: refs.itemNotes.value.trim(),
@@ -1504,6 +1634,7 @@ refs.editItemForm.addEventListener("submit", async (event) => {
         saveItem({
           id: state.editingItemId,
           name: refs.editItemName.value.trim(),
+          groupName: refs.editItemGroup.value,
           qty: Number(refs.editItemQty.value),
           threshold: Number(refs.editItemThreshold.value),
           notes: refs.editItemNotes.value.trim(),
@@ -1527,6 +1658,44 @@ refs.searchInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
     handleSearch();
+  }
+});
+refs.applyMainFiltersBtn.addEventListener("click", handleSearch);
+refs.resetMainFiltersBtn.addEventListener("click", resetMainFilters);
+refs.mainGroupFilter.addEventListener("change", handleSearch);
+refs.mainStockFilter.addEventListener("change", handleSearch);
+
+refs.groupForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!canAdmin()) {
+    showToast("Только для администратора");
+    hapticWarning();
+    return;
+  }
+  const name = refs.groupNameInput.value.trim();
+  if (!name) {
+    showToast("Введите название группы");
+    return;
+  }
+  const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
+  try {
+    await runDbAction(
+      () =>
+        apiRequest("/api/inventory/groups", {
+          method: "POST",
+          body: { name },
+        }),
+      { button: submitBtn, message: "Создаем группу..." }
+    );
+    const groupsData = await apiRequest("/api/inventory/groups");
+    state.groups = groupsData.groups || [];
+    renderGroupOptions();
+    refs.groupNameInput.value = "";
+    showToast("Группа создана");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
   }
 });
 

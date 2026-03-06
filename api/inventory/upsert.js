@@ -1,7 +1,7 @@
-const { listItems, upsertItem, appendMovement, findUserByEmail } = require("../../lib/sheets");
+const { listItems, upsertItem, appendMovement, listUsers } = require("../../lib/sheets");
 const { requireAuth, requireRole } = require("../../lib/auth");
 const { send, methodNotAllowed, parseJsonBody } = require("../../lib/http");
-const { lowStockTransition, notifyLowStockToUser } = require("../../lib/low-stock");
+const { lowStockTransition, notifyLowStockToUsers } = require("../../lib/low-stock");
 
 function nextId(items) {
   let max = 0;
@@ -29,6 +29,7 @@ module.exports = async function handler(req, res) {
     const incomingId = String(body.id || "").trim();
     const id = incomingId || nextId(items);
     const name = String(body.name || "").trim();
+    const groupName = String(body.groupName || "").trim();
     const qty = Number(body.qty || 0);
     const threshold = Number(body.threshold || 0);
     const notes = String(body.notes || "").trim();
@@ -44,6 +45,7 @@ module.exports = async function handler(req, res) {
     await upsertItem({
       id,
       name,
+      group_name: groupName,
       qty,
       threshold,
       notes,
@@ -63,20 +65,15 @@ module.exports = async function handler(req, res) {
     let notified = false;
     if (lowState.notify) {
       try {
-        const actor = await findUserByEmail(auth.user.email);
-        const notifyOnLow = String(actor?.low_stock_notifications ?? "1") !== "0";
-        if (!notifyOnLow) {
-          return send(res, 200, { ok: true, id, notified: false });
-        }
-        const chatId = actor?.telegram_chat_id || auth.user.telegram_chat_id || process.env.TELEGRAM_DEFAULT_CHAT_ID;
-        const result = await notifyLowStockToUser({
-          chatId,
+        const users = await listUsers();
+        const sent = await notifyLowStockToUsers({
+          users,
           itemName: name,
           itemId: id,
           qty,
           threshold,
         });
-        notified = result.sent;
+        notified = sent > 0;
       } catch {
         notified = false;
       }

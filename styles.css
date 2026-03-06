@@ -702,6 +702,17 @@ button.is-loading::after {
   margin-bottom: 10px;
 }
 
+.main-filters {
+  margin-bottom: 0;
+  margin-top: 6px;
+}
+
+.group-form {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line-strong);
+}
+
 .settings-layout {
   grid-template-columns: 1.1fr 0.9fr;
 }
@@ -911,6 +922,10 @@ button.is-loading::after {
   }
 
   .history-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .main-filters {
     grid-template-columns: 1fr;
   }
 

@@ -1,7 +1,7 @@
-const { listItems, upsertItem, appendMovement, findUserByEmail } = require("../../lib/sheets");
+const { listItems, upsertItem, appendMovement, listUsers } = require("../../lib/sheets");
 const { requireAuth, requireRole } = require("../../lib/auth");
 const { send, methodNotAllowed, parseJsonBody } = require("../../lib/http");
-const { lowStockTransition, notifyLowStockToUser } = require("../../lib/low-stock");
+const { lowStockTransition, notifyLowStockToUsers } = require("../../lib/low-stock");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
@@ -40,6 +40,7 @@ module.exports = async function handler(req, res) {
     await upsertItem({
       id: item.id,
       name: item.name,
+      group_name: item.group_name || "",
       qty: newQty,
       threshold: Number(item.threshold || 0),
       notes: item.notes || "",
@@ -59,24 +60,15 @@ module.exports = async function handler(req, res) {
     let notified = false;
     if (lowState.notify) {
       try {
-        const actor = await findUserByEmail(auth.user.email);
-        const notifyOnLow = String(actor?.low_stock_notifications ?? "1") !== "0";
-        if (!notifyOnLow) {
-          return send(res, 200, {
-            ok: true,
-            notified: false,
-            item: { ...item, qty: newQty, low_notified: lowState.nextFlag },
-          });
-        }
-        const chatId = actor?.telegram_chat_id || auth.user.telegram_chat_id || process.env.TELEGRAM_DEFAULT_CHAT_ID;
-        const result = await notifyLowStockToUser({
-          chatId,
+        const users = await listUsers();
+        const sent = await notifyLowStockToUsers({
+          users,
           itemName: item.name,
           itemId: item.id,
           qty: newQty,
           threshold: item.threshold,
         });
-        notified = result.sent;
+        notified = sent > 0;
       } catch {
         notified = false;
       }

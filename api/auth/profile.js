@@ -67,6 +67,7 @@ module.exports = async function handler(req, res) {
     const fullName = `${firstName} ${lastName}`.trim() || current.name || "Сотрудник";
     const nextEmail = String(body.email || current.email || "").trim().toLowerCase();
     const password = String(body.password || "");
+    const telegramChatId = String(body.telegramChatId ?? current.telegram_chat_id ?? "").trim();
     const lowStock = normalizeToggle(body.lowStockNotifications, current.low_stock_notifications || "1");
 
     if (!nextEmail) {
@@ -91,6 +92,7 @@ module.exports = async function handler(req, res) {
       first_name: firstName,
       last_name: lastName,
       password_hash: password ? hashPassword(password) : current.password_hash,
+      telegram_chat_id: telegramChatId,
       low_stock_notifications: lowStock,
     });
 

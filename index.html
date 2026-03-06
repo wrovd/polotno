@@ -163,6 +163,18 @@
               <input id="searchInput" type="search" placeholder="Название, код, заметка" autocomplete="off" />
               <button class="primary-btn btn-with-icon" id="searchBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Найти</span></button>
             </div>
+            <div class="history-filters main-filters">
+              <select id="mainGroupFilter">
+                <option value="">Все группы</option>
+              </select>
+              <select id="mainStockFilter">
+                <option value="">Все остатки</option>
+                <option value="low">Низкий остаток</option>
+                <option value="ok">В норме</option>
+              </select>
+              <button class="secondary-btn btn-with-icon" id="applyMainFiltersBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-check"></use></svg></span><span>Применить</span></button>
+              <button class="glass-btn btn-with-icon" id="resetMainFiltersBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-reset"></use></svg></span><span>Сбросить</span></button>
+            </div>
           </section>
 
           <section class="layout-grid">
@@ -175,6 +187,12 @@
                 <label>
                   Наименование
                   <input type="text" name="name" id="itemName" placeholder="Например, Пакет M" required />
+                </label>
+                <label>
+                  Группа
+                  <select id="itemGroup">
+                    <option value="">Без группы</option>
+                  </select>
                 </label>
                 <label>
                   Количество
@@ -200,6 +218,13 @@
               <div class="hero-actions">
                 <button class="secondary-btn full btn-with-icon" id="toToolsBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-toolbox"></use></svg></span><span>Открыть Инструменты</span></button>
               </div>
+              <form class="stock-form group-form" id="groupForm" novalidate>
+                <label>
+                  Новая группа
+                  <input type="text" id="groupNameInput" placeholder="Например, Упаковка" />
+                </label>
+                <button class="primary-btn full btn-with-icon" id="createGroupBtn" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Создать группу</span></button>
+              </form>
             </section>
           </section>
 
@@ -332,6 +357,10 @@
                 <input type="email" id="settingsEmail" placeholder="name@company.com" required />
               </label>
               <label>
+                Telegram Chat ID
+                <input type="text" id="settingsTelegramChatId" placeholder="123456789" />
+              </label>
+              <label>
                 Новый пароль
                 <input type="password" id="settingsPassword" placeholder="Оставьте пустым, чтобы не менять" minlength="6" />
               </label>
@@ -387,6 +416,12 @@
           <label>
             Количество
             <input type="number" name="qty" id="editItemQty" min="0" step="1" required />
+          </label>
+          <label>
+            Группа
+            <select id="editItemGroup">
+              <option value="">Без группы</option>
+            </select>
           </label>
           <label>
             Лимит
