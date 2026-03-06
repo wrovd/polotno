@@ -80,6 +80,12 @@ const refs = {
   scannerVideo: document.getElementById("scannerVideo"),
   scannerCanvas: document.getElementById("scannerCanvas"),
   scanStatus: document.getElementById("scanStatus"),
+  scanModal: document.getElementById("scanModal"),
+  scanModalBackdrop: document.getElementById("scanModalBackdrop"),
+  closeScanModalBtn: document.getElementById("closeScanModalBtn"),
+  modalScannerVideo: document.getElementById("modalScannerVideo"),
+  modalScannerCanvas: document.getElementById("modalScannerCanvas"),
+  modalScanStatus: document.getElementById("modalScanStatus"),
   editModal: document.getElementById("editModal"),
   editBackdrop: document.getElementById("editBackdrop"),
   closeEditBtn: document.getElementById("closeEditBtn"),
@@ -315,11 +321,55 @@ function iconSpan(name) {
 
 function updateMobileScanFab() {
   if (!refs.mobileScanFab) return;
+  if ((refs.scanModal && !refs.scanModal.hidden) || (refs.onboarding && !refs.onboarding.hidden)) {
+    refs.mobileScanFab.hidden = true;
+    return;
+  }
+  refs.mobileScanFab.hidden = false;
   const scanning = Boolean(state.stream);
   refs.mobileScanFab.classList.toggle("is-active", scanning);
   refs.mobileScanFab.setAttribute("aria-label", scanning ? "Остановить сканер" : "Сканировать QR");
   refs.mobileScanFab.title = scanning ? "Остановить сканер" : "Сканировать QR";
   refs.mobileScanFab.innerHTML = scanning ? iconSpan("stop") : iconSpan("camera");
+}
+
+function getActiveScannerRefs() {
+  const useModal = Boolean(refs.scanModal && !refs.scanModal.hidden);
+  if (useModal) {
+    return {
+      video: refs.modalScannerVideo,
+      canvas: refs.modalScannerCanvas,
+      status: refs.modalScanStatus,
+    };
+  }
+  return {
+    video: refs.scannerVideo,
+    canvas: refs.scannerCanvas,
+    status: refs.scanStatus,
+  };
+}
+
+function setScanStatus(text, options = {}) {
+  const { busy = false, refsOverride = null } = options;
+  const target = refsOverride || getActiveScannerRefs();
+  if (!target.status) return;
+  target.status.textContent = text;
+  target.status.classList.toggle("is-busy", busy);
+}
+
+function openScanModal() {
+  if (!refs.scanModal) return;
+  refs.scanModal.hidden = false;
+  document.body.style.overflow = "hidden";
+  updateMobileScanFab();
+}
+
+function closeScanModal() {
+  if (!refs.scanModal) return;
+  stopScanner();
+  refs.scanModal.hidden = true;
+  document.body.style.overflow = "";
+  updateMobileScanFab();
 }
 
 function applyPrintAccess() {
@@ -365,13 +415,13 @@ function applyRoleAccess() {
 
 function openOnboarding() {
   refs.onboarding.hidden = false;
-  if (refs.mobileScanFab) refs.mobileScanFab.hidden = true;
+  updateMobileScanFab();
   hapticSelection();
 }
 
 function closeOnboarding() {
   refs.onboarding.hidden = true;
-  if (refs.mobileScanFab) refs.mobileScanFab.hidden = false;
+  updateMobileScanFab();
   localStorage.setItem(ONBOARDING_KEY, "1");
   hapticSuccess();
 }
@@ -961,13 +1011,14 @@ async function processScanValue(rawValue) {
   const id = extractItemIdFromScan(rawValue);
   const item = state.items.find((it) => String(it.id).toUpperCase() === id);
   if (!item) {
-    refs.scanStatus.textContent = "QR считан, но расходник не найден.";
+    setScanStatus("QR считан, но расходник не найден.");
     hapticWarning();
     return;
   }
 
+  setScanStatus("QR найден. Обрабатываем списание...", { busy: true });
   await consumeOne(item.id);
-  refs.scanStatus.textContent = `Списано 1 шт: ${item.name}`;
+  setScanStatus(`Списано 1 шт: ${item.name}`, { busy: false });
   showToast(`Сканировано: ${item.name} (-1)`);
   hapticSuccess();
 }
@@ -985,8 +1036,9 @@ function stopScanLoops() {
 }
 
 async function startScanner() {
+  const active = getActiveScannerRefs();
   if (!navigator.mediaDevices?.getUserMedia) {
-    refs.scanStatus.textContent = "Камера недоступна в этом браузере.";
+    setScanStatus("Камера недоступна в этом браузере.", { refsOverride: active });
     hapticWarning();
     return;
   }
@@ -998,19 +1050,22 @@ async function startScanner() {
     });
 
     state.stream = stream;
-    refs.scannerVideo.srcObject = stream;
-    await refs.scannerVideo.play();
+    if (!active.video) {
+      throw new Error("Видео-элемент сканера не найден");
+    }
+    active.video.srcObject = stream;
+    await active.video.play();
     stopScanLoops();
 
     if ("BarcodeDetector" in window) {
       const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
-      refs.scanStatus.textContent = "Сканирование запущено...";
+      setScanStatus("Сканирование запущено...", { refsOverride: active });
 
       state.scanTimer = window.setInterval(async () => {
         if (state.scanBusy) return;
         state.scanBusy = true;
         try {
-          const codes = await detector.detect(refs.scannerVideo);
+          const codes = await detector.detect(active.video);
           if (codes.length) {
             const value = String(codes[0].rawValue || "");
             await processScanValue(value);
@@ -1026,16 +1081,16 @@ async function startScanner() {
     }
 
     if (typeof window.jsQR !== "function") {
-      refs.scanStatus.textContent = "Сканер недоступен: отсутствует библиотека jsQR.";
+      setScanStatus("Сканер недоступен: отсутствует библиотека jsQR.", { refsOverride: active });
       stopScanner();
       hapticWarning();
       return;
     }
 
-    refs.scanStatus.textContent = "Сканирование запущено (jsQR)...";
-    const canvas = refs.scannerCanvas;
+    setScanStatus("Сканирование запущено (jsQR)...", { refsOverride: active });
+    const canvas = active.canvas;
     if (!canvas) {
-      refs.scanStatus.textContent = "Сканер недоступен: не найден canvas-элемент.";
+      setScanStatus("Сканер недоступен: не найден canvas-элемент.", { refsOverride: active });
       stopScanner();
       hapticWarning();
       return;
@@ -1043,7 +1098,7 @@ async function startScanner() {
 
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) {
-      refs.scanStatus.textContent = "Сканер недоступен: не удалось инициализировать canvas.";
+      setScanStatus("Сканер недоступен: не удалось инициализировать canvas.", { refsOverride: active });
       stopScanner();
       hapticWarning();
       return;
@@ -1052,12 +1107,12 @@ async function startScanner() {
     const scanFrame = async () => {
       if (!state.stream) return;
 
-      const vw = refs.scannerVideo.videoWidth;
-      const vh = refs.scannerVideo.videoHeight;
+      const vw = active.video.videoWidth;
+      const vh = active.video.videoHeight;
       if (vw && vh) {
         canvas.width = vw;
         canvas.height = vh;
-        ctx.drawImage(refs.scannerVideo, 0, 0, vw, vh);
+        ctx.drawImage(active.video, 0, 0, vw, vh);
         const imageData = ctx.getImageData(0, 0, vw, vh);
         const code = window.jsQR(imageData.data, vw, vh, { inversionAttempts: "dontInvert" });
         if (code?.data) {
@@ -1071,14 +1126,18 @@ async function startScanner() {
     state.scanRaf = requestAnimationFrame(scanFrame);
     updateMobileScanFab();
   } catch {
-    refs.scanStatus.textContent = "Нет доступа к камере.";
+    setScanStatus("Нет доступа к камере.", { refsOverride: active });
     updateMobileScanFab();
     hapticWarning();
   }
 }
 
 function stopScanner() {
-  refs.scanStatus.textContent = "Наведите камеру на QR-код расходника.";
+  setScanStatus("Наведите камеру на QR-код расходника.");
+  if (refs.modalScanStatus) {
+    refs.modalScanStatus.textContent = "Наведите камеру на QR-код расходника.";
+    refs.modalScanStatus.classList.remove("is-busy");
+  }
   stopScanLoops();
 
   if (state.stream) {
@@ -1086,7 +1145,8 @@ function stopScanner() {
     state.stream = null;
   }
 
-  refs.scannerVideo.srcObject = null;
+  if (refs.scannerVideo) refs.scannerVideo.srcObject = null;
+  if (refs.modalScannerVideo) refs.modalScannerVideo.srcObject = null;
   updateMobileScanFab();
 }
 
@@ -1434,21 +1494,18 @@ refs.stopScannerBtn.addEventListener("click", () => {
   hapticSelection();
 });
 
+if (refs.closeScanModalBtn) refs.closeScanModalBtn.addEventListener("click", closeScanModal);
+if (refs.scanModalBackdrop) refs.scanModalBackdrop.addEventListener("click", closeScanModal);
+
 if (refs.mobileScanFab) {
   refs.mobileScanFab.addEventListener("click", async () => {
-    if (state.moduleView !== "inventory") {
-      setModuleView("inventory");
-    }
-    if (state.inventoryTab !== "tools") {
-      setInventoryTab("tools");
-    }
-
     if (state.stream) {
-      stopScanner();
+      closeScanModal();
       hapticSelection();
       return;
     }
 
+    openScanModal();
     await startScanner();
   });
 }
@@ -1457,6 +1514,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeAuthModal();
     closeEditModal();
+    closeScanModal();
     stopScanner();
   }
 });

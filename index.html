@@ -297,6 +297,19 @@
       <span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span>
     </button>
 
+    <section class="scan-modal" id="scanModal" hidden>
+      <div class="scan-modal-backdrop" id="scanModalBackdrop"></div>
+      <article class="scan-modal-card">
+        <header class="scan-modal-head">
+          <h3>Сканер QR</h3>
+          <button class="close-btn" id="closeScanModalBtn" type="button" aria-label="Закрыть">×</button>
+        </header>
+        <video id="modalScannerVideo" playsinline muted></video>
+        <canvas id="modalScannerCanvas" hidden></canvas>
+        <p class="muted scan-status" id="modalScanStatus">Наведите камеру на QR-код расходника.</p>
+      </article>
+    </section>
+
     <div class="edit-modal" id="editModal" hidden>
       <div class="auth-backdrop" id="editBackdrop"></div>
       <section class="auth-card" role="dialog" aria-modal="true" aria-label="Редактирование расходника">
