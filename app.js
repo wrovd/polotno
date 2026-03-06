@@ -606,7 +606,9 @@ function applyRoleAccess() {
   refs.registerTab.classList.toggle("is-hidden", !canManageUsers);
   refs.authTabs.classList.toggle("admin-disabled", !canManageUsers);
   refs.adjustPanel.classList.toggle("is-hidden", !canManageUsers);
-  refs.adminPanel.classList.toggle("is-hidden", !canManageUsers);
+  if (refs.adminPanel) {
+    refs.adminPanel.classList.toggle("is-hidden", !canManageUsers);
+  }
 
   refs.stockManagePanel.classList.toggle("is-hidden", !canManageUsers);
   refs.itemName.disabled = !canManageUsers;
@@ -1625,7 +1627,7 @@ refs.registerForm.addEventListener("submit", async (event) => {
   }
 });
 
-refs.settingsForm.addEventListener("submit", async (event) => {
+if (refs.settingsForm) refs.settingsForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!refs.settingsForm.reportValidity() || !state.token) return;
   const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
@@ -1658,7 +1660,7 @@ refs.settingsForm.addEventListener("submit", async (event) => {
   }
 });
 
-refs.adminHistoryLoadBtn.addEventListener("click", async () => {
+if (refs.adminHistoryLoadBtn) refs.adminHistoryLoadBtn.addEventListener("click", async () => {
   try {
     await runDbAction(() => loadAdminHistoryByUser(), {
       button: refs.adminHistoryLoadBtn,
@@ -1670,7 +1672,7 @@ refs.adminHistoryLoadBtn.addEventListener("click", async () => {
   }
 });
 
-refs.adminAnnounceForm.addEventListener("submit", async (event) => {
+if (refs.adminAnnounceForm) refs.adminAnnounceForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!canAdmin()) {
     showToast("Только для администратора");
