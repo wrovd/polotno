@@ -109,7 +109,7 @@ p {
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  background: linear-gradient(145deg, #8ea8f0 0%, #f0cf8a 100%);
+  background: url("./assets/logo.png") center/cover no-repeat;
 }
 
 .eyebrow {
