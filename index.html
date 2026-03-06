@@ -25,7 +25,7 @@
         </div>
         <div class="top-controls">
           <button class="seg-btn top-select" type="button">Dashboard</button>
-          <button class="primary-btn" id="openAuthBtn" type="button">Войти</button>
+          <button class="primary-btn btn-with-icon" id="openAuthBtn" type="button"><span class="btn-icon" aria-hidden="true">🔐</span><span>Войти</span></button>
         </div>
       </header>
 
@@ -69,7 +69,7 @@
             <label for="searchInput">Поиск расходников</label>
             <div class="search-row">
               <input id="searchInput" type="search" placeholder="Название, код, заметка" autocomplete="off" />
-              <button class="primary-btn" id="searchBtn" type="button">Найти</button>
+              <button class="primary-btn btn-with-icon" id="searchBtn" type="button"><span class="btn-icon" aria-hidden="true">🔎</span><span>Найти</span></button>
             </div>
           </section>
 
@@ -96,7 +96,7 @@
                   Заметка
                   <textarea name="notes" id="itemNotes" rows="3" placeholder="Поставщик, место хранения"></textarea>
                 </label>
-                <button class="primary-btn full" type="submit">Сохранить расходник</button>
+                <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true">💾</span><span>Сохранить расходник</span></button>
               </form>
             </section>
 
@@ -106,7 +106,7 @@
                 <p>Все второстепенные функции вынесены в отдельную вкладку «Инструменты».</p>
               </div>
               <div class="hero-actions">
-                <button class="secondary-btn full" id="toToolsBtn" type="button">Открыть Инструменты</button>
+                <button class="secondary-btn full btn-with-icon" id="toToolsBtn" type="button"><span class="btn-icon" aria-hidden="true">🧰</span><span>Открыть Инструменты</span></button>
               </div>
             </section>
           </section>
@@ -144,8 +144,8 @@
                 <p class="muted">Пока все в норме.</p>
               </div>
               <div class="hero-actions">
-                <button class="secondary-btn full" id="checkAlertsBtn" type="button">Проверить лимиты</button>
-                <button class="primary-btn full" id="notifyAlertsBtn" type="button">Отправить в личку</button>
+                <button class="secondary-btn full btn-with-icon" id="checkAlertsBtn" type="button"><span class="btn-icon" aria-hidden="true">📊</span><span>Проверить лимиты</span></button>
+                <button class="primary-btn full btn-with-icon" id="notifyAlertsBtn" type="button"><span class="btn-icon" aria-hidden="true">✉️</span><span>Отправить в личку</span></button>
               </div>
             </section>
 
@@ -155,11 +155,12 @@
                 <p>Сканер встроен в экран. Печать этикеток доступна только на ПК.</p>
               </div>
               <div class="hero-actions">
-                <button class="secondary-btn full" id="printAllBtn" type="button">Печать всех QR</button>
-                <button class="secondary-btn full" id="startScannerBtn" type="button">Запустить сканер</button>
-                <button class="glass-btn full" id="stopScannerBtn" type="button">Остановить сканер</button>
+                <button class="secondary-btn full btn-with-icon" id="printAllBtn" type="button"><span class="btn-icon" aria-hidden="true">🖨️</span><span>Печать всех QR</span></button>
+                <button class="secondary-btn full btn-with-icon" id="startScannerBtn" type="button"><span class="btn-icon" aria-hidden="true">📷</span><span>Запустить сканер</span></button>
+                <button class="glass-btn full btn-with-icon" id="stopScannerBtn" type="button"><span class="btn-icon" aria-hidden="true">⏹️</span><span>Остановить сканер</span></button>
               </div>
               <video id="scannerVideo" playsinline muted></video>
+              <canvas id="scannerCanvas" hidden></canvas>
               <p class="muted" id="scanStatus">Наведите камеру на QR-код расходника.</p>
             </section>
           </section>
@@ -196,9 +197,9 @@
               </select>
               <input type="date" id="historyDateFrom" />
               <input type="date" id="historyDateTo" />
-              <button class="secondary-btn" id="historyApplyBtn" type="button">Применить</button>
-              <button class="glass-btn" id="historyResetBtn" type="button">Сбросить</button>
-              <button class="primary-btn" id="historyExportBtn" type="button">Экспорт CSV</button>
+              <button class="secondary-btn btn-with-icon" id="historyApplyBtn" type="button"><span class="btn-icon" aria-hidden="true">✅</span><span>Применить</span></button>
+              <button class="glass-btn btn-with-icon" id="historyResetBtn" type="button"><span class="btn-icon" aria-hidden="true">↺</span><span>Сбросить</span></button>
+              <button class="primary-btn btn-with-icon" id="historyExportBtn" type="button"><span class="btn-icon" aria-hidden="true">⬇️</span><span>Экспорт CSV</span></button>
             </div>
             <div class="history-list" id="historyList">
               <p class="muted">История пока пустая.</p>
@@ -230,7 +231,7 @@
             Заметка
             <textarea name="notes" id="editItemNotes" rows="3"></textarea>
           </label>
-          <button class="primary-btn full" type="submit">Сохранить изменения</button>
+          <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true">💾</span><span>Сохранить изменения</span></button>
         </form>
       </section>
     </div>
@@ -248,7 +249,7 @@
           <p><strong>2.</strong> Добавьте позиции и лимиты.</p>
           <p><strong>3.</strong> В «Инструментах» используйте сканер и отправку уведомлений.</p>
         </div>
-        <button class="primary-btn full" id="closeOnboardingBtn" type="button">Начать работу</button>
+        <button class="primary-btn full btn-with-icon" id="closeOnboardingBtn" type="button"><span class="btn-icon" aria-hidden="true">🚀</span><span>Начать работу</span></button>
       </div>
     </section>
 
@@ -272,7 +273,7 @@
             Пароль
             <input type="password" name="password" placeholder="••••••••" required minlength="6" />
           </label>
-          <button class="primary-btn full" type="submit">Войти</button>
+          <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true">🔓</span><span>Войти</span></button>
         </form>
 
         <form class="auth-form" id="registerForm" novalidate>
@@ -305,11 +306,12 @@
             Админ-ключ
             <input type="password" name="adminKey" placeholder="Секретный ключ" required minlength="6" />
           </label>
-          <button class="primary-btn full" type="submit">Создать аккаунт</button>
+          <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true">👤</span><span>Создать аккаунт</span></button>
         </form>
       </section>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
     <script src="./app.js"></script>
   </body>

@@ -1,6 +1,7 @@
 const { listItems, upsertItem, appendMovement } = require("../../lib/sheets");
 const { requireAuth, requireRole } = require("../../lib/auth");
 const { send, methodNotAllowed, parseJsonBody } = require("../../lib/http");
+const { lowStockTransition, notifyLowStockToUser } = require("../../lib/low-stock");
 
 function nextId(items) {
   let max = 0;
@@ -36,7 +37,9 @@ module.exports = async function handler(req, res) {
       return send(res, 400, { error: "Item name is required" });
     }
 
-    const existed = items.some((row) => row.id === id);
+    const existing = items.find((row) => row.id === id);
+    const existed = Boolean(existing);
+    const lowState = lowStockTransition(existing?.low_notified || "0", qty, threshold);
 
     await upsertItem({
       id,
@@ -46,6 +49,7 @@ module.exports = async function handler(req, res) {
       notes,
       updated_at: new Date().toISOString(),
       updated_by: auth.user.email,
+      low_notified: lowState.nextFlag,
     });
 
     await appendMovement({
@@ -56,7 +60,24 @@ module.exports = async function handler(req, res) {
       created_at: new Date().toISOString(),
     });
 
-    return send(res, 200, { ok: true, id });
+    let notified = false;
+    if (lowState.notify) {
+      try {
+        const chatId = auth.user.telegram_chat_id || process.env.TELEGRAM_DEFAULT_CHAT_ID;
+        const result = await notifyLowStockToUser({
+          chatId,
+          itemName: name,
+          itemId: id,
+          qty,
+          threshold,
+        });
+        notified = result.sent;
+      } catch {
+        notified = false;
+      }
+    }
+
+    return send(res, 200, { ok: true, id, notified });
   } catch (error) {
     return send(res, 500, { error: error.message || "Failed to save item" });
   }

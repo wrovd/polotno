@@ -16,6 +16,10 @@ const state = {
   },
   stream: null,
   scanTimer: null,
+  scanRaf: null,
+  scanBusy: false,
+  lastScanValue: "",
+  lastScanAt: 0,
   editingItemId: "",
   desktopPrint: true,
 };
@@ -73,6 +77,7 @@ const refs = {
   startScannerBtn: document.getElementById("startScannerBtn"),
   stopScannerBtn: document.getElementById("stopScannerBtn"),
   scannerVideo: document.getElementById("scannerVideo"),
+  scannerCanvas: document.getElementById("scannerCanvas"),
   scanStatus: document.getElementById("scanStatus"),
   editModal: document.getElementById("editModal"),
   editBackdrop: document.getElementById("editBackdrop"),
@@ -241,13 +246,13 @@ function setInventoryTab(tab) {
 function updateAuthButton() {
   if (state.user?.email) {
     const role = String(state.user.role || "staff").toLowerCase();
-    refs.openAuthBtn.textContent = `${state.user.email} • ${role}`;
+    refs.openAuthBtn.innerHTML = `${iconSpan("👤")}<span>${state.user.email} • ${role}</span>`;
     refs.openAuthBtn.classList.remove("primary-btn");
     refs.openAuthBtn.classList.add("glass-btn");
     return;
   }
 
-  refs.openAuthBtn.textContent = "Войти";
+  refs.openAuthBtn.innerHTML = `${iconSpan("🔐")}<span>Войти</span>`;
   refs.openAuthBtn.classList.remove("glass-btn");
   refs.openAuthBtn.classList.add("primary-btn");
 }
@@ -267,6 +272,10 @@ function detectDesktopPrint() {
 
 function canDesktopPrint() {
   return state.desktopPrint;
+}
+
+function iconSpan(symbol) {
+  return `<span class="btn-icon" aria-hidden="true">${symbol}</span>`;
 }
 
 function applyPrintAccess() {
@@ -378,12 +387,13 @@ async function printLabels(items) {
     return;
   }
 
-  wnd.document.write(`
+  const html = `
     <html>
       <head>
         <title>QR Этикетки</title>
         <style>
-          body { font-family: -apple-system, Segoe UI, sans-serif; margin: 18px; }
+          body { font-family: -apple-system, Segoe UI, sans-serif; margin: 18px; color: #111827; }
+          @page { size: A4; margin: 10mm; }
           .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
           .card { border: 1px solid #c9d4e8; border-radius: 10px; padding: 8px; text-align: center; }
           img { width: 100%; max-width: 150px; }
@@ -402,15 +412,16 @@ async function printLabels(items) {
         </div>
       </body>
     </html>
-  `);
+  `;
 
+  wnd.document.open();
+  wnd.document.write(html);
   wnd.document.close();
   wnd.focus();
-  wnd.onload = () => {
-    setTimeout(() => {
-      wnd.print();
-    }, 120);
-  };
+  setTimeout(() => {
+    wnd.print();
+    wnd.onafterprint = () => wnd.close();
+  }, 260);
 }
 
 function renderTable(list = state.items) {
@@ -434,11 +445,11 @@ function renderTable(list = state.items) {
       <td data-label="QR-код">${item.id}<br />${statusBadge(item)}</td>
       <td data-label="Действия">
         <div class="actions">
-          <button class="secondary-btn ${canDesktopPrint() ? "" : "is-hidden"}" data-action="print" data-id="${item.id}" type="button">Печать QR</button>
-          <button class="secondary-btn ${canAdmin() ? "" : "is-hidden"}" data-action="plus-one" data-id="${item.id}" type="button">+1</button>
-          <button class="secondary-btn ${canAdmin() ? "" : "is-hidden"}" data-action="edit" data-id="${item.id}" type="button">Редактировать</button>
-          <button class="glass-btn ${canAdmin() ? "" : "is-hidden"}" data-action="delete" data-id="${item.id}" type="button">Удалить</button>
-          <button class="glass-btn" data-action="consume" data-id="${item.id}" type="button">-1</button>
+          <button class="secondary-btn btn-with-icon ${canDesktopPrint() ? "" : "is-hidden"}" data-action="print" data-id="${item.id}" type="button">${iconSpan("🖨️")}<span>Печать QR</span></button>
+          <button class="secondary-btn btn-with-icon ${canAdmin() ? "" : "is-hidden"}" data-action="plus-one" data-id="${item.id}" type="button">${iconSpan("➕")}<span>+1</span></button>
+          <button class="secondary-btn btn-with-icon ${canAdmin() ? "" : "is-hidden"}" data-action="edit" data-id="${item.id}" type="button">${iconSpan("✏️")}<span>Редактировать</span></button>
+          <button class="glass-btn btn-with-icon ${canAdmin() ? "" : "is-hidden"}" data-action="delete" data-id="${item.id}" type="button">${iconSpan("🗑️")}<span>Удалить</span></button>
+          <button class="glass-btn btn-with-icon" data-action="consume" data-id="${item.id}" type="button">${iconSpan("➖")}<span>-1</span></button>
         </div>
       </td>
     `;
@@ -822,6 +833,57 @@ async function notifyLowStock() {
   showToast(result.sent ? `Отправлено в личку: ${result.sent}` : "Низких остатков нет");
 }
 
+function extractItemIdFromScan(rawValue) {
+  const text = String(rawValue || "").trim();
+  if (!text) return "";
+
+  try {
+    const obj = JSON.parse(text);
+    if (obj && typeof obj.id === "string") {
+      return obj.id.trim();
+    }
+  } catch {
+    // not json, keep parsing as text
+  }
+
+  const match = text.match(/SUP-\d{3,}/i);
+  return match ? match[0].toUpperCase() : text.toUpperCase();
+}
+
+async function processScanValue(rawValue) {
+  const now = Date.now();
+  if (rawValue === state.lastScanValue && now - state.lastScanAt < 1600) {
+    return;
+  }
+  state.lastScanValue = rawValue;
+  state.lastScanAt = now;
+
+  const id = extractItemIdFromScan(rawValue);
+  const item = state.items.find((it) => String(it.id).toUpperCase() === id);
+  if (!item) {
+    refs.scanStatus.textContent = "QR считан, но расходник не найден.";
+    hapticWarning();
+    return;
+  }
+
+  await consumeOne(item.id);
+  refs.scanStatus.textContent = `Списано 1 шт: ${item.name}`;
+  showToast(`Сканировано: ${item.name} (-1)`);
+  hapticSuccess();
+}
+
+function stopScanLoops() {
+  if (state.scanTimer) {
+    clearInterval(state.scanTimer);
+    state.scanTimer = null;
+  }
+  if (state.scanRaf) {
+    cancelAnimationFrame(state.scanRaf);
+    state.scanRaf = null;
+  }
+  state.scanBusy = false;
+}
+
 async function startScanner() {
   if (!navigator.mediaDevices?.getUserMedia) {
     refs.scanStatus.textContent = "Камера недоступна в этом браузере.";
@@ -838,38 +900,74 @@ async function startScanner() {
     state.stream = stream;
     refs.scannerVideo.srcObject = stream;
     await refs.scannerVideo.play();
+    stopScanLoops();
 
-    if (!("BarcodeDetector" in window)) {
-      refs.scanStatus.textContent =
-        "BarcodeDetector не поддерживается. Для iOS подключим Telegram-сканер на следующем шаге.";
+    if ("BarcodeDetector" in window) {
+      const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+      refs.scanStatus.textContent = "Сканирование запущено...";
+
+      state.scanTimer = window.setInterval(async () => {
+        if (state.scanBusy) return;
+        state.scanBusy = true;
+        try {
+          const codes = await detector.detect(refs.scannerVideo);
+          if (codes.length) {
+            const value = String(codes[0].rawValue || "");
+            await processScanValue(value);
+          }
+        } catch {
+          // frame-level errors are ignored
+        } finally {
+          state.scanBusy = false;
+        }
+      }, 380);
+      return;
+    }
+
+    if (typeof window.jsQR !== "function") {
+      refs.scanStatus.textContent = "Сканер недоступен: отсутствует библиотека jsQR.";
+      stopScanner();
       hapticWarning();
       return;
     }
 
-    const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
-    refs.scanStatus.textContent = "Сканирование запущено...";
+    refs.scanStatus.textContent = "Сканирование запущено (jsQR)...";
+    const canvas = refs.scannerCanvas;
+    if (!canvas) {
+      refs.scanStatus.textContent = "Сканер недоступен: не найден canvas-элемент.";
+      stopScanner();
+      hapticWarning();
+      return;
+    }
 
-    state.scanTimer = window.setInterval(async () => {
-      try {
-        const codes = await detector.detect(refs.scannerVideo);
-        if (!codes.length) return;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) {
+      refs.scanStatus.textContent = "Сканер недоступен: не удалось инициализировать canvas.";
+      stopScanner();
+      hapticWarning();
+      return;
+    }
 
-        const text = codes[0].rawValue || "";
-        const item = state.items.find((it) => text.includes(it.id));
+    const scanFrame = async () => {
+      if (!state.stream) return;
 
-        if (!item) {
-          refs.scanStatus.textContent = "QR считан, но расходник не найден.";
-          return;
+      const vw = refs.scannerVideo.videoWidth;
+      const vh = refs.scannerVideo.videoHeight;
+      if (vw && vh) {
+        canvas.width = vw;
+        canvas.height = vh;
+        ctx.drawImage(refs.scannerVideo, 0, 0, vw, vh);
+        const imageData = ctx.getImageData(0, 0, vw, vh);
+        const code = window.jsQR(imageData.data, vw, vh, { inversionAttempts: "dontInvert" });
+        if (code?.data) {
+          await processScanValue(code.data);
         }
-
-        await consumeOne(item.id);
-        refs.scanStatus.textContent = `Списано 1 шт: ${item.name}`;
-        showToast(`Сканировано: ${item.name} (-1)`);
-        hapticSuccess();
-      } catch {
-        // frame-level errors are ignored
       }
-    }, 900);
+
+      state.scanRaf = requestAnimationFrame(scanFrame);
+    };
+
+    state.scanRaf = requestAnimationFrame(scanFrame);
   } catch {
     refs.scanStatus.textContent = "Нет доступа к камере.";
     hapticWarning();
@@ -878,11 +976,7 @@ async function startScanner() {
 
 function stopScanner() {
   refs.scanStatus.textContent = "Наведите камеру на QR-код расходника.";
-
-  if (state.scanTimer) {
-    clearInterval(state.scanTimer);
-    state.scanTimer = null;
-  }
+  stopScanLoops();
 
   if (state.stream) {
     state.stream.getTracks().forEach((track) => track.stop());

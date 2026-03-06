@@ -1,6 +1,7 @@
 const { listItems, upsertItem, appendMovement } = require("../../lib/sheets");
 const { requireAuth, requireRole } = require("../../lib/auth");
 const { send, methodNotAllowed, parseJsonBody } = require("../../lib/http");
+const { lowStockTransition, notifyLowStockToUser } = require("../../lib/low-stock");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
@@ -34,6 +35,7 @@ module.exports = async function handler(req, res) {
     }
 
     const newQty = Math.max(0, Number(item.qty) + delta);
+    const lowState = lowStockTransition(item.low_notified, newQty, item.threshold);
 
     await upsertItem({
       id: item.id,
@@ -43,6 +45,7 @@ module.exports = async function handler(req, res) {
       notes: item.notes || "",
       updated_at: new Date().toISOString(),
       updated_by: auth.user.email,
+      low_notified: lowState.nextFlag,
     });
 
     await appendMovement({
@@ -53,7 +56,24 @@ module.exports = async function handler(req, res) {
       created_at: new Date().toISOString(),
     });
 
-    return send(res, 200, { ok: true, item: { ...item, qty: newQty } });
+    let notified = false;
+    if (lowState.notify) {
+      try {
+        const chatId = auth.user.telegram_chat_id || process.env.TELEGRAM_DEFAULT_CHAT_ID;
+        const result = await notifyLowStockToUser({
+          chatId,
+          itemName: item.name,
+          itemId: item.id,
+          qty: newQty,
+          threshold: item.threshold,
+        });
+        notified = result.sent;
+      } catch {
+        notified = false;
+      }
+    }
+
+    return send(res, 200, { ok: true, notified, item: { ...item, qty: newQty, low_notified: lowState.nextFlag } });
   } catch (error) {
     return send(res, 500, { error: error.message || "Failed to adjust item" });
   }
