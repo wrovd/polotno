@@ -496,21 +496,16 @@ async function printLabels(items) {
       <head>
         <title>QR Этикетки</title>
         <style>
-          @page { size: auto; margin: 0; }
+          @page { size: 58mm 40mm; margin: 0; }
           * { box-sizing: border-box; }
-          body { font-family: -apple-system, Segoe UI, sans-serif; margin: 0; color: #111827; background: #fff; }
-          .sheet {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, 58mm);
-            gap: 2mm;
-            padding: 4mm;
-            justify-content: start;
-          }
+          html, body { width: 58mm; height: 40mm; margin: 0; padding: 0; }
+          body { font-family: -apple-system, Segoe UI, sans-serif; color: #111827; background: #fff; }
+          .sheet { display: block; }
           .label {
             width: 58mm;
             height: 40mm;
             border: 0.2mm solid #d5dceb;
-            border-radius: 2mm;
+            border-radius: 0;
             padding: 2.2mm;
             display: grid;
             grid-template-columns: 22mm 1fr;
@@ -518,7 +513,9 @@ async function printLabels(items) {
             gap: 2mm;
             break-inside: avoid;
             page-break-inside: avoid;
+            page-break-after: always;
           }
+          .label:last-child { page-break-after: auto; }
           .label img {
             width: 21mm;
             height: 21mm;
