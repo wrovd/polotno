@@ -381,6 +381,86 @@
               <span class="toggle-switch" aria-hidden="true"></span>
             </label>
             <p class="muted">Если выключено, бот не отправляет вам личные сообщения о низком остатке.</p>
+
+            <div class="section-head reminder-head">
+              <h3>Напоминания</h3>
+              <p>Выберите товары и периодичность напоминаний.</p>
+            </div>
+            <label>
+              Периодичность
+              <select id="settingsReminderInterval">
+                <option value="0">Выключено</option>
+                <option value="30">Каждые 30 минут</option>
+                <option value="60">Каждый час</option>
+                <option value="180">Каждые 3 часа</option>
+                <option value="360">Каждые 6 часов</option>
+                <option value="720">Каждые 12 часов</option>
+                <option value="1440">Раз в день</option>
+                <option value="2880">Каждые 2 дня</option>
+                <option value="4320">Каждые 3 дня</option>
+                <option value="10080">Раз в неделю</option>
+                <option value="20160">Каждые 2 недели</option>
+                <option value="43200">Раз в месяц</option>
+              </select>
+            </label>
+            <div class="reminder-items" id="settingsReminderItems">
+              <p class="muted">Список товаров загрузится после входа.</p>
+            </div>
+          </section>
+        </section>
+
+        <section class="panel admin-only is-hidden" id="adminPanel">
+          <div class="section-head">
+            <h3>Админка</h3>
+            <p>Пользователи, история действий и рассылка от имени бота.</p>
+          </div>
+
+          <div class="layout-grid admin-grid">
+            <section class="panel">
+              <div class="section-head">
+                <h3>Пользователи</h3>
+                <p>Зарегистрированные аккаунты и роли.</p>
+              </div>
+              <div class="history-list" id="adminUsersList">
+                <p class="muted">Нет данных.</p>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="section-head">
+                <h3>История пользователя</h3>
+                <p>Показываются только действия выбранного пользователя.</p>
+              </div>
+              <div class="history-filters">
+                <select id="adminHistoryUser"></select>
+                <button class="secondary-btn btn-with-icon" id="adminHistoryLoadBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-check"></use></svg></span><span>Загрузить</span></button>
+              </div>
+              <div class="history-list" id="adminHistoryList">
+                <p class="muted">Выберите пользователя.</p>
+              </div>
+            </section>
+          </div>
+
+          <section class="panel">
+            <div class="section-head">
+              <h3>Анонс от бота</h3>
+              <p>Отправка сообщения сотрудникам от имени Telegram-бота.</p>
+            </div>
+            <form class="stock-form" id="adminAnnounceForm" novalidate>
+              <label>
+                Кому отправить
+                <select id="adminAnnounceRole">
+                  <option value="all">Всем</option>
+                  <option value="staff">Только сотрудникам (staff)</option>
+                  <option value="admin">Только администраторам (admin)</option>
+                </select>
+              </label>
+              <label>
+                Сообщение
+                <textarea id="adminAnnounceText" rows="4" placeholder="Текст анонса..." required></textarea>
+              </label>
+              <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-bell"></use></svg></span><span>Отправить анонс</span></button>
+            </form>
           </section>
         </section>
       </section>

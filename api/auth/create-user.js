@@ -58,6 +58,9 @@ module.exports = async function handler(req, res) {
       first_name: firstName,
       last_name: lastName,
       low_stock_notifications: "1",
+      reminder_item_ids: "",
+      reminder_interval_minutes: "0",
+      reminder_last_sent_at: "",
     });
 
     return send(res, 201, { ok: true });

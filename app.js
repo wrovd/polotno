@@ -67,6 +67,16 @@ const refs = {
   settingsTelegramChatId: document.getElementById("settingsTelegramChatId"),
   settingsPassword: document.getElementById("settingsPassword"),
   settingsLowStockToggle: document.getElementById("settingsLowStockToggle"),
+  settingsReminderInterval: document.getElementById("settingsReminderInterval"),
+  settingsReminderItems: document.getElementById("settingsReminderItems"),
+  adminPanel: document.getElementById("adminPanel"),
+  adminUsersList: document.getElementById("adminUsersList"),
+  adminHistoryUser: document.getElementById("adminHistoryUser"),
+  adminHistoryLoadBtn: document.getElementById("adminHistoryLoadBtn"),
+  adminHistoryList: document.getElementById("adminHistoryList"),
+  adminAnnounceForm: document.getElementById("adminAnnounceForm"),
+  adminAnnounceRole: document.getElementById("adminAnnounceRole"),
+  adminAnnounceText: document.getElementById("adminAnnounceText"),
   roleHint: document.getElementById("roleHint"),
   historyItemFilter: document.getElementById("historyItemFilter"),
   historyUserFilter: document.getElementById("historyUserFilter"),
@@ -363,10 +373,15 @@ function userNotifyEnabled() {
 
 function applyUserFromServer(nextUser, nextToken = "") {
   if (!nextUser) return;
+  const reminderRaw = Array.isArray(nextUser.reminder_item_ids)
+    ? nextUser.reminder_item_ids.join(",")
+    : String(nextUser.reminder_item_ids || "");
   state.user = {
     ...state.user,
     ...nextUser,
     low_stock_notifications: String(nextUser.low_stock_notifications ?? "1"),
+    reminder_item_ids: reminderRaw,
+    reminder_interval_minutes: String(nextUser.reminder_interval_minutes ?? "0"),
   };
   if (nextToken) {
     state.token = nextToken;
@@ -385,6 +400,41 @@ function fillSettingsForm() {
   refs.settingsTelegramChatId.value = String(state.user.telegram_chat_id || "").trim();
   refs.settingsPassword.value = "";
   refs.settingsLowStockToggle.checked = userNotifyEnabled();
+  refs.settingsReminderInterval.value = String(state.user.reminder_interval_minutes || "0");
+  renderReminderItems();
+}
+
+function reminderSelectionFromUser() {
+  return new Set(
+    String(state.user?.reminder_item_ids || "")
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean)
+  );
+}
+
+function selectedReminderItemIds() {
+  if (!refs.settingsReminderItems) return [];
+  return [...refs.settingsReminderItems.querySelectorAll("input[type='checkbox'][data-item-id]:checked")]
+    .map((input) => String(input.getAttribute("data-item-id") || "").trim())
+    .filter(Boolean);
+}
+
+function renderReminderItems() {
+  if (!refs.settingsReminderItems) return;
+  refs.settingsReminderItems.innerHTML = "";
+  if (!state.items.length) {
+    refs.settingsReminderItems.innerHTML = '<p class="muted">Нет доступных товаров для напоминаний.</p>';
+    return;
+  }
+
+  const selected = reminderSelectionFromUser();
+  state.items.forEach((item) => {
+    const row = document.createElement("label");
+    row.className = "reminder-item";
+    row.innerHTML = `<input type="checkbox" data-item-id="${item.id}" ${selected.has(String(item.id)) ? "checked" : ""} /><span>${item.name} <span class="muted">(${item.id})</span></span>`;
+    refs.settingsReminderItems.appendChild(row);
+  });
 }
 
 function applyMainFiltersFromInputs() {
@@ -446,6 +496,9 @@ async function openSettingsView() {
     await runDbAction(() => loadProfile(), { message: "Загружаем профиль..." });
   } else {
     fillSettingsForm();
+  }
+  if (canAdmin()) {
+    await runDbAction(() => loadAdminUsers(), { message: "Загружаем админку..." });
   }
 }
 
@@ -553,6 +606,7 @@ function applyRoleAccess() {
   refs.registerTab.classList.toggle("is-hidden", !canManageUsers);
   refs.authTabs.classList.toggle("admin-disabled", !canManageUsers);
   refs.adjustPanel.classList.toggle("is-hidden", !canManageUsers);
+  refs.adminPanel.classList.toggle("is-hidden", !canManageUsers);
 
   refs.stockManagePanel.classList.toggle("is-hidden", !canManageUsers);
   refs.itemName.disabled = !canManageUsers;
@@ -823,6 +877,70 @@ function reasonLabel(reason) {
   return reason || "Изменение";
 }
 
+function renderAdminUsers(users = []) {
+  refs.adminUsersList.innerHTML = "";
+  if (!users.length) {
+    refs.adminUsersList.innerHTML = '<p class="muted">Пользователи не найдены.</p>';
+    refs.adminHistoryUser.innerHTML = '<option value="">Нет пользователей</option>';
+    return;
+  }
+
+  refs.adminHistoryUser.innerHTML = '<option value="">Выберите пользователя</option>';
+  users.forEach((user) => {
+    const item = document.createElement("article");
+    item.className = "history-item";
+    item.innerHTML = `
+      <div><strong>${user.name || user.email}</strong> <span class="history-reason">${user.role}</span></div>
+      <div class="history-meta">${user.email}</div>
+      <div class="history-meta">Chat ID: ${user.telegram_chat_id || "не указан"}</div>
+    `;
+    refs.adminUsersList.appendChild(item);
+
+    const option = document.createElement("option");
+    option.value = user.email;
+    option.textContent = `${user.email} (${user.role})`;
+    refs.adminHistoryUser.appendChild(option);
+  });
+}
+
+function renderAdminHistory(movements = []) {
+  refs.adminHistoryList.innerHTML = "";
+  if (!movements.length) {
+    refs.adminHistoryList.innerHTML = '<p class="muted">Действия не найдены.</p>';
+    return;
+  }
+
+  movements.forEach((row) => {
+    const block = document.createElement("article");
+    block.className = "history-item";
+    block.innerHTML = `
+      <div><strong>${row.item_id || "Без ID"}</strong> <span class="history-reason">${reasonLabel(row.reason)}</span></div>
+      <div class="history-meta">Изменение: ${Number(row.delta || 0)}</div>
+      <div class="history-meta">${row.user_email || "-"}</div>
+      <div class="history-meta">${formatHistoryDate(row.created_at)}</div>
+    `;
+    refs.adminHistoryList.appendChild(block);
+  });
+}
+
+async function loadAdminUsers() {
+  if (!canAdmin() || !state.token) return;
+  const data = await apiRequest("/api/admin/users");
+  renderAdminUsers(data.users || []);
+}
+
+async function loadAdminHistoryByUser() {
+  if (!canAdmin() || !state.token) return;
+  const email = String(refs.adminHistoryUser.value || "").trim().toLowerCase();
+  if (!email) {
+    refs.adminHistoryList.innerHTML = '<p class="muted">Выберите пользователя.</p>';
+    return;
+  }
+  const query = new URLSearchParams({ user_email: email, limit: "160" }).toString();
+  const data = await apiRequest(`/api/admin/history?${query}`);
+  renderAdminHistory(data.movements || []);
+}
+
 function setHistoryFiltersFromInputs() {
   state.historyFilters.itemId = refs.historyItemFilter.value.trim().toUpperCase();
   state.historyFilters.userEmail = refs.historyUserFilter.value.trim().toLowerCase();
@@ -1019,6 +1137,7 @@ async function loadItems() {
   }
 
   renderGroupOptions();
+  renderReminderItems();
   renderMainByFilters();
   renderAlerts();
   refreshAdjustItemOptions();
@@ -1523,6 +1642,8 @@ refs.settingsForm.addEventListener("submit", async (event) => {
             telegramChatId: refs.settingsTelegramChatId.value.trim(),
             password: refs.settingsPassword.value,
             lowStockNotifications: refs.settingsLowStockToggle.checked,
+            reminderItemIds: selectedReminderItemIds(),
+            reminderIntervalMinutes: Number(refs.settingsReminderInterval.value || 0),
           },
         }),
       { button: submitBtn, message: "Сохраняем настройки..." }
@@ -1530,6 +1651,52 @@ refs.settingsForm.addEventListener("submit", async (event) => {
     applyUserFromServer(data.user, data.token);
     fillSettingsForm();
     showToast("Настройки сохранены");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+
+refs.adminHistoryLoadBtn.addEventListener("click", async () => {
+  try {
+    await runDbAction(() => loadAdminHistoryByUser(), {
+      button: refs.adminHistoryLoadBtn,
+      message: "Загружаем историю пользователя...",
+    });
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+
+refs.adminAnnounceForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!canAdmin()) {
+    showToast("Только для администратора");
+    hapticWarning();
+    return;
+  }
+  const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
+  const message = refs.adminAnnounceText.value.trim();
+  if (!message) {
+    showToast("Введите текст анонса");
+    return;
+  }
+  try {
+    const result = await runDbAction(
+      () =>
+        apiRequest("/api/admin/announce", {
+          method: "POST",
+          body: {
+            role: refs.adminAnnounceRole.value,
+            message,
+          },
+        }),
+      { button: submitBtn, message: "Отправляем анонс..." }
+    );
+    refs.adminAnnounceText.value = "";
+    showToast(`Анонс отправлен: ${result.sent}/${result.total}`);
     hapticSuccess();
   } catch (error) {
     showToast(error.message);

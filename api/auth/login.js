@@ -36,6 +36,8 @@ module.exports = async function handler(req, res) {
       role: user.role || "staff",
       telegram_chat_id: user.telegram_chat_id || "",
       low_stock_notifications: user.low_stock_notifications || "1",
+      reminder_item_ids: user.reminder_item_ids || "",
+      reminder_interval_minutes: user.reminder_interval_minutes || "0",
     });
 
     return send(res, 200, {
@@ -49,6 +51,8 @@ module.exports = async function handler(req, res) {
         telegram_chat_id: user.telegram_chat_id || "",
         low_stock_notifications: user.low_stock_notifications || "1",
         notifications_enabled: notificationsEnabled(user.low_stock_notifications),
+        reminder_item_ids: user.reminder_item_ids || "",
+        reminder_interval_minutes: user.reminder_interval_minutes || "0",
       },
     });
   } catch (error) {

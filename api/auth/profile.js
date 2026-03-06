@@ -15,6 +15,18 @@ function notificationsEnabled(raw) {
   return normalizeToggle(raw, "1") === "1";
 }
 
+function normalizeReminderInterval(raw, fallback = "0") {
+  const value = Number(raw ?? fallback ?? 0);
+  if (!Number.isFinite(value) || value < 0) return "0";
+  const rounded = Math.round(value);
+  return String(rounded);
+}
+
+function normalizeReminderItemIds(raw) {
+  const array = Array.isArray(raw) ? raw : String(raw || "").split(",");
+  return [...new Set(array.map((x) => String(x || "").trim()).filter(Boolean))];
+}
+
 function publicUser(user) {
   return {
     email: user.email,
@@ -25,6 +37,9 @@ function publicUser(user) {
     telegram_chat_id: user.telegram_chat_id || "",
     low_stock_notifications: normalizeToggle(user.low_stock_notifications, "1"),
     notifications_enabled: notificationsEnabled(user.low_stock_notifications),
+    reminder_item_ids: normalizeReminderItemIds(user.reminder_item_ids || ""),
+    reminder_interval_minutes: normalizeReminderInterval(user.reminder_interval_minutes, "0"),
+    reminder_last_sent_at: String(user.reminder_last_sent_at || ""),
   };
 }
 
@@ -37,6 +52,8 @@ function tokenForUser(user) {
     role: user.role || "staff",
     telegram_chat_id: user.telegram_chat_id || "",
     low_stock_notifications: normalizeToggle(user.low_stock_notifications, "1"),
+    reminder_item_ids: String(user.reminder_item_ids || ""),
+    reminder_interval_minutes: normalizeReminderInterval(user.reminder_interval_minutes, "0"),
   });
 }
 
@@ -69,6 +86,11 @@ module.exports = async function handler(req, res) {
     const password = String(body.password || "");
     const telegramChatId = String(body.telegramChatId ?? current.telegram_chat_id ?? "").trim();
     const lowStock = normalizeToggle(body.lowStockNotifications, current.low_stock_notifications || "1");
+    const reminderItems = normalizeReminderItemIds(body.reminderItemIds ?? current.reminder_item_ids ?? "");
+    const reminderInterval = normalizeReminderInterval(
+      body.reminderIntervalMinutes,
+      current.reminder_interval_minutes || "0"
+    );
 
     if (!nextEmail) {
       return send(res, 400, { error: "Email is required" });
@@ -94,6 +116,8 @@ module.exports = async function handler(req, res) {
       password_hash: password ? hashPassword(password) : current.password_hash,
       telegram_chat_id: telegramChatId,
       low_stock_notifications: lowStock,
+      reminder_item_ids: reminderItems.join(","),
+      reminder_interval_minutes: reminderInterval,
     });
 
     if (!updated) {
