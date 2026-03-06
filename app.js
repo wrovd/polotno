@@ -22,6 +22,7 @@ const state = {
   lastScanAt: 0,
   editingItemId: "",
   desktopPrint: true,
+  loadingDepth: 0,
 };
 
 const ONBOARDING_KEY = "polotno_onboarding_seen_v1";
@@ -89,6 +90,8 @@ const refs = {
   editItemNotes: document.getElementById("editItemNotes"),
   onboarding: document.getElementById("onboarding"),
   closeOnboardingBtn: document.getElementById("closeOnboardingBtn"),
+  loadingOverlay: document.getElementById("loadingOverlay"),
+  loadingText: document.getElementById("loadingText"),
 };
 
 function safeParse(text) {
@@ -116,6 +119,35 @@ function showToast(message) {
   ].join(";");
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 2200);
+}
+
+function setLoadingOverlay(visible, message = "Загрузка...") {
+  if (!refs.loadingOverlay || !refs.loadingText) return;
+  refs.loadingOverlay.hidden = !visible;
+  refs.loadingText.textContent = message;
+}
+
+function setButtonLoading(button, isLoading) {
+  if (!(button instanceof HTMLButtonElement)) return;
+  button.classList.toggle("is-loading", isLoading);
+  button.disabled = isLoading;
+}
+
+async function runDbAction(task, options = {}) {
+  const { button = null, message = "Сохраняем данные..." } = options;
+  state.loadingDepth += 1;
+  setLoadingOverlay(true, message);
+  setButtonLoading(button, true);
+
+  try {
+    return await task();
+  } finally {
+    setButtonLoading(button, false);
+    state.loadingDepth = Math.max(0, state.loadingDepth - 1);
+    if (state.loadingDepth === 0) {
+      setLoadingOverlay(false, message);
+    }
+  }
 }
 
 function getHaptic() {
@@ -1081,16 +1113,21 @@ refs.loginForm.addEventListener("submit", async (event) => {
   if (!refs.loginForm.reportValidity()) return;
 
   const form = new FormData(refs.loginForm);
+  const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
 
   try {
-    const data = await apiRequest("/api/auth/login", {
-      method: "POST",
-      auth: false,
-      body: {
-        email: String(form.get("email") || "").trim(),
-        password: String(form.get("password") || ""),
-      },
-    });
+    const data = await runDbAction(
+      () =>
+        apiRequest("/api/auth/login", {
+          method: "POST",
+          auth: false,
+          body: {
+            email: String(form.get("email") || "").trim(),
+            password: String(form.get("password") || ""),
+          },
+        }),
+      { button: submitBtn, message: "Проверяем вход..." }
+    );
 
     state.token = data.token;
     state.user = data.user;
@@ -1100,8 +1137,13 @@ refs.loginForm.addEventListener("submit", async (event) => {
     updateAuthButton();
     applyRoleAccess();
     closeAuthModal();
-    await loadItems();
-    await loadHistory();
+    await runDbAction(
+      async () => {
+        await loadItems();
+        await loadHistory();
+      },
+      { message: "Загружаем данные аккаунта..." }
+    );
     showToast("Вход успешен");
     hapticSuccess();
   } catch (error) {
@@ -1115,19 +1157,24 @@ refs.registerForm.addEventListener("submit", async (event) => {
   if (!refs.registerForm.reportValidity()) return;
 
   const form = new FormData(refs.registerForm);
+  const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
 
   try {
-    await apiRequest("/api/auth/create-user", {
-      method: "POST",
-      body: {
-        name: String(form.get("name") || "").trim(),
-        email: String(form.get("email") || "").trim(),
-        password: String(form.get("password") || ""),
-        adminKey: String(form.get("adminKey") || ""),
-        telegramChatId: String(form.get("telegramChatId") || "").trim(),
-        role: String(form.get("role") || "staff"),
-      },
-    });
+    await runDbAction(
+      () =>
+        apiRequest("/api/auth/create-user", {
+          method: "POST",
+          body: {
+            name: String(form.get("name") || "").trim(),
+            email: String(form.get("email") || "").trim(),
+            password: String(form.get("password") || ""),
+            adminKey: String(form.get("adminKey") || ""),
+            telegramChatId: String(form.get("telegramChatId") || "").trim(),
+            role: String(form.get("role") || "staff"),
+          },
+        }),
+      { button: submitBtn, message: "Создаём аккаунт..." }
+    );
 
     showToast("Аккаунт создан админом");
     refs.registerForm.reset();
@@ -1142,14 +1189,19 @@ refs.registerForm.addEventListener("submit", async (event) => {
 refs.stockForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!refs.stockForm.reportValidity()) return;
+  const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
 
   try {
-    await saveItem({
-      name: refs.itemName.value.trim(),
-      qty: Number(refs.itemQty.value),
-      threshold: Number(refs.itemThreshold.value),
-      notes: refs.itemNotes.value.trim(),
-    });
+    await runDbAction(
+      () =>
+        saveItem({
+          name: refs.itemName.value.trim(),
+          qty: Number(refs.itemQty.value),
+          threshold: Number(refs.itemThreshold.value),
+          notes: refs.itemNotes.value.trim(),
+        }),
+      { button: submitBtn, message: "Сохраняем расходник..." }
+    );
 
     refs.stockForm.reset();
     showToast("Расходник сохранен");
@@ -1164,7 +1216,7 @@ refs.itemsTableBody.addEventListener("click", async (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
   const button = target.closest("button[data-action][data-id]");
-  if (!(button instanceof HTMLElement)) return;
+  if (!(button instanceof HTMLButtonElement)) return;
 
   const action = button.getAttribute("data-action");
   const id = button.getAttribute("data-id");
@@ -1172,12 +1224,12 @@ refs.itemsTableBody.addEventListener("click", async (event) => {
 
   try {
     if (action === "consume") {
-      await consumeOne(id);
+      await runDbAction(() => consumeOne(id), { button, message: "Списываем расходник..." });
       return;
     }
 
     if (action === "plus-one") {
-      await adjustItem(id, 1);
+      await runDbAction(() => adjustItem(id, 1), { button, message: "Обновляем количество..." });
       showToast("Добавлено +1");
       hapticSuccess();
       return;
@@ -1209,7 +1261,7 @@ refs.itemsTableBody.addEventListener("click", async (event) => {
       }
       const ok = window.confirm(`Удалить расходник ${id}?`);
       if (!ok) return;
-      await deleteItem(id);
+      await runDbAction(() => deleteItem(id), { button, message: "Удаляем расходник..." });
       showToast("Расходник удален");
       hapticSuccess();
     }
@@ -1222,15 +1274,20 @@ refs.itemsTableBody.addEventListener("click", async (event) => {
 refs.editItemForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!refs.editItemForm.reportValidity() || !state.editingItemId) return;
+  const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
 
   try {
-    await saveItem({
-      id: state.editingItemId,
-      name: refs.editItemName.value.trim(),
-      qty: Number(refs.editItemQty.value),
-      threshold: Number(refs.editItemThreshold.value),
-      notes: refs.editItemNotes.value.trim(),
-    });
+    await runDbAction(
+      () =>
+        saveItem({
+          id: state.editingItemId,
+          name: refs.editItemName.value.trim(),
+          qty: Number(refs.editItemQty.value),
+          threshold: Number(refs.editItemThreshold.value),
+          notes: refs.editItemNotes.value.trim(),
+        }),
+      { button: submitBtn, message: "Сохраняем изменения..." }
+    );
     closeEditModal();
     showToast("Изменения сохранены");
     hapticSuccess();
@@ -1253,7 +1310,10 @@ refs.searchInput.addEventListener("keydown", (event) => {
 
 refs.checkAlertsBtn.addEventListener("click", async () => {
   try {
-    await checkLowStock();
+    await runDbAction(() => checkLowStock(), {
+      button: refs.checkAlertsBtn,
+      message: "Проверяем лимиты...",
+    });
   } catch (error) {
     showToast(error.message);
     hapticWarning();
@@ -1262,7 +1322,10 @@ refs.checkAlertsBtn.addEventListener("click", async () => {
 
 refs.notifyAlertsBtn.addEventListener("click", async () => {
   try {
-    await notifyLowStock();
+    await runDbAction(() => notifyLowStock(), {
+      button: refs.notifyAlertsBtn,
+      message: "Отправляем уведомления...",
+    });
   } catch (error) {
     showToast(error.message);
     hapticWarning();
@@ -1295,7 +1358,11 @@ refs.adjustForm.addEventListener("submit", async (event) => {
   }
 
   try {
-    await adjustItem(id, delta);
+    const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
+    await runDbAction(() => adjustItem(id, delta), {
+      button: submitBtn,
+      message: "Применяем корректировку...",
+    });
     refs.adjustDelta.value = "";
     showToast("Корректировка применена");
     hapticSuccess();
@@ -1307,13 +1374,19 @@ refs.adjustForm.addEventListener("submit", async (event) => {
 
 refs.historyApplyBtn.addEventListener("click", async () => {
   hapticSelection();
-  await loadHistory();
+  await runDbAction(() => loadHistory(), {
+    button: refs.historyApplyBtn,
+    message: "Загружаем историю...",
+  });
 });
 
 refs.historyResetBtn.addEventListener("click", async () => {
   resetHistoryFilters();
   hapticSelection();
-  await loadHistory();
+  await runDbAction(() => loadHistory(), {
+    button: refs.historyResetBtn,
+    message: "Сбрасываем и загружаем историю...",
+  });
 });
 
 refs.historyExportBtn.addEventListener("click", exportHistoryCsv);
@@ -1322,14 +1395,18 @@ refs.historyExportBtn.addEventListener("click", exportHistoryCsv);
   input.addEventListener("keydown", async (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
-      await loadHistory();
+      await runDbAction(() => loadHistory(), {
+        message: "Загружаем историю...",
+      });
     }
   });
 });
 
 [refs.historyReasonFilter, refs.historyDateFrom, refs.historyDateTo].forEach((input) => {
   input.addEventListener("change", async () => {
-    await loadHistory();
+    await runDbAction(() => loadHistory(), {
+      message: "Обновляем историю...",
+    });
   });
 });
 
