@@ -1,4 +1,4 @@
-const { listItems, upsertItem, appendMovement } = require("../../lib/sheets");
+const { listItems, upsertItem, appendMovement, findUserByEmail } = require("../../lib/sheets");
 const { requireAuth, requireRole } = require("../../lib/auth");
 const { send, methodNotAllowed, parseJsonBody } = require("../../lib/http");
 const { lowStockTransition, notifyLowStockToUser } = require("../../lib/low-stock");
@@ -63,7 +63,12 @@ module.exports = async function handler(req, res) {
     let notified = false;
     if (lowState.notify) {
       try {
-        const chatId = auth.user.telegram_chat_id || process.env.TELEGRAM_DEFAULT_CHAT_ID;
+        const actor = await findUserByEmail(auth.user.email);
+        const notifyOnLow = String(actor?.low_stock_notifications ?? "1") !== "0";
+        if (!notifyOnLow) {
+          return send(res, 200, { ok: true, id, notified: false });
+        }
+        const chatId = actor?.telegram_chat_id || auth.user.telegram_chat_id || process.env.TELEGRAM_DEFAULT_CHAT_ID;
         const result = await notifyLowStockToUser({
           chatId,
           itemName: name,

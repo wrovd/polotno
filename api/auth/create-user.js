@@ -45,6 +45,8 @@ module.exports = async function handler(req, res) {
 
     const roleRaw = String(body.role || "staff").toLowerCase();
     const role = hasUsers ? (roleRaw === "admin" ? "admin" : "staff") : "admin";
+    const [firstName = "", ...rest] = name.split(/\s+/).filter(Boolean);
+    const lastName = rest.join(" ");
 
     await createUser({
       email,
@@ -53,6 +55,9 @@ module.exports = async function handler(req, res) {
       role,
       telegram_chat_id: telegramChatId,
       created_at: new Date().toISOString(),
+      first_name: firstName,
+      last_name: lastName,
+      low_stock_notifications: "1",
     });
 
     return send(res, 201, { ok: true });

@@ -2,6 +2,7 @@ const state = {
   authTab: "login",
   moduleView: "home",
   inventoryTab: "main",
+  profileLoaded: false,
   token: localStorage.getItem("sf_token") || "",
   user: safeParse(localStorage.getItem("sf_user")) || null,
   items: [],
@@ -29,6 +30,9 @@ const ONBOARDING_KEY = "polotno_onboarding_seen_v1";
 
 const refs = {
   openAuthBtn: document.getElementById("openAuthBtn"),
+  accountMenu: document.getElementById("accountMenu"),
+  openSettingsBtn: document.getElementById("openSettingsBtn"),
+  requestLogoutBtn: document.getElementById("requestLogoutBtn"),
   authModal: document.getElementById("authModal"),
   authBackdrop: document.getElementById("authBackdrop"),
   closeAuthBtn: document.getElementById("closeAuthBtn"),
@@ -39,6 +43,7 @@ const refs = {
   registerForm: document.getElementById("registerForm"),
   homeView: document.getElementById("homeView"),
   inventoryView: document.getElementById("inventoryView"),
+  settingsView: document.getElementById("settingsView"),
   openInventoryTile: document.getElementById("openInventoryTile"),
   homeBtn: document.getElementById("homeBtn"),
   mainTabBtn: document.getElementById("mainTabBtn"),
@@ -48,6 +53,13 @@ const refs = {
   toolsTab: document.getElementById("toolsTab"),
   historyTab: document.getElementById("historyTab"),
   historyList: document.getElementById("historyList"),
+  settingsBackBtn: document.getElementById("settingsBackBtn"),
+  settingsForm: document.getElementById("settingsForm"),
+  settingsFirstName: document.getElementById("settingsFirstName"),
+  settingsLastName: document.getElementById("settingsLastName"),
+  settingsEmail: document.getElementById("settingsEmail"),
+  settingsPassword: document.getElementById("settingsPassword"),
+  settingsLowStockToggle: document.getElementById("settingsLowStockToggle"),
   roleHint: document.getElementById("roleHint"),
   historyItemFilter: document.getElementById("historyItemFilter"),
   historyUserFilter: document.getElementById("historyUserFilter"),
@@ -96,6 +108,10 @@ const refs = {
   editItemNotes: document.getElementById("editItemNotes"),
   onboarding: document.getElementById("onboarding"),
   closeOnboardingBtn: document.getElementById("closeOnboardingBtn"),
+  logoutModal: document.getElementById("logoutModal"),
+  logoutBackdrop: document.getElementById("logoutBackdrop"),
+  cancelLogoutBtn: document.getElementById("cancelLogoutBtn"),
+  confirmLogoutBtn: document.getElementById("confirmLogoutBtn"),
   loadingOverlay: document.getElementById("loadingOverlay"),
   loadingText: document.getElementById("loadingText"),
   mobileScanFab: document.getElementById("mobileScanFab"),
@@ -223,6 +239,27 @@ function closeAuthModal() {
   document.body.style.overflow = "";
 }
 
+function openLogoutModal() {
+  refs.logoutModal.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeLogoutModal() {
+  refs.logoutModal.hidden = true;
+  document.body.style.overflow = "";
+}
+
+function toggleAccountMenu(forceOpen = null) {
+  if (!refs.accountMenu) return;
+  const shouldOpen = forceOpen === null ? refs.accountMenu.hidden : Boolean(forceOpen);
+  refs.accountMenu.hidden = !shouldOpen;
+}
+
+function closeAccountMenu() {
+  if (!refs.accountMenu) return;
+  refs.accountMenu.hidden = true;
+}
+
 function openEditModal(item) {
   state.editingItemId = item.id;
   refs.editItemName.value = item.name || "";
@@ -251,12 +288,16 @@ function setAuthTab(tab) {
 function setModuleView(view) {
   state.moduleView = view;
   const showHome = view === "home";
+  const showInventory = view === "inventory";
+  const showSettings = view === "settings";
 
   refs.homeView.classList.toggle("active", showHome);
-  refs.inventoryView.classList.toggle("active", !showHome);
-  if (showHome) {
+  refs.inventoryView.classList.toggle("active", showInventory);
+  refs.settingsView.classList.toggle("active", showSettings);
+  if (!showInventory) {
     stopScanner();
   }
+  closeAccountMenu();
   updateMobileScanFab();
   hapticSelection();
 }
@@ -296,6 +337,75 @@ function updateAuthButton() {
   refs.openAuthBtn.innerHTML = `${iconSpan("lock")}<span>Войти</span>`;
   refs.openAuthBtn.classList.remove("glass-btn");
   refs.openAuthBtn.classList.add("primary-btn");
+}
+
+function userNotifyEnabled() {
+  const value = state.user?.low_stock_notifications;
+  if (value === undefined || value === null || value === "") return true;
+  return String(value) !== "0";
+}
+
+function applyUserFromServer(nextUser, nextToken = "") {
+  if (!nextUser) return;
+  state.user = {
+    ...state.user,
+    ...nextUser,
+    low_stock_notifications: String(nextUser.low_stock_notifications ?? "1"),
+  };
+  if (nextToken) {
+    state.token = nextToken;
+    localStorage.setItem("sf_token", nextToken);
+  }
+  localStorage.setItem("sf_user", JSON.stringify(state.user));
+  updateAuthButton();
+  applyRoleAccess();
+}
+
+function fillSettingsForm() {
+  if (!state.user) return;
+  refs.settingsFirstName.value = String(state.user.first_name || "").trim();
+  refs.settingsLastName.value = String(state.user.last_name || "").trim();
+  refs.settingsEmail.value = String(state.user.email || "").trim().toLowerCase();
+  refs.settingsPassword.value = "";
+  refs.settingsLowStockToggle.checked = userNotifyEnabled();
+}
+
+async function loadProfile() {
+  if (!state.token) return;
+  const data = await apiRequest("/api/auth/profile");
+  applyUserFromServer(data.user);
+  fillSettingsForm();
+  state.profileLoaded = true;
+}
+
+async function openSettingsView() {
+  if (!state.user?.email || !state.token) {
+    openAuthModal();
+    return;
+  }
+  setModuleView("settings");
+  if (!state.profileLoaded) {
+    await runDbAction(() => loadProfile(), { message: "Загружаем профиль..." });
+  } else {
+    fillSettingsForm();
+  }
+}
+
+function performLogout() {
+  localStorage.removeItem("sf_token");
+  localStorage.removeItem("sf_user");
+  state.token = "";
+  state.user = null;
+  state.profileLoaded = false;
+  updateAuthButton();
+  applyRoleAccess();
+  closeAccountMenu();
+  closeLogoutModal();
+  setModuleView("home");
+  loadItems();
+  loadHistory();
+  showToast("Вы вышли из аккаунта");
+  hapticSuccess();
 }
 
 function canAdmin() {
@@ -977,6 +1087,10 @@ async function notifyLowStock() {
   }
 
   const result = await apiRequest("/api/alerts/notify", { method: "POST" });
+  if (result.disabled) {
+    showToast("Уведомления об остатках выключены в настройках");
+    return;
+  }
   showToast(result.sent ? `Отправлено в личку: ${result.sent}` : "Низких остатков нет");
 }
 
@@ -1150,16 +1264,7 @@ function stopScanner() {
 refs.openAuthBtn.addEventListener("click", () => {
   hapticSelection();
   if (state.user?.email) {
-    localStorage.removeItem("sf_token");
-    localStorage.removeItem("sf_user");
-    state.token = "";
-    state.user = null;
-    updateAuthButton();
-    applyRoleAccess();
-    loadItems();
-    loadHistory();
-    showToast("Вы вышли из аккаунта");
-    hapticSuccess();
+    toggleAccountMenu();
     return;
   }
 
@@ -1182,6 +1287,23 @@ refs.toolsTabBtn.addEventListener("click", () => setInventoryTab("tools"));
 refs.historyTabBtn.addEventListener("click", () => setInventoryTab("history"));
 refs.toToolsBtn.addEventListener("click", () => setInventoryTab("tools"));
 refs.closeOnboardingBtn.addEventListener("click", closeOnboarding);
+refs.openSettingsBtn.addEventListener("click", async () => {
+  closeAccountMenu();
+  try {
+    await openSettingsView();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+refs.settingsBackBtn.addEventListener("click", () => setModuleView("inventory"));
+refs.requestLogoutBtn.addEventListener("click", () => {
+  closeAccountMenu();
+  openLogoutModal();
+});
+refs.cancelLogoutBtn.addEventListener("click", closeLogoutModal);
+refs.confirmLogoutBtn.addEventListener("click", performLogout);
+refs.logoutBackdrop.addEventListener("click", closeLogoutModal);
 
 refs.loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -1204,13 +1326,8 @@ refs.loginForm.addEventListener("submit", async (event) => {
       { button: submitBtn, message: "Проверяем вход..." }
     );
 
-    state.token = data.token;
-    state.user = data.user;
-    localStorage.setItem("sf_token", data.token);
-    localStorage.setItem("sf_user", JSON.stringify(data.user));
-
-    updateAuthButton();
-    applyRoleAccess();
+    applyUserFromServer(data.user, data.token);
+    state.profileLoaded = true;
     closeAuthModal();
     await runDbAction(
       async () => {
@@ -1254,6 +1371,36 @@ refs.registerForm.addEventListener("submit", async (event) => {
     showToast("Аккаунт создан админом");
     refs.registerForm.reset();
     setAuthTab("login");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+
+refs.settingsForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!refs.settingsForm.reportValidity() || !state.token) return;
+  const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
+
+  try {
+    const data = await runDbAction(
+      () =>
+        apiRequest("/api/auth/profile", {
+          method: "PATCH",
+          body: {
+            firstName: refs.settingsFirstName.value.trim(),
+            lastName: refs.settingsLastName.value.trim(),
+            email: refs.settingsEmail.value.trim().toLowerCase(),
+            password: refs.settingsPassword.value,
+            lowStockNotifications: refs.settingsLowStockToggle.checked,
+          },
+        }),
+      { button: submitBtn, message: "Сохраняем настройки..." }
+    );
+    applyUserFromServer(data.user, data.token);
+    fillSettingsForm();
+    showToast("Настройки сохранены");
     hapticSuccess();
   } catch (error) {
     showToast(error.message);
@@ -1507,11 +1654,24 @@ if (refs.mobileScanFab) {
   });
 }
 
+document.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  if (refs.accountMenu.hidden) return;
+  const insideButton = refs.openAuthBtn.contains(target);
+  const insideMenu = refs.accountMenu.contains(target);
+  if (!insideButton && !insideMenu) {
+    closeAccountMenu();
+  }
+});
+
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeAuthModal();
     closeEditModal();
     closeScanModal();
+    closeLogoutModal();
+    closeAccountMenu();
     stopScanner();
   }
 });

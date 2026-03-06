@@ -2,6 +2,11 @@ const { listUsers } = require("../../lib/sheets");
 const { verifyPassword, signToken } = require("../../lib/security");
 const { send, methodNotAllowed, parseJsonBody } = require("../../lib/http");
 
+function notificationsEnabled(raw) {
+  const value = String(raw ?? "1").trim().toLowerCase();
+  return !(value === "0" || value === "false" || value === "off" || value === "no");
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     return methodNotAllowed(req, res, ["POST"]);
@@ -26,8 +31,11 @@ module.exports = async function handler(req, res) {
     const token = signToken({
       email: user.email,
       name: user.name,
+      first_name: user.first_name || "",
+      last_name: user.last_name || "",
       role: user.role || "staff",
       telegram_chat_id: user.telegram_chat_id || "",
+      low_stock_notifications: user.low_stock_notifications || "1",
     });
 
     return send(res, 200, {
@@ -35,8 +43,12 @@ module.exports = async function handler(req, res) {
       user: {
         email: user.email,
         name: user.name,
+        first_name: user.first_name || "",
+        last_name: user.last_name || "",
         role: user.role || "staff",
         telegram_chat_id: user.telegram_chat_id || "",
+        low_stock_notifications: user.low_stock_notifications || "1",
+        notifications_enabled: notificationsEnabled(user.low_stock_notifications),
       },
     });
   } catch (error) {

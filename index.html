@@ -111,6 +111,14 @@
           <button class="seg-btn top-select" type="button">Dashboard</button>
           <button class="primary-btn btn-with-icon account-btn" id="openAuthBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-lock"></use></svg></span><span>Войти</span></button>
         </div>
+        <div class="account-menu" id="accountMenu" hidden>
+          <button class="secondary-btn btn-with-icon" id="openSettingsBtn" type="button">
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-toolbox"></use></svg></span><span>Настройки</span>
+          </button>
+          <button class="glass-btn btn-with-icon" id="requestLogoutBtn" type="button">
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-login"></use></svg></span><span>Выйти</span>
+          </button>
+        </div>
       </header>
 
       <section id="homeView" class="view active">
@@ -291,6 +299,62 @@
           </section>
         </section>
       </section>
+
+      <section id="settingsView" class="view">
+        <section class="panel nav-panel">
+          <div class="segmented">
+            <button class="seg-btn btn-with-icon" id="settingsBackBtn" type="button">
+              <span class="btn-icon" aria-hidden="true"><svg><use href="#i-home"></use></svg></span><span>Назад</span>
+            </button>
+            <div class="seg-btn active btn-with-icon" aria-hidden="true">
+              <span class="btn-icon" aria-hidden="true"><svg><use href="#i-toolbox"></use></svg></span><span>Настройки профиля</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="layout-grid settings-layout">
+          <section class="panel">
+            <div class="section-head">
+              <h3>Профиль пользователя</h3>
+              <p>Изменяйте личные данные самостоятельно, без администратора.</p>
+            </div>
+            <form class="stock-form" id="settingsForm" novalidate>
+              <label>
+                Имя
+                <input type="text" id="settingsFirstName" placeholder="Имя" required />
+              </label>
+              <label>
+                Фамилия
+                <input type="text" id="settingsLastName" placeholder="Фамилия" />
+              </label>
+              <label>
+                Email
+                <input type="email" id="settingsEmail" placeholder="name@company.com" required />
+              </label>
+              <label>
+                Новый пароль
+                <input type="password" id="settingsPassword" placeholder="Оставьте пустым, чтобы не менять" minlength="6" />
+              </label>
+              <button class="primary-btn full btn-with-icon" type="submit">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить настройки</span>
+              </button>
+            </form>
+          </section>
+
+          <section class="panel">
+            <div class="section-head">
+              <h3>Уведомления</h3>
+              <p>Личные уведомления, когда расходник ниже лимита.</p>
+            </div>
+            <label class="toggle-row" for="settingsLowStockToggle">
+              <span>Уведомления об остатках</span>
+              <input type="checkbox" id="settingsLowStockToggle" class="toggle-input" />
+              <span class="toggle-switch" aria-hidden="true"></span>
+            </label>
+            <p class="muted">Если выключено, бот не отправляет вам личные сообщения о низком остатке.</p>
+          </section>
+        </section>
+      </section>
     </main>
 
     <button class="scan-fab" id="mobileScanFab" type="button" aria-label="Сканировать QR" title="Сканировать QR">
@@ -334,6 +398,18 @@
           </label>
           <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить изменения</span></button>
         </form>
+      </section>
+    </div>
+
+    <div class="auth-modal" id="logoutModal" hidden>
+      <div class="auth-backdrop" id="logoutBackdrop"></div>
+      <section class="auth-card" role="dialog" aria-modal="true" aria-label="Подтверждение выхода">
+        <h3>Выйти из аккаунта?</h3>
+        <p class="helper">Вы сможете войти снова по почте и паролю.</p>
+        <div class="hero-actions">
+          <button class="glass-btn full" id="cancelLogoutBtn" type="button">Остаться</button>
+          <button class="primary-btn full" id="confirmLogoutBtn" type="button">Выйти</button>
+        </div>
       </section>
     </div>
 

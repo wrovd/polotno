@@ -1,4 +1,4 @@
-const { listItems } = require("../../lib/sheets");
+const { listItems, findUserByEmail } = require("../../lib/sheets");
 const { requireAuth } = require("../../lib/auth");
 const { sendTelegramMessage } = require("../../lib/telegram");
 const { send, methodNotAllowed } = require("../../lib/http");
@@ -21,7 +21,13 @@ module.exports = async function handler(req, res) {
       return send(res, 200, { ok: true, sent: 0 });
     }
 
-    const chatId = auth.user.telegram_chat_id || process.env.TELEGRAM_DEFAULT_CHAT_ID;
+    const actor = await findUserByEmail(auth.user.email);
+    const notifyOnLow = String(actor?.low_stock_notifications ?? "1") !== "0";
+    if (!notifyOnLow) {
+      return send(res, 200, { ok: true, sent: 0, disabled: true });
+    }
+
+    const chatId = actor?.telegram_chat_id || auth.user.telegram_chat_id || process.env.TELEGRAM_DEFAULT_CHAT_ID;
     if (!chatId) {
       return send(res, 400, { error: "No personal chat id configured" });
     }
