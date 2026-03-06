@@ -356,16 +356,24 @@ function statusBadge(item) {
     : '<span class="badge badge-ok">В норме</span>';
 }
 
-async function qrDataUrl(text) {
-  if (!window.QRCode || !window.QRCode.toDataURL) {
-    throw new Error("QR library missing");
-  }
+function qrFallbackUrl(text, size = 220) {
+  const encoded = encodeURIComponent(text);
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=0&data=${encoded}`;
+}
 
-  return window.QRCode.toDataURL(text, {
-    width: 220,
-    margin: 1,
-    color: { dark: "#0f172a", light: "#ffffff" },
-  });
+async function qrImageSrc(text, size = 220) {
+  if (window.QRCode?.toDataURL) {
+    try {
+      return await window.QRCode.toDataURL(text, {
+        width: size,
+        margin: 1,
+        color: { dark: "#0f172a", light: "#ffffff" },
+      });
+    } catch {
+      // fallback to remote generator
+    }
+  }
+  return qrFallbackUrl(text, size);
 }
 
 async function printLabels(items) {
@@ -375,16 +383,16 @@ async function printLabels(items) {
     return;
   }
 
-  const cards = [];
-  for (const item of items) {
-    const src = await qrDataUrl(itemPayload(item));
-    cards.push({ item, src });
-  }
-
   const wnd = window.open("", "_blank", "width=900,height=700");
   if (!wnd) {
     showToast("Разрешите popup для печати этикеток");
     return;
+  }
+
+  const cards = [];
+  for (const item of items) {
+    const src = await qrImageSrc(itemPayload(item), 210);
+    cards.push({ item, src });
   }
 
   const html = `
@@ -392,21 +400,67 @@ async function printLabels(items) {
       <head>
         <title>QR Этикетки</title>
         <style>
-          body { font-family: -apple-system, Segoe UI, sans-serif; margin: 18px; color: #111827; }
-          @page { size: A4; margin: 10mm; }
-          .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-          .card { border: 1px solid #c9d4e8; border-radius: 10px; padding: 8px; text-align: center; }
-          img { width: 100%; max-width: 150px; }
-          h4, p { margin: 4px 0; }
+          @page { size: auto; margin: 0; }
+          * { box-sizing: border-box; }
+          body { font-family: -apple-system, Segoe UI, sans-serif; margin: 0; color: #111827; background: #fff; }
+          .sheet {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 58mm);
+            gap: 2mm;
+            padding: 4mm;
+            justify-content: start;
+          }
+          .label {
+            width: 58mm;
+            height: 40mm;
+            border: 0.2mm solid #d5dceb;
+            border-radius: 2mm;
+            padding: 2.2mm;
+            display: grid;
+            grid-template-columns: 22mm 1fr;
+            align-items: center;
+            gap: 2mm;
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          .label img {
+            width: 21mm;
+            height: 21mm;
+            object-fit: contain;
+            display: block;
+          }
+          .meta { min-width: 0; }
+          .name {
+            font-size: 3.6mm;
+            font-weight: 700;
+            line-height: 1.12;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
+          .id {
+            margin-top: 1.4mm;
+            font-size: 2.7mm;
+            color: #4f5f7f;
+            word-break: break-word;
+          }
+          .helper {
+            margin-top: 1mm;
+            font-size: 2.4mm;
+            color: #7a8395;
+          }
+          @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          }
         </style>
       </head>
       <body>
-        <h3>Этикетки QR</h3>
-        <div class="grid">
+        <div class="sheet">
           ${cards
             .map(
               ({ item, src }) =>
-                `<div class="card"><img src="${src}" alt="${item.id}" /><h4>${item.name}</h4><p>${item.id}</p></div>`
+                `<section class="label"><img src="${src}" alt="${item.id}" /><div class="meta"><div class="name">${item.name}</div><div class="id">${item.id}</div><div class="helper">58x40 мм</div></div></section>`
             )
             .join("")}
         </div>
