@@ -1109,9 +1109,11 @@ refs.stockForm.addEventListener("submit", async (event) => {
 refs.itemsTableBody.addEventListener("click", async (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
+  const button = target.closest("button[data-action][data-id]");
+  if (!(button instanceof HTMLElement)) return;
 
-  const action = target.getAttribute("data-action");
-  const id = target.getAttribute("data-id");
+  const action = button.getAttribute("data-action");
+  const id = button.getAttribute("data-id");
   if (!action || !id) return;
 
   try {
