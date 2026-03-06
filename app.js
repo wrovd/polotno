@@ -278,13 +278,13 @@ function setInventoryTab(tab) {
 function updateAuthButton() {
   if (state.user?.email) {
     const role = String(state.user.role || "staff").toLowerCase();
-    refs.openAuthBtn.innerHTML = `${iconSpan("👤")}<span>${state.user.email} • ${role}</span>`;
+    refs.openAuthBtn.innerHTML = `${iconSpan("user")}<span>${state.user.email} • ${role}</span>`;
     refs.openAuthBtn.classList.remove("primary-btn");
     refs.openAuthBtn.classList.add("glass-btn");
     return;
   }
 
-  refs.openAuthBtn.innerHTML = `${iconSpan("🔐")}<span>Войти</span>`;
+  refs.openAuthBtn.innerHTML = `${iconSpan("lock")}<span>Войти</span>`;
   refs.openAuthBtn.classList.remove("glass-btn");
   refs.openAuthBtn.classList.add("primary-btn");
 }
@@ -306,8 +306,8 @@ function canDesktopPrint() {
   return state.desktopPrint;
 }
 
-function iconSpan(symbol) {
-  return `<span class="btn-icon" aria-hidden="true">${symbol}</span>`;
+function iconSpan(name) {
+  return `<span class="btn-icon" aria-hidden="true"><svg><use href="#i-${name}"></use></svg></span>`;
 }
 
 function applyPrintAccess() {
@@ -531,11 +531,11 @@ function renderTable(list = state.items) {
       <td data-label="QR-код">${item.id}<br />${statusBadge(item)}</td>
       <td data-label="Действия">
         <div class="actions">
-          <button class="secondary-btn btn-with-icon ${canDesktopPrint() ? "" : "is-hidden"}" data-action="print" data-id="${item.id}" type="button">${iconSpan("🖨️")}<span>Печать QR</span></button>
-          <button class="secondary-btn btn-with-icon ${canAdmin() ? "" : "is-hidden"}" data-action="plus-one" data-id="${item.id}" type="button">${iconSpan("➕")}<span>+1</span></button>
-          <button class="secondary-btn btn-with-icon ${canAdmin() ? "" : "is-hidden"}" data-action="edit" data-id="${item.id}" type="button">${iconSpan("✏️")}<span>Редактировать</span></button>
-          <button class="glass-btn btn-with-icon ${canAdmin() ? "" : "is-hidden"}" data-action="delete" data-id="${item.id}" type="button">${iconSpan("🗑️")}<span>Удалить</span></button>
-          <button class="glass-btn btn-with-icon" data-action="consume" data-id="${item.id}" type="button">${iconSpan("➖")}<span>-1</span></button>
+          <button class="secondary-btn btn-with-icon ${canDesktopPrint() ? "" : "is-hidden"}" data-action="print" data-id="${item.id}" type="button">${iconSpan("print")}<span>Печать QR</span></button>
+          <button class="secondary-btn btn-with-icon ${canAdmin() ? "" : "is-hidden"}" data-action="plus-one" data-id="${item.id}" type="button">${iconSpan("plus")}<span>+1</span></button>
+          <button class="secondary-btn btn-with-icon ${canAdmin() ? "" : "is-hidden"}" data-action="edit" data-id="${item.id}" type="button">${iconSpan("edit")}<span>Редактировать</span></button>
+          <button class="glass-btn btn-with-icon ${canAdmin() ? "" : "is-hidden"}" data-action="delete" data-id="${item.id}" type="button">${iconSpan("trash")}<span>Удалить</span></button>
+          <button class="glass-btn btn-with-icon" data-action="consume" data-id="${item.id}" type="button">${iconSpan("minus")}<span>-1</span></button>
         </div>
       </td>
     `;

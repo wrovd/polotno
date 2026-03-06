@@ -69,6 +69,13 @@ p {
   background: radial-gradient(circle, rgba(141, 164, 224, 0.3), rgba(141, 164, 224, 0));
 }
 
+.icon-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
 .app-shell {
   position: relative;
   z-index: 1;
@@ -273,9 +280,18 @@ button:active {
 }
 
 .btn-icon {
-  font-size: 14px;
-  line-height: 1;
   display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.btn-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  stroke: currentColor;
+  fill: none;
 }
 
 .layout-grid {
@@ -680,15 +696,27 @@ button.is-loading::after {
   .top-controls {
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+  }
+
+  .top-controls .primary-btn,
+  .top-controls .glass-btn {
+    min-width: 132px;
   }
 
   .search-row,
-  .hero-actions,
-  .segmented,
-  .segmented-three,
-  .segmented-four {
+  .hero-actions {
     grid-template-columns: 1fr;
+  }
+
+  .segmented,
+  .segmented-three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .segmented-four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .history-filters {
@@ -703,7 +731,33 @@ button.is-loading::after {
 
   button,
   .btn-with-icon {
-    min-height: 44px;
+    min-height: 46px;
+  }
+
+  .nav-panel {
+    position: sticky;
+    top: calc(env(safe-area-inset-top, 0px) + var(--tg-top-offset) + 6px);
+    z-index: 5;
+    backdrop-filter: blur(6px);
+  }
+
+  .segmented .seg-btn {
+    justify-content: flex-start;
+    padding-inline: 12px;
+  }
+
+  .segmented .seg-btn .btn-icon {
+    width: 17px;
+    height: 17px;
+  }
+
+  #mainTab .layout-grid {
+    gap: 10px;
+  }
+
+  #stockForm .primary-btn,
+  #adjustForm .primary-btn {
+    margin-top: 2px;
   }
 
   #scannerVideo {
@@ -757,12 +811,15 @@ button.is-loading::after {
   }
 
   td .actions {
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   td .actions button {
-    width: 100%;
-    min-height: 42px;
+    width: calc(50% - 4px);
+    min-height: 44px;
+    justify-content: center;
   }
 
   .auth-card,

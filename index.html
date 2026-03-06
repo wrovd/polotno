@@ -11,6 +11,90 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <svg class="icon-sprite" aria-hidden="true" focusable="false">
+      <symbol id="i-lock" viewBox="0 0 24 24">
+        <path d="M7 10V8a5 5 0 0 1 10 0v2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+        <rect x="5" y="10" width="14" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <circle cx="12" cy="15.5" r="1.4" fill="currentColor" />
+      </symbol>
+      <symbol id="i-user" viewBox="0 0 24 24">
+        <circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <path d="M5 19a7 7 0 0 1 14 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+      </symbol>
+      <symbol id="i-search" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <path d="M16 16l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+      </symbol>
+      <symbol id="i-save" viewBox="0 0 24 24">
+        <path d="M5 4h12l2 2v14H5z" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <path d="M8 4v6h8V4M8 20v-6h8v6" fill="none" stroke="currentColor" stroke-width="1.8" />
+      </symbol>
+      <symbol id="i-toolbox" viewBox="0 0 24 24">
+        <rect x="4" y="8" width="16" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <path d="M9 8V6a1.8 1.8 0 0 1 1.8-1.8h2.4A1.8 1.8 0 0 1 15 6v2M4 12h16" fill="none" stroke="currentColor" stroke-width="1.8" />
+      </symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24">
+        <path d="M5 19V9M12 19V5M19 19v-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+      </symbol>
+      <symbol id="i-bell" viewBox="0 0 24 24">
+        <path d="M7 10a5 5 0 1 1 10 0v4l2 2H5l2-2z" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <path d="M10 18a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+      </symbol>
+      <symbol id="i-print" viewBox="0 0 24 24">
+        <path d="M7 8V4h10v4M7 14H5V9a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v5h-2" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <rect x="7" y="12" width="10" height="8" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.8" />
+      </symbol>
+      <symbol id="i-camera" viewBox="0 0 24 24">
+        <rect x="4" y="7" width="16" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <circle cx="12" cy="13" r="3" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <path d="M9 7l1-2h4l1 2" fill="none" stroke="currentColor" stroke-width="1.8" />
+      </symbol>
+      <symbol id="i-stop" viewBox="0 0 24 24">
+        <rect x="6.5" y="6.5" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.8" />
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 24 24">
+        <path d="M5 12l4 4 10-10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-reset" viewBox="0 0 24 24">
+        <path d="M6 8V4M6 4h4M6 4a8 8 0 1 1-1 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-download" viewBox="0 0 24 24">
+        <path d="M12 4v10M8 10l4 4 4-4M5 19h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-rocket" viewBox="0 0 24 24">
+        <path d="M14 4c3 0 6 3 6 6-2 1-5 4-6 6-3 0-6-3-6-6 2-1 5-4 6-6z" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <path d="M9 15l-4 4M11 19l-2 2M5 13l2-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+        <circle cx="15.5" cy="8.5" r="1.2" fill="currentColor" />
+      </symbol>
+      <symbol id="i-login" viewBox="0 0 24 24">
+        <path d="M14 5h5v14h-5M10 8l-4 4 4 4M6 12h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-home" viewBox="0 0 24 24">
+        <path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-5H9v5H5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.8" />
+      </symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24">
+        <rect x="4" y="4" width="7" height="7" rx="1.3" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <rect x="13" y="4" width="7" height="7" rx="1.3" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <rect x="4" y="13" width="7" height="7" rx="1.3" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <rect x="13" y="13" width="7" height="7" rx="1.3" fill="none" stroke="currentColor" stroke-width="1.8" />
+      </symbol>
+      <symbol id="i-history" viewBox="0 0 24 24">
+        <path d="M4 12a8 8 0 1 0 2-5.3M4 4v4h4M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24">
+        <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+      </symbol>
+      <symbol id="i-minus" viewBox="0 0 24 24">
+        <path d="M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+      </symbol>
+      <symbol id="i-edit" viewBox="0 0 24 24">
+        <path d="M4 20h4l10-10-4-4L4 16v4zM13 7l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24">
+        <path d="M5 7h14M9 7V5h6v2M8 7l1 12h6l1-12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+      </symbol>
+    </svg>
+
     <div class="bg-shape bg-shape-top" aria-hidden="true"></div>
     <div class="bg-shape bg-shape-bottom" aria-hidden="true"></div>
 
@@ -25,7 +109,7 @@
         </div>
         <div class="top-controls">
           <button class="seg-btn top-select" type="button">Dashboard</button>
-          <button class="primary-btn btn-with-icon" id="openAuthBtn" type="button"><span class="btn-icon" aria-hidden="true">🔐</span><span>Войти</span></button>
+          <button class="primary-btn btn-with-icon" id="openAuthBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-lock"></use></svg></span><span>Войти</span></button>
         </div>
       </header>
 
@@ -56,10 +140,10 @@
       <section id="inventoryView" class="view">
         <section class="panel nav-panel">
           <div class="segmented segmented-four">
-            <button class="seg-btn" id="homeBtn" type="button">Главная</button>
-            <button class="seg-btn active" id="mainTabBtn" type="button">Основное</button>
-            <button class="seg-btn" id="toolsTabBtn" type="button">Инструменты</button>
-            <button class="seg-btn" id="historyTabBtn" type="button">История</button>
+            <button class="seg-btn btn-with-icon" id="homeBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-home"></use></svg></span><span>Главная</span></button>
+            <button class="seg-btn btn-with-icon active" id="mainTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span><span>Основное</span></button>
+            <button class="seg-btn btn-with-icon" id="toolsTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-toolbox"></use></svg></span><span>Инструменты</span></button>
+            <button class="seg-btn btn-with-icon" id="historyTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-history"></use></svg></span><span>История</span></button>
           </div>
         </section>
         <section class="panel role-hint is-hidden" id="roleHint"></section>
@@ -69,7 +153,7 @@
             <label for="searchInput">Поиск расходников</label>
             <div class="search-row">
               <input id="searchInput" type="search" placeholder="Название, код, заметка" autocomplete="off" />
-              <button class="primary-btn btn-with-icon" id="searchBtn" type="button"><span class="btn-icon" aria-hidden="true">🔎</span><span>Найти</span></button>
+              <button class="primary-btn btn-with-icon" id="searchBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Найти</span></button>
             </div>
           </section>
 
@@ -96,7 +180,7 @@
                   Заметка
                   <textarea name="notes" id="itemNotes" rows="3" placeholder="Поставщик, место хранения"></textarea>
                 </label>
-                <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true">💾</span><span>Сохранить расходник</span></button>
+                <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить расходник</span></button>
               </form>
             </section>
 
@@ -106,7 +190,7 @@
                 <p>Все второстепенные функции вынесены в отдельную вкладку «Инструменты».</p>
               </div>
               <div class="hero-actions">
-                <button class="secondary-btn full btn-with-icon" id="toToolsBtn" type="button"><span class="btn-icon" aria-hidden="true">🧰</span><span>Открыть Инструменты</span></button>
+                <button class="secondary-btn full btn-with-icon" id="toToolsBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-toolbox"></use></svg></span><span>Открыть Инструменты</span></button>
               </div>
             </section>
           </section>
@@ -144,8 +228,8 @@
                 <p class="muted">Пока все в норме.</p>
               </div>
               <div class="hero-actions">
-                <button class="secondary-btn full btn-with-icon" id="checkAlertsBtn" type="button"><span class="btn-icon" aria-hidden="true">📊</span><span>Проверить лимиты</span></button>
-                <button class="primary-btn full btn-with-icon" id="notifyAlertsBtn" type="button"><span class="btn-icon" aria-hidden="true">✉️</span><span>Отправить в личку</span></button>
+                <button class="secondary-btn full btn-with-icon" id="checkAlertsBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-chart"></use></svg></span><span>Проверить лимиты</span></button>
+                <button class="primary-btn full btn-with-icon" id="notifyAlertsBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-bell"></use></svg></span><span>Отправить в личку</span></button>
               </div>
             </section>
 
@@ -155,9 +239,9 @@
                 <p>Сканер встроен в экран. Печать этикеток доступна только на ПК.</p>
               </div>
               <div class="hero-actions">
-                <button class="secondary-btn full btn-with-icon" id="printAllBtn" type="button"><span class="btn-icon" aria-hidden="true">🖨️</span><span>Печать всех QR</span></button>
-                <button class="secondary-btn full btn-with-icon" id="startScannerBtn" type="button"><span class="btn-icon" aria-hidden="true">📷</span><span>Запустить сканер</span></button>
-                <button class="glass-btn full btn-with-icon" id="stopScannerBtn" type="button"><span class="btn-icon" aria-hidden="true">⏹️</span><span>Остановить сканер</span></button>
+                <button class="secondary-btn full btn-with-icon" id="printAllBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-print"></use></svg></span><span>Печать всех QR</span></button>
+                <button class="secondary-btn full btn-with-icon" id="startScannerBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span><span>Запустить сканер</span></button>
+                <button class="glass-btn full btn-with-icon" id="stopScannerBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-stop"></use></svg></span><span>Остановить сканер</span></button>
               </div>
               <video id="scannerVideo" playsinline muted></video>
               <canvas id="scannerCanvas" hidden></canvas>
@@ -173,7 +257,7 @@
             <form class="history-filters" id="adjustForm" novalidate>
               <select id="adjustItemId" required></select>
               <input type="number" id="adjustDelta" placeholder="Изменение, например +15 или -3" required />
-              <button class="primary-btn" type="submit">Применить корректировку</button>
+              <button class="primary-btn btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-check"></use></svg></span><span>Применить корректировку</span></button>
             </form>
           </section>
         </section>
@@ -197,9 +281,9 @@
               </select>
               <input type="date" id="historyDateFrom" />
               <input type="date" id="historyDateTo" />
-              <button class="secondary-btn btn-with-icon" id="historyApplyBtn" type="button"><span class="btn-icon" aria-hidden="true">✅</span><span>Применить</span></button>
-              <button class="glass-btn btn-with-icon" id="historyResetBtn" type="button"><span class="btn-icon" aria-hidden="true">↺</span><span>Сбросить</span></button>
-              <button class="primary-btn btn-with-icon" id="historyExportBtn" type="button"><span class="btn-icon" aria-hidden="true">⬇️</span><span>Экспорт CSV</span></button>
+              <button class="secondary-btn btn-with-icon" id="historyApplyBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-check"></use></svg></span><span>Применить</span></button>
+              <button class="glass-btn btn-with-icon" id="historyResetBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-reset"></use></svg></span><span>Сбросить</span></button>
+              <button class="primary-btn btn-with-icon" id="historyExportBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-download"></use></svg></span><span>Экспорт CSV</span></button>
             </div>
             <div class="history-list" id="historyList">
               <p class="muted">История пока пустая.</p>
@@ -231,7 +315,7 @@
             Заметка
             <textarea name="notes" id="editItemNotes" rows="3"></textarea>
           </label>
-          <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true">💾</span><span>Сохранить изменения</span></button>
+          <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить изменения</span></button>
         </form>
       </section>
     </div>
@@ -249,7 +333,7 @@
           <p><strong>2.</strong> Добавьте позиции и лимиты.</p>
           <p><strong>3.</strong> В «Инструментах» используйте сканер и отправку уведомлений.</p>
         </div>
-        <button class="primary-btn full btn-with-icon" id="closeOnboardingBtn" type="button"><span class="btn-icon" aria-hidden="true">🚀</span><span>Начать работу</span></button>
+        <button class="primary-btn full btn-with-icon" id="closeOnboardingBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-rocket"></use></svg></span><span>Начать работу</span></button>
       </div>
     </section>
 
@@ -273,7 +357,7 @@
             Пароль
             <input type="password" name="password" placeholder="••••••••" required minlength="6" />
           </label>
-          <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true">🔓</span><span>Войти</span></button>
+          <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-login"></use></svg></span><span>Войти</span></button>
         </form>
 
         <form class="auth-form" id="registerForm" novalidate>
@@ -306,7 +390,7 @@
             Админ-ключ
             <input type="password" name="adminKey" placeholder="Секретный ключ" required minlength="6" />
           </label>
-          <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true">👤</span><span>Создать аккаунт</span></button>
+          <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-user"></use></svg></span><span>Создать аккаунт</span></button>
         </form>
       </section>
     </div>
