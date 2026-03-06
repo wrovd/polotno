@@ -92,6 +92,7 @@ const refs = {
   closeOnboardingBtn: document.getElementById("closeOnboardingBtn"),
   loadingOverlay: document.getElementById("loadingOverlay"),
   loadingText: document.getElementById("loadingText"),
+  mobileScanFab: document.getElementById("mobileScanFab"),
 };
 
 function safeParse(text) {
@@ -250,6 +251,7 @@ function setModuleView(view) {
   if (showHome) {
     stopScanner();
   }
+  updateMobileScanFab();
   hapticSelection();
 }
 
@@ -272,6 +274,7 @@ function setInventoryTab(tab) {
     stopScanner();
     loadHistory();
   }
+  updateMobileScanFab();
   hapticSelection();
 }
 
@@ -308,6 +311,15 @@ function canDesktopPrint() {
 
 function iconSpan(name) {
   return `<span class="btn-icon" aria-hidden="true"><svg><use href="#i-${name}"></use></svg></span>`;
+}
+
+function updateMobileScanFab() {
+  if (!refs.mobileScanFab) return;
+  const scanning = Boolean(state.stream);
+  refs.mobileScanFab.classList.toggle("is-active", scanning);
+  refs.mobileScanFab.setAttribute("aria-label", scanning ? "Остановить сканер" : "Сканировать QR");
+  refs.mobileScanFab.title = scanning ? "Остановить сканер" : "Сканировать QR";
+  refs.mobileScanFab.innerHTML = scanning ? iconSpan("stop") : iconSpan("camera");
 }
 
 function applyPrintAccess() {
@@ -353,11 +365,13 @@ function applyRoleAccess() {
 
 function openOnboarding() {
   refs.onboarding.hidden = false;
+  if (refs.mobileScanFab) refs.mobileScanFab.hidden = true;
   hapticSelection();
 }
 
 function closeOnboarding() {
   refs.onboarding.hidden = true;
+  if (refs.mobileScanFab) refs.mobileScanFab.hidden = false;
   localStorage.setItem(ONBOARDING_KEY, "1");
   hapticSuccess();
 }
@@ -1007,6 +1021,7 @@ async function startScanner() {
           state.scanBusy = false;
         }
       }, 380);
+      updateMobileScanFab();
       return;
     }
 
@@ -1054,8 +1069,10 @@ async function startScanner() {
     };
 
     state.scanRaf = requestAnimationFrame(scanFrame);
+    updateMobileScanFab();
   } catch {
     refs.scanStatus.textContent = "Нет доступа к камере.";
+    updateMobileScanFab();
     hapticWarning();
   }
 }
@@ -1070,6 +1087,7 @@ function stopScanner() {
   }
 
   refs.scannerVideo.srcObject = null;
+  updateMobileScanFab();
 }
 
 refs.openAuthBtn.addEventListener("click", () => {
@@ -1416,6 +1434,25 @@ refs.stopScannerBtn.addEventListener("click", () => {
   hapticSelection();
 });
 
+if (refs.mobileScanFab) {
+  refs.mobileScanFab.addEventListener("click", async () => {
+    if (state.moduleView !== "inventory") {
+      setModuleView("inventory");
+    }
+    if (state.inventoryTab !== "tools") {
+      setInventoryTab("tools");
+    }
+
+    if (state.stream) {
+      stopScanner();
+      hapticSelection();
+      return;
+    }
+
+    await startScanner();
+  });
+}
+
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeAuthModal();
@@ -1438,6 +1475,7 @@ applyPrintAccess();
 loadItems();
 loadHistory();
 initTelegram();
+updateMobileScanFab();
 
 if (!localStorage.getItem(ONBOARDING_KEY)) {
   openOnboarding();

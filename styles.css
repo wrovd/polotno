@@ -138,6 +138,14 @@ h1 {
   gap: 8px;
 }
 
+.account-btn {
+  max-width: min(66vw, 520px);
+}
+
+.account-btn span:last-child {
+  overflow-wrap: anywhere;
+}
+
 .top-select {
   min-width: 140px;
 }
@@ -654,6 +662,32 @@ button.is-loading::after {
   line-height: 1.45;
 }
 
+.scan-fab {
+  position: fixed;
+  right: 14px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  border: 1px solid var(--primary-strong);
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(48, 88, 165, 0.28);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 24;
+}
+
+.scan-fab .btn-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.scan-fab.is-active {
+  background: #476fb7;
+}
+
 @keyframes fadeUp {
   from {
     opacity: 0;
@@ -696,13 +730,32 @@ button.is-loading::after {
   .top-controls {
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr;
     gap: 10px;
   }
 
+  .top-controls .top-select,
   .top-controls .primary-btn,
   .top-controls .glass-btn {
-    min-width: 132px;
+    width: 100%;
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .top-controls .top-select {
+    min-height: 42px;
+  }
+
+  .account-btn {
+    max-width: 100%;
+  }
+
+  .account-btn span:last-child {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    line-height: 1.2;
   }
 
   .search-row,
@@ -736,7 +789,7 @@ button.is-loading::after {
 
   .nav-panel {
     position: sticky;
-    top: calc(env(safe-area-inset-top, 0px) + var(--tg-top-offset) + 6px);
+    top: calc(env(safe-area-inset-top, 0px) + var(--tg-top-offset) + 54px);
     z-index: 5;
     backdrop-filter: blur(6px);
   }
@@ -827,5 +880,9 @@ button.is-loading::after {
     width: 100%;
     border-radius: 18px;
     padding: 14px;
+  }
+
+  .scan-fab {
+    display: inline-flex;
   }
 }
