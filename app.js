@@ -248,6 +248,11 @@ async function apiRequest(path, options = {}) {
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
+    if (response.status === 401 && auth) {
+      clearSession();
+      openAuthModal();
+      showToast("Сессия истекла. Войдите снова");
+    }
     throw new Error(payload.error || `HTTP ${response.status}`);
   }
 
@@ -503,13 +508,7 @@ async function openSettingsView() {
 }
 
 function performLogout() {
-  localStorage.removeItem("sf_token");
-  localStorage.removeItem("sf_user");
-  state.token = "";
-  state.user = null;
-  state.profileLoaded = false;
-  updateAuthButton();
-  applyRoleAccess();
+  clearSession();
   closeAccountMenu();
   closeLogoutModal();
   setModuleView("home");
@@ -517,6 +516,22 @@ function performLogout() {
   loadHistory();
   showToast("Вы вышли из аккаунта");
   hapticSuccess();
+}
+
+function clearSession() {
+  localStorage.removeItem("sf_token");
+  localStorage.removeItem("sf_user");
+  state.token = "";
+  state.user = null;
+  state.profileLoaded = false;
+  updateAuthButton();
+  applyRoleAccess();
+}
+
+function sanitizeInitialSession() {
+  if (state.user?.email && !state.token) {
+    clearSession();
+  }
 }
 
 function canAdmin() {
@@ -2022,6 +2037,7 @@ window.addEventListener("resize", () => {
 setAuthTab("login");
 setModuleView("home");
 setInventoryTab("main");
+sanitizeInitialSession();
 updateAuthButton();
 applyRoleAccess();
 applyPrintAccess();
