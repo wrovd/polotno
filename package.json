@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "vercel dev",
-    "start": "vercel dev"
+    "start": "vercel dev",
+    "migrate:sheets-to-postgres": "node scripts/migrate-sheets-to-postgres.js"
   },
   "dependencies": {
+    "@vercel/postgres": "^0.10.0",
     "googleapis": "^150.0.1"
   }
 }

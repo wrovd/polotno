@@ -1,4 +1,9 @@
 {
+  "rewrites": [
+    { "source": "/api/auth/:action", "destination": "/api/auth?action=:action" },
+    { "source": "/api/alerts/:action", "destination": "/api/alerts?action=:action" },
+    { "source": "/api/admin/:action", "destination": "/api/admin?action=:action" }
+  ],
   "functions": {
     "api/**/*.js": {
       "maxDuration": 10

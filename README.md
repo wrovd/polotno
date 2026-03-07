@@ -2,7 +2,7 @@
 
 Telegram MiniApp for consumables accounting with:
 - email/password auth (admin creates users)
-- inventory in Google Sheets
+- inventory in Vercel Postgres
 - QR generation + print labels
 - low-stock personal Telegram alerts
 
@@ -16,15 +16,23 @@ Telegram MiniApp for consumables accounting with:
 4. Start Vercel dev:
    - `npm run dev`
 
-## Required Google Sheets setup
+## Required DB setup (Vercel Postgres)
 
-1. Create a Google Spreadsheet.
-2. Share the spreadsheet with your service account email (`Editor` role).
-3. Set `GOOGLE_SHEETS_SPREADSHEET_ID`.
-4. First API call auto-creates/updates headers in sheets:
+1. Add `POSTGRES_URL` in Vercel project env.
+2. First API call auto-creates tables:
    - `users`
-   - `inventory`
+   - `items`
    - `movements`
+   - `groups_dir`
+
+## Optional migration from Google Sheets
+
+1. Fill Google env vars in `.env.local`:
+   - `GOOGLE_SERVICE_ACCOUNT_EMAIL`
+   - `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`
+   - `GOOGLE_SHEETS_SPREADSHEET_ID`
+2. Run:
+   - `npm run migrate:sheets-to-postgres`
 
 ## API routes
 
@@ -41,9 +49,9 @@ Telegram MiniApp for consumables accounting with:
 
 ## Notes
 
-- For personal alerts, each user should have `telegram_chat_id` in `users` sheet.
+- For personal alerts, each user should have `telegram_chat_id` in `users`.
 - If `telegram_chat_id` is empty, backend uses `TELEGRAM_DEFAULT_CHAT_ID`.
-- Frontend works in DB/API mode only (Google Sheets via Vercel API).
+- Frontend works in DB/API mode only (Vercel Postgres via Vercel API).
 - Role model:
   - `admin`: can create/edit/delete items and users, can run stock adjustments.
   - `staff`: can view items/history and consume stock.
