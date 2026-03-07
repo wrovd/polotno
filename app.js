@@ -118,6 +118,10 @@ const refs = {
   mainStockFilter: document.getElementById("mainStockFilter"),
   applyMainFiltersBtn: document.getElementById("applyMainFiltersBtn"),
   resetMainFiltersBtn: document.getElementById("resetMainFiltersBtn"),
+  exportInventoryBtn: document.getElementById("exportInventoryBtn"),
+  importInventoryBtn: document.getElementById("importInventoryBtn"),
+  exportInventorySheetBtn: document.getElementById("exportInventorySheetBtn"),
+  importInventoryFile: document.getElementById("importInventoryFile"),
   toToolsBtn: document.getElementById("toToolsBtn"),
   stockManagePanel: document.getElementById("stockManagePanel"),
   adjustPanel: document.getElementById("adjustPanel"),
@@ -1350,6 +1354,173 @@ async function exportHistoryCsv() {
   hapticWarning();
 }
 
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let value = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    const next = text[i + 1];
+
+    if (ch === "\"") {
+      if (inQuotes && next === "\"") {
+        value += "\"";
+        i += 1;
+        continue;
+      }
+      inQuotes = !inQuotes;
+      continue;
+    }
+
+    if (!inQuotes && ch === ",") {
+      row.push(value);
+      value = "";
+      continue;
+    }
+
+    if (!inQuotes && (ch === "\n" || ch === "\r")) {
+      if (ch === "\r" && next === "\n") i += 1;
+      row.push(value);
+      value = "";
+      if (row.some((cell) => String(cell || "").trim() !== "")) {
+        rows.push(row);
+      }
+      row = [];
+      continue;
+    }
+
+    value += ch;
+  }
+
+  row.push(value);
+  if (row.some((cell) => String(cell || "").trim() !== "")) {
+    rows.push(row);
+  }
+  return rows;
+}
+
+function csvRowsToObjects(rows) {
+  if (!rows.length) return [];
+  const headers = rows[0].map((h) => String(h || "").trim().toLowerCase());
+  return rows.slice(1).map((r) => {
+    const out = {};
+    headers.forEach((h, idx) => {
+      out[h] = String(r[idx] ?? "").trim();
+    });
+    return out;
+  });
+}
+
+async function exportInventoryCsv() {
+  if (!canDesktopPrint()) {
+    showToast("Экспорт доступен только на ПК");
+    return;
+  }
+  if (!state.items.length) {
+    showToast("Нет расходников для экспорта");
+    return;
+  }
+
+  const headers = ["id", "name", "group_name", "qty", "threshold", "notes", "action"];
+  const rows = state.items.map((item) => [
+    item.id,
+    item.name,
+    item.group_name || "",
+    String(item.qty ?? 0),
+    String(item.threshold ?? 0),
+    item.notes || "",
+    "",
+  ]);
+  const csv = [headers.join(","), ...rows.map((r) => r.map(csvEscape).join(","))].join("\n");
+  const stamp = new Date().toISOString().slice(0, 10);
+  const ok = await downloadCsvWithFallback(`polotno-inventory-${stamp}.csv`, csv);
+  if (ok) {
+    showToast("Экспорт расходников готов");
+    return;
+  }
+  showToast("Экспорт ограничен в этом браузере");
+}
+
+async function exportInventorySheetCsv() {
+  if (!canDesktopPrint()) {
+    showToast("Экспорт доступен только на ПК");
+    return;
+  }
+  if (!state.items.length) {
+    showToast("Нет расходников для инвентаризации");
+    return;
+  }
+
+  const headers = ["Наименование товара", "Количество (система)", "Количество (факт)", "Комментарий"];
+  const rows = [...state.items]
+    .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "ru"))
+    .map((item) => [item.name, String(item.qty ?? 0), "", ""]);
+  const csv = [headers.join(","), ...rows.map((r) => r.map(csvEscape).join(","))].join("\n");
+  const stamp = new Date().toISOString().slice(0, 10);
+  const ok = await downloadCsvWithFallback(`polotno-inventory-sheet-${stamp}.csv`, csv);
+  if (ok) {
+    showToast("Файл инвентаризации готов");
+    return;
+  }
+  showToast("Экспорт ограничен в этом браузере");
+}
+
+async function importInventoryCsv(file) {
+  if (!file) return;
+  if (!canDesktopPrint()) throw new Error("Импорт доступен только на ПК");
+  if (!canAdmin()) throw new Error("Только для администратора");
+
+  const text = await file.text();
+  const rows = parseCsv(text);
+  if (!rows.length) throw new Error("CSV пустой");
+  const objects = csvRowsToObjects(rows);
+  if (!objects.length) throw new Error("Нет строк для импорта");
+
+  let updated = 0;
+  let deleted = 0;
+  let skipped = 0;
+
+  for (const row of objects) {
+    const id = String(row.id || "").trim();
+    const name = String(row.name || "").trim();
+    const action = String(row.action || "").trim().toLowerCase();
+
+    if (action === "delete" || action === "remove" || action === "del") {
+      if (!id) {
+        skipped += 1;
+        continue;
+      }
+      await apiRequest("/api/inventory/delete", { method: "POST", body: { id } });
+      deleted += 1;
+      continue;
+    }
+
+    if (!name) {
+      skipped += 1;
+      continue;
+    }
+
+    await apiRequest("/api/inventory/upsert", {
+      method: "POST",
+      body: {
+        id,
+        name,
+        groupName: String(row.group_name || ""),
+        qty: Number(row.qty || 0),
+        threshold: Number(row.threshold || 0),
+        notes: String(row.notes || ""),
+      },
+    });
+    updated += 1;
+  }
+
+  await loadItems();
+  await loadHistory();
+  showToast(`Импорт завершен: обновлено ${updated}, удалено ${deleted}, пропущено ${skipped}`);
+}
+
 async function loadItems() {
   if (!state.token) {
     state.items = [];
@@ -2123,6 +2294,41 @@ refs.applyMainFiltersBtn.addEventListener("click", handleSearch);
 refs.resetMainFiltersBtn.addEventListener("click", resetMainFilters);
 refs.mainGroupFilter.addEventListener("change", handleSearch);
 refs.mainStockFilter.addEventListener("change", handleSearch);
+if (refs.exportInventoryBtn) refs.exportInventoryBtn.addEventListener("click", async () => {
+  try {
+    await exportInventoryCsv();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.exportInventorySheetBtn) refs.exportInventorySheetBtn.addEventListener("click", async () => {
+  try {
+    await exportInventorySheetCsv();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.importInventoryBtn && refs.importInventoryFile) refs.importInventoryBtn.addEventListener("click", () => {
+  if (!canDesktopPrint()) {
+    showToast("Импорт доступен только на ПК");
+    return;
+  }
+  refs.importInventoryFile.value = "";
+  refs.importInventoryFile.click();
+});
+if (refs.importInventoryFile) refs.importInventoryFile.addEventListener("change", async () => {
+  const file = refs.importInventoryFile.files?.[0];
+  if (!file) return;
+  try {
+    await runDbAction(() => importInventoryCsv(file), { message: "Импортируем расходники..." });
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
 
 refs.groupForm.addEventListener("submit", async (event) => {
   event.preventDefault();

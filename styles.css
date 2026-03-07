@@ -781,6 +781,12 @@ button.is-loading::after {
 .main-filters {
   margin-bottom: 0;
   margin-top: 6px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: end;
+}
+
+.desktop-only {
+  display: inline-flex;
 }
 
 .group-form {
@@ -1102,6 +1108,10 @@ button.is-loading::after {
 
   .main-filters {
     grid-template-columns: 1fr;
+  }
+
+  .desktop-only {
+    display: none !important;
   }
 
   .panel,
