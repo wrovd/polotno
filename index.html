@@ -384,92 +384,27 @@
               <span class="toggle-switch" aria-hidden="true"></span>
             </label>
             <p class="muted">Если выключено, бот не отправляет вам личные сообщения о низком остатке.</p>
-
-            <div class="section-head reminder-head">
-              <h3>Напоминания</h3>
-              <p>Выберите товары и периодичность напоминаний.</p>
+            <div class="settings-menu">
+              <div class="settings-menu-item">
+                <div>
+                  <strong>Напоминания</strong>
+                  <p class="muted">Периодичность и список товаров для напоминаний.</p>
+                </div>
+                <button class="secondary-btn btn-with-icon" id="openRemindersSettingsBtn" type="button">
+                  <span class="btn-icon" aria-hidden="true"><svg><use href="#i-toolbox"></use></svg></span><span>Настроить</span>
+                </button>
+              </div>
+              <div class="settings-menu-item">
+                <div>
+                  <strong>Отображение списков</strong>
+                  <p class="muted">Общий лимит для всех страниц.</p>
+                </div>
+                <button class="secondary-btn btn-with-icon" id="openDisplaySettingsBtn" type="button">
+                  <span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span><span>Настроить</span>
+                </button>
+              </div>
             </div>
-            <label>
-              Периодичность
-              <select id="settingsReminderInterval">
-                <option value="0">Выключено</option>
-                <option value="30">Каждые 30 минут</option>
-                <option value="60">Каждый час</option>
-                <option value="180">Каждые 3 часа</option>
-                <option value="360">Каждые 6 часов</option>
-                <option value="720">Каждые 12 часов</option>
-                <option value="1440">Раз в день</option>
-                <option value="2880">Каждые 2 дня</option>
-                <option value="4320">Каждые 3 дня</option>
-                <option value="10080">Раз в неделю</option>
-                <option value="20160">Каждые 2 недели</option>
-                <option value="43200">Раз в месяц</option>
-              </select>
-            </label>
-            <div class="reminder-items" id="settingsReminderItems">
-              <p class="muted">Список товаров загрузится после входа.</p>
-            </div>
-            <button class="primary-btn full btn-with-icon" id="settingsNotificationsSaveBtn" type="button">
-              <span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить уведомления</span>
-            </button>
           </section>
-        </section>
-
-        <section class="panel panel-collapsible">
-          <div class="section-head">
-            <h3>Отображение списков</h3>
-            <p>По умолчанию показываем 10 элементов. Настройте лимиты для всех разделов.</p>
-          </div>
-          <form class="history-filters display-settings-grid" id="displaySettingsForm" novalidate>
-            <label>
-              Каталог расходников
-              <select id="displayItemsLimit">
-                <option value="10">10</option>
-                <option value="20">20</option>
-                <option value="30">30</option>
-                <option value="-1">Все</option>
-              </select>
-            </label>
-            <label>
-              История движений
-              <select id="displayHistoryLimit">
-                <option value="10">10</option>
-                <option value="20">20</option>
-                <option value="30">30</option>
-                <option value="-1">Все</option>
-              </select>
-            </label>
-            <label>
-              Уведомления в личку
-              <select id="displayAlertsLimit">
-                <option value="10">10</option>
-                <option value="20">20</option>
-                <option value="30">30</option>
-                <option value="-1">Все</option>
-              </select>
-            </label>
-            <label>
-              Админка: пользователи
-              <select id="displayAdminUsersLimit">
-                <option value="10">10</option>
-                <option value="20">20</option>
-                <option value="30">30</option>
-                <option value="-1">Все</option>
-              </select>
-            </label>
-            <label>
-              Админка: история пользователя
-              <select id="displayAdminHistoryLimit">
-                <option value="10">10</option>
-                <option value="20">20</option>
-                <option value="30">30</option>
-                <option value="-1">Все</option>
-              </select>
-            </label>
-            <button class="primary-btn btn-with-icon" id="saveDisplaySettingsBtn" type="submit">
-              <span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить отображение</span>
-            </button>
-          </form>
         </section>
 
         <section class="panel panel-collapsible admin-only is-hidden" id="adminPanel">
@@ -674,6 +609,60 @@
         <p id="loadingText">Загрузка...</p>
       </div>
     </section>
+
+    <div class="auth-modal" id="remindersSettingsModal" hidden>
+      <div class="auth-backdrop" id="remindersSettingsBackdrop"></div>
+      <section class="auth-card" role="dialog" aria-modal="true" aria-label="Настройка напоминаний">
+        <button class="close-btn" id="closeRemindersSettingsBtn" type="button" aria-label="Закрыть">×</button>
+        <h3>Настройка напоминаний</h3>
+        <p class="helper">Выберите товары и периодичность напоминаний.</p>
+        <label>
+          Периодичность
+          <select id="settingsReminderInterval">
+            <option value="0">Выключено</option>
+            <option value="30">Каждые 30 минут</option>
+            <option value="60">Каждый час</option>
+            <option value="180">Каждые 3 часа</option>
+            <option value="360">Каждые 6 часов</option>
+            <option value="720">Каждые 12 часов</option>
+            <option value="1440">Раз в день</option>
+            <option value="2880">Каждые 2 дня</option>
+            <option value="4320">Каждые 3 дня</option>
+            <option value="10080">Раз в неделю</option>
+            <option value="20160">Каждые 2 недели</option>
+            <option value="43200">Раз в месяц</option>
+          </select>
+        </label>
+        <div class="reminder-items" id="settingsReminderItems">
+          <p class="muted">Список товаров загрузится после входа.</p>
+        </div>
+        <button class="primary-btn full btn-with-icon" id="settingsNotificationsSaveBtn" type="button">
+          <span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить напоминания</span>
+        </button>
+      </section>
+    </div>
+
+    <div class="auth-modal" id="displaySettingsModal" hidden>
+      <div class="auth-backdrop" id="displaySettingsBackdrop"></div>
+      <section class="auth-card" role="dialog" aria-modal="true" aria-label="Настройка отображения списков">
+        <button class="close-btn" id="closeDisplaySettingsBtn" type="button" aria-label="Закрыть">×</button>
+        <h3>Отображение списков</h3>
+        <p class="helper">Общий лимит для всех страниц.</p>
+        <form class="stock-form" id="displaySettingsForm" novalidate>
+          <label>
+            Показывать элементов
+            <select id="displayAllLimit">
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="30">30</option>
+            </select>
+          </label>
+          <button class="primary-btn full btn-with-icon" id="saveDisplaySettingsBtn" type="submit">
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить</span>
+          </button>
+        </form>
+      </section>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>

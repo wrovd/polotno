@@ -929,6 +929,32 @@ button.is-loading::after {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.settings-menu {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.settings-menu-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fbfcff;
+  padding: 10px;
+}
+
+.settings-menu-item strong {
+  font-size: 14px;
+}
+
+.settings-menu-item .muted {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .role-hint {
   border-style: dashed;
   background: #f8fbff;
@@ -1067,6 +1093,10 @@ button.is-loading::after {
   }
 
   .display-settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-menu-item {
     grid-template-columns: 1fr;
   }
 

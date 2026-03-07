@@ -33,11 +33,7 @@ const state = {
   adminUsers: [],
   adminHistory: [],
   displayPrefs: {
-    items: 10,
-    history: 10,
-    alerts: 10,
-    adminUsers: 10,
-    adminHistory: 10,
+    all: 10,
   },
   pages: {
     items: 1,
@@ -85,16 +81,20 @@ const refs = {
   settingsTelegramChatId: document.getElementById("settingsTelegramChatId"),
   settingsPassword: document.getElementById("settingsPassword"),
   settingsLowStockToggle: document.getElementById("settingsLowStockToggle"),
+  openRemindersSettingsBtn: document.getElementById("openRemindersSettingsBtn"),
+  openDisplaySettingsBtn: document.getElementById("openDisplaySettingsBtn"),
   settingsReminderInterval: document.getElementById("settingsReminderInterval"),
   settingsReminderItems: document.getElementById("settingsReminderItems"),
   settingsNotificationsSaveBtn: document.getElementById("settingsNotificationsSaveBtn"),
+  remindersSettingsModal: document.getElementById("remindersSettingsModal"),
+  remindersSettingsBackdrop: document.getElementById("remindersSettingsBackdrop"),
+  closeRemindersSettingsBtn: document.getElementById("closeRemindersSettingsBtn"),
   displaySettingsForm: document.getElementById("displaySettingsForm"),
-  displayItemsLimit: document.getElementById("displayItemsLimit"),
-  displayHistoryLimit: document.getElementById("displayHistoryLimit"),
-  displayAlertsLimit: document.getElementById("displayAlertsLimit"),
-  displayAdminUsersLimit: document.getElementById("displayAdminUsersLimit"),
-  displayAdminHistoryLimit: document.getElementById("displayAdminHistoryLimit"),
+  displayAllLimit: document.getElementById("displayAllLimit"),
   saveDisplaySettingsBtn: document.getElementById("saveDisplaySettingsBtn"),
+  displaySettingsModal: document.getElementById("displaySettingsModal"),
+  displaySettingsBackdrop: document.getElementById("displaySettingsBackdrop"),
+  closeDisplaySettingsBtn: document.getElementById("closeDisplaySettingsBtn"),
   adminPanel: document.getElementById("adminPanel"),
   adminUsersList: document.getElementById("adminUsersList"),
   adminUsersPager: document.getElementById("adminUsersPager"),
@@ -182,7 +182,6 @@ function safeParse(text) {
 
 function normalizePageSize(value, fallback = 10) {
   const raw = Number(value);
-  if (raw === -1) return -1;
   if (![10, 20, 30].includes(raw)) return fallback;
   return raw;
 }
@@ -191,11 +190,7 @@ function loadDisplayPrefs() {
   const saved = safeParse(localStorage.getItem(DISPLAY_PREFS_KEY));
   if (!saved || typeof saved !== "object") return;
   state.displayPrefs = {
-    items: normalizePageSize(saved.items, 10),
-    history: normalizePageSize(saved.history, 10),
-    alerts: normalizePageSize(saved.alerts, 10),
-    adminUsers: normalizePageSize(saved.adminUsers, 10),
-    adminHistory: normalizePageSize(saved.adminHistory, 10),
+    all: normalizePageSize(saved.all, 10),
   };
 }
 
@@ -204,29 +199,17 @@ function saveDisplayPrefs() {
 }
 
 function fillDisplayPrefsForm() {
-  if (!refs.displayItemsLimit) return;
-  refs.displayItemsLimit.value = String(state.displayPrefs.items);
-  refs.displayHistoryLimit.value = String(state.displayPrefs.history);
-  refs.displayAlertsLimit.value = String(state.displayPrefs.alerts);
-  refs.displayAdminUsersLimit.value = String(state.displayPrefs.adminUsers);
-  refs.displayAdminHistoryLimit.value = String(state.displayPrefs.adminHistory);
+  if (!refs.displayAllLimit) return;
+  refs.displayAllLimit.value = String(state.displayPrefs.all);
 }
 
 function readDisplayPrefsForm() {
-  if (!refs.displayItemsLimit) return;
-  state.displayPrefs.items = normalizePageSize(refs.displayItemsLimit.value, state.displayPrefs.items);
-  state.displayPrefs.history = normalizePageSize(refs.displayHistoryLimit.value, state.displayPrefs.history);
-  state.displayPrefs.alerts = normalizePageSize(refs.displayAlertsLimit.value, state.displayPrefs.alerts);
-  state.displayPrefs.adminUsers = normalizePageSize(refs.displayAdminUsersLimit.value, state.displayPrefs.adminUsers);
-  state.displayPrefs.adminHistory = normalizePageSize(refs.displayAdminHistoryLimit.value, state.displayPrefs.adminHistory);
+  if (!refs.displayAllLimit) return;
+  state.displayPrefs.all = normalizePageSize(refs.displayAllLimit.value, state.displayPrefs.all);
 }
 
 function paginateList(list, key) {
-  const pageSize = state.displayPrefs[key] ?? 10;
-  if (pageSize === -1) {
-    return { items: list, page: 1, totalPages: 1, total: list.length };
-  }
-
+  const pageSize = state.displayPrefs.all ?? 10;
   const totalPages = Math.max(1, Math.ceil(list.length / pageSize));
   const current = Math.min(Math.max(1, Number(state.pages[key] || 1)), totalPages);
   state.pages[key] = current;
@@ -245,8 +228,9 @@ function renderPager(el, key, meta, rerender) {
   }
 
   el.hidden = false;
-  const from = (page - 1) * (state.displayPrefs[key] === -1 ? total : state.displayPrefs[key]) + 1;
-  const to = Math.min(total, page * (state.displayPrefs[key] === -1 ? total : state.displayPrefs[key]));
+  const pageSize = state.displayPrefs.all;
+  const from = (page - 1) * pageSize + 1;
+  const to = Math.min(total, page * pageSize);
   el.innerHTML = `
     <button class="glass-btn pager-btn" type="button" data-dir="prev" ${page <= 1 ? "disabled" : ""}>Назад</button>
     <p class="pager-meta">Страница ${page}/${totalPages} • ${from}-${to} из ${total}</p>
@@ -419,6 +403,18 @@ function closeEditModal() {
   state.editingItemId = "";
 }
 
+function openSimpleModal(modal) {
+  if (!modal) return;
+  modal.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeSimpleModal(modal) {
+  if (!modal) return;
+  modal.hidden = true;
+  document.body.style.overflow = "";
+}
+
 function setAuthTab(tab) {
   state.authTab = tab;
   const isLogin = tab === "login";
@@ -511,8 +507,14 @@ function applyUserFromServer(nextUser, nextToken = "") {
 
 function fillSettingsForm() {
   if (!state.user) return;
-  refs.settingsFirstName.value = String(state.user.first_name || "").trim();
-  refs.settingsLastName.value = String(state.user.last_name || "").trim();
+  const fallbackNameParts = String(state.user.name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const fallbackFirst = fallbackNameParts[0] || "";
+  const fallbackLast = fallbackNameParts.slice(1).join(" ");
+  refs.settingsFirstName.value = String(state.user.first_name || fallbackFirst).trim();
+  refs.settingsLastName.value = String(state.user.last_name || fallbackLast).trim();
   refs.settingsEmail.value = String(state.user.email || "").trim().toLowerCase();
   refs.settingsTelegramChatId.value = String(state.user.telegram_chat_id || "").trim();
   refs.settingsPassword.value = "";
@@ -1164,7 +1166,7 @@ async function loadAdminHistoryByUser() {
     }
     return;
   }
-  const adminHistoryLimit = state.displayPrefs.adminHistory === -1 ? "500" : String(Math.max(160, state.displayPrefs.adminHistory));
+  const adminHistoryLimit = String(Math.max(160, state.displayPrefs.all));
   const query = new URLSearchParams({ user_email: email, limit: adminHistoryLimit }).toString();
   const data = await apiRequest(`/api/admin/history?${query}`);
   state.adminHistory = data.movements || [];
@@ -1205,7 +1207,7 @@ function applyHistoryFilters(list = state.history) {
 
 function historyQueryString() {
   const params = new URLSearchParams();
-  const historyLimit = state.displayPrefs.history === -1 ? "300" : String(Math.max(120, state.displayPrefs.history));
+  const historyLimit = String(Math.max(120, state.displayPrefs.all));
   params.set("limit", historyLimit);
   if (state.historyFilters.itemId) params.set("item_id", state.historyFilters.itemId);
   if (state.historyFilters.userEmail) params.set("user_email", state.historyFilters.userEmail);
@@ -1790,6 +1792,18 @@ refs.openSettingsBtn.addEventListener("click", async () => {
   }
 });
 refs.settingsBackBtn.addEventListener("click", () => setModuleView("inventory"));
+if (refs.openRemindersSettingsBtn) refs.openRemindersSettingsBtn.addEventListener("click", () => {
+  fillSettingsForm();
+  openSimpleModal(refs.remindersSettingsModal);
+});
+if (refs.openDisplaySettingsBtn) refs.openDisplaySettingsBtn.addEventListener("click", () => {
+  fillDisplayPrefsForm();
+  openSimpleModal(refs.displaySettingsModal);
+});
+if (refs.closeRemindersSettingsBtn) refs.closeRemindersSettingsBtn.addEventListener("click", () => closeSimpleModal(refs.remindersSettingsModal));
+if (refs.remindersSettingsBackdrop) refs.remindersSettingsBackdrop.addEventListener("click", () => closeSimpleModal(refs.remindersSettingsModal));
+if (refs.closeDisplaySettingsBtn) refs.closeDisplaySettingsBtn.addEventListener("click", () => closeSimpleModal(refs.displaySettingsModal));
+if (refs.displaySettingsBackdrop) refs.displaySettingsBackdrop.addEventListener("click", () => closeSimpleModal(refs.displaySettingsModal));
 refs.requestLogoutBtn.addEventListener("click", () => {
   closeAccountMenu();
   openLogoutModal();
@@ -1820,7 +1834,7 @@ refs.loginForm.addEventListener("submit", async (event) => {
     );
 
     applyUserFromServer(data.user, data.token);
-    state.profileLoaded = true;
+    state.profileLoaded = false;
     closeAuthModal();
     await runDbAction(
       async () => {
@@ -1908,6 +1922,7 @@ if (refs.settingsNotificationsSaveBtn) refs.settingsNotificationsSaveBtn.addEven
   const submitBtn = event.currentTarget instanceof HTMLButtonElement ? event.currentTarget : null;
   try {
     await saveNotificationsSettings(submitBtn);
+    closeSimpleModal(refs.remindersSettingsModal);
     showToast("Уведомления сохранены");
     hapticSuccess();
   } catch (error) {
@@ -1930,6 +1945,7 @@ if (refs.displaySettingsForm) refs.displaySettingsForm.addEventListener("submit"
   renderAlerts();
   renderAdminUsers(state.adminUsers);
   renderAdminHistory(state.adminHistory);
+  closeSimpleModal(refs.displaySettingsModal);
   showToast("Настройки отображения сохранены");
   hapticSuccess();
 });
@@ -2283,6 +2299,8 @@ document.addEventListener("keydown", (event) => {
     closeEditModal();
     closeScanModal();
     closeLogoutModal();
+    closeSimpleModal(refs.remindersSettingsModal);
+    closeSimpleModal(refs.displaySettingsModal);
     closeAccountMenu();
     stopScanner();
   }
