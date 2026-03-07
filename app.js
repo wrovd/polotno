@@ -30,9 +30,26 @@ const state = {
   desktopPrint: true,
   loadingDepth: 0,
   groups: [],
+  adminUsers: [],
+  adminHistory: [],
+  displayPrefs: {
+    items: 10,
+    history: 10,
+    alerts: 10,
+    adminUsers: 10,
+    adminHistory: 10,
+  },
+  pages: {
+    items: 1,
+    history: 1,
+    alerts: 1,
+    adminUsers: 1,
+    adminHistory: 1,
+  },
 };
 
 const ONBOARDING_KEY = "polotno_onboarding_seen_v1";
+const DISPLAY_PREFS_KEY = "polotno_display_prefs_v1";
 
 const refs = {
   openAuthBtn: document.getElementById("openAuthBtn"),
@@ -59,6 +76,7 @@ const refs = {
   toolsTab: document.getElementById("toolsTab"),
   historyTab: document.getElementById("historyTab"),
   historyList: document.getElementById("historyList"),
+  historyPager: document.getElementById("historyPager"),
   settingsBackBtn: document.getElementById("settingsBackBtn"),
   settingsForm: document.getElementById("settingsForm"),
   settingsFirstName: document.getElementById("settingsFirstName"),
@@ -70,11 +88,20 @@ const refs = {
   settingsReminderInterval: document.getElementById("settingsReminderInterval"),
   settingsReminderItems: document.getElementById("settingsReminderItems"),
   settingsNotificationsSaveBtn: document.getElementById("settingsNotificationsSaveBtn"),
+  displaySettingsForm: document.getElementById("displaySettingsForm"),
+  displayItemsLimit: document.getElementById("displayItemsLimit"),
+  displayHistoryLimit: document.getElementById("displayHistoryLimit"),
+  displayAlertsLimit: document.getElementById("displayAlertsLimit"),
+  displayAdminUsersLimit: document.getElementById("displayAdminUsersLimit"),
+  displayAdminHistoryLimit: document.getElementById("displayAdminHistoryLimit"),
+  saveDisplaySettingsBtn: document.getElementById("saveDisplaySettingsBtn"),
   adminPanel: document.getElementById("adminPanel"),
   adminUsersList: document.getElementById("adminUsersList"),
+  adminUsersPager: document.getElementById("adminUsersPager"),
   adminHistoryUser: document.getElementById("adminHistoryUser"),
   adminHistoryLoadBtn: document.getElementById("adminHistoryLoadBtn"),
   adminHistoryList: document.getElementById("adminHistoryList"),
+  adminHistoryPager: document.getElementById("adminHistoryPager"),
   adminAnnounceForm: document.getElementById("adminAnnounceForm"),
   adminAnnounceRole: document.getElementById("adminAnnounceRole"),
   adminAnnounceText: document.getElementById("adminAnnounceText"),
@@ -108,7 +135,9 @@ const refs = {
   itemThreshold: document.getElementById("itemThreshold"),
   itemNotes: document.getElementById("itemNotes"),
   itemsTableBody: document.getElementById("itemsTableBody"),
+  itemsPager: document.getElementById("itemsPager"),
   alertsBox: document.getElementById("alertsBox"),
+  alertsPager: document.getElementById("alertsPager"),
   checkAlertsBtn: document.getElementById("checkAlertsBtn"),
   notifyAlertsBtn: document.getElementById("notifyAlertsBtn"),
   printAllBtn: document.getElementById("printAllBtn"),
@@ -149,6 +178,88 @@ function safeParse(text) {
   } catch {
     return null;
   }
+}
+
+function normalizePageSize(value, fallback = 10) {
+  const raw = Number(value);
+  if (raw === -1) return -1;
+  if (![10, 20, 30].includes(raw)) return fallback;
+  return raw;
+}
+
+function loadDisplayPrefs() {
+  const saved = safeParse(localStorage.getItem(DISPLAY_PREFS_KEY));
+  if (!saved || typeof saved !== "object") return;
+  state.displayPrefs = {
+    items: normalizePageSize(saved.items, 10),
+    history: normalizePageSize(saved.history, 10),
+    alerts: normalizePageSize(saved.alerts, 10),
+    adminUsers: normalizePageSize(saved.adminUsers, 10),
+    adminHistory: normalizePageSize(saved.adminHistory, 10),
+  };
+}
+
+function saveDisplayPrefs() {
+  localStorage.setItem(DISPLAY_PREFS_KEY, JSON.stringify(state.displayPrefs));
+}
+
+function fillDisplayPrefsForm() {
+  if (!refs.displayItemsLimit) return;
+  refs.displayItemsLimit.value = String(state.displayPrefs.items);
+  refs.displayHistoryLimit.value = String(state.displayPrefs.history);
+  refs.displayAlertsLimit.value = String(state.displayPrefs.alerts);
+  refs.displayAdminUsersLimit.value = String(state.displayPrefs.adminUsers);
+  refs.displayAdminHistoryLimit.value = String(state.displayPrefs.adminHistory);
+}
+
+function readDisplayPrefsForm() {
+  if (!refs.displayItemsLimit) return;
+  state.displayPrefs.items = normalizePageSize(refs.displayItemsLimit.value, state.displayPrefs.items);
+  state.displayPrefs.history = normalizePageSize(refs.displayHistoryLimit.value, state.displayPrefs.history);
+  state.displayPrefs.alerts = normalizePageSize(refs.displayAlertsLimit.value, state.displayPrefs.alerts);
+  state.displayPrefs.adminUsers = normalizePageSize(refs.displayAdminUsersLimit.value, state.displayPrefs.adminUsers);
+  state.displayPrefs.adminHistory = normalizePageSize(refs.displayAdminHistoryLimit.value, state.displayPrefs.adminHistory);
+}
+
+function paginateList(list, key) {
+  const pageSize = state.displayPrefs[key] ?? 10;
+  if (pageSize === -1) {
+    return { items: list, page: 1, totalPages: 1, total: list.length };
+  }
+
+  const totalPages = Math.max(1, Math.ceil(list.length / pageSize));
+  const current = Math.min(Math.max(1, Number(state.pages[key] || 1)), totalPages);
+  state.pages[key] = current;
+  const start = (current - 1) * pageSize;
+  const end = start + pageSize;
+  return { items: list.slice(start, end), page: current, totalPages, total: list.length };
+}
+
+function renderPager(el, key, meta, rerender) {
+  if (!el) return;
+  const { page, totalPages, total } = meta;
+  if (total <= 0 || totalPages <= 1) {
+    el.hidden = true;
+    el.innerHTML = "";
+    return;
+  }
+
+  el.hidden = false;
+  const from = (page - 1) * (state.displayPrefs[key] === -1 ? total : state.displayPrefs[key]) + 1;
+  const to = Math.min(total, page * (state.displayPrefs[key] === -1 ? total : state.displayPrefs[key]));
+  el.innerHTML = `
+    <button class="glass-btn pager-btn" type="button" data-dir="prev" ${page <= 1 ? "disabled" : ""}>Назад</button>
+    <p class="pager-meta">Страница ${page}/${totalPages} • ${from}-${to} из ${total}</p>
+    <button class="glass-btn pager-btn" type="button" data-dir="next" ${page >= totalPages ? "disabled" : ""}>Вперед</button>
+  `;
+
+  el.querySelectorAll("button[data-dir]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const dir = btn.getAttribute("data-dir");
+      state.pages[key] = dir === "prev" ? Math.max(1, page - 1) : Math.min(totalPages, page + 1);
+      rerender();
+    });
+  });
 }
 
 function showToast(message) {
@@ -473,6 +584,7 @@ function filteredItems() {
 
 function renderMainByFilters() {
   applyMainFiltersFromInputs();
+  state.pages.items = 1;
   renderTable(filteredItems());
 }
 
@@ -481,6 +593,7 @@ function resetMainFilters() {
   refs.mainGroupFilter.value = "";
   refs.mainStockFilter.value = "";
   state.mainFilters = { search: "", group: "", stock: "" };
+  state.pages.items = 1;
   renderTable(state.items);
 }
 
@@ -521,6 +634,7 @@ async function openSettingsView() {
   } else {
     fillSettingsForm();
   }
+  fillDisplayPrefsForm();
   if (canAdmin()) {
     await runDbAction(() => loadAdminUsers(), { message: "Загружаем админку..." });
   }
@@ -872,10 +986,16 @@ function renderTable(list = state.items) {
       ? "Ничего не найдено. Добавьте новый расходник."
       : "Для загрузки каталога выполните вход в систему.";
     refs.itemsTableBody.innerHTML = `<tr><td colspan="5" class="muted">${emptyMessage}</td></tr>`;
+    if (refs.itemsPager) {
+      refs.itemsPager.hidden = true;
+      refs.itemsPager.innerHTML = "";
+    }
     return;
   }
 
-  for (const item of list) {
+  const page = paginateList(list, "items");
+
+  for (const item of page.items) {
     const groupLine = item.group_name
       ? `<span class="muted">Группа: ${item.group_name}</span><br />`
       : "";
@@ -905,6 +1025,8 @@ function renderTable(list = state.items) {
     `;
     refs.itemsTableBody.appendChild(row);
   }
+
+  renderPager(refs.itemsPager, "items", page, () => renderTable(list));
 }
 
 function renderAlerts(lowItems = null) {
@@ -913,15 +1035,22 @@ function renderAlerts(lowItems = null) {
 
   if (!low.length) {
     refs.alertsBox.innerHTML = '<p class="muted">Пока все в норме.</p>';
+    if (refs.alertsPager) {
+      refs.alertsPager.hidden = true;
+      refs.alertsPager.innerHTML = "";
+    }
     return;
   }
 
-  for (const item of low) {
+  const page = paginateList(low, "alerts");
+  for (const item of page.items) {
     const itemEl = document.createElement("div");
     itemEl.className = "alert-item";
     itemEl.textContent = `Личное уведомление: ${item.name} (${item.qty} шт, лимит ${item.threshold}).`;
     refs.alertsBox.appendChild(itemEl);
   }
+
+  renderPager(refs.alertsPager, "alerts", page, () => renderAlerts(low));
 }
 
 function formatHistoryDate(value) {
@@ -953,16 +1082,28 @@ function reasonLabel(reason) {
   return reason || "Изменение";
 }
 
-function renderAdminUsers(users = []) {
+function renderAdminUsers(users = state.adminUsers) {
   refs.adminUsersList.innerHTML = "";
   if (!users.length) {
     refs.adminUsersList.innerHTML = '<p class="muted">Пользователи не найдены.</p>';
     refs.adminHistoryUser.innerHTML = '<option value="">Нет пользователей</option>';
+    if (refs.adminUsersPager) {
+      refs.adminUsersPager.hidden = true;
+      refs.adminUsersPager.innerHTML = "";
+    }
     return;
   }
 
   refs.adminHistoryUser.innerHTML = '<option value="">Выберите пользователя</option>';
+  const page = paginateList(users, "adminUsers");
   users.forEach((user) => {
+    const option = document.createElement("option");
+    option.value = user.email;
+    option.textContent = `${user.email} (${user.role})`;
+    refs.adminHistoryUser.appendChild(option);
+  });
+
+  page.items.forEach((user) => {
     const item = document.createElement("article");
     item.className = "history-item";
     item.innerHTML = `
@@ -971,22 +1112,24 @@ function renderAdminUsers(users = []) {
       <div class="history-meta">Chat ID: ${user.telegram_chat_id || "не указан"}</div>
     `;
     refs.adminUsersList.appendChild(item);
-
-    const option = document.createElement("option");
-    option.value = user.email;
-    option.textContent = `${user.email} (${user.role})`;
-    refs.adminHistoryUser.appendChild(option);
   });
+
+  renderPager(refs.adminUsersPager, "adminUsers", page, () => renderAdminUsers(users));
 }
 
-function renderAdminHistory(movements = []) {
+function renderAdminHistory(movements = state.adminHistory) {
   refs.adminHistoryList.innerHTML = "";
   if (!movements.length) {
     refs.adminHistoryList.innerHTML = '<p class="muted">Действия не найдены.</p>';
+    if (refs.adminHistoryPager) {
+      refs.adminHistoryPager.hidden = true;
+      refs.adminHistoryPager.innerHTML = "";
+    }
     return;
   }
 
-  movements.forEach((row) => {
+  const page = paginateList(movements, "adminHistory");
+  page.items.forEach((row) => {
     const block = document.createElement("article");
     block.className = "history-item";
     block.innerHTML = `
@@ -997,24 +1140,36 @@ function renderAdminHistory(movements = []) {
     `;
     refs.adminHistoryList.appendChild(block);
   });
+
+  renderPager(refs.adminHistoryPager, "adminHistory", page, () => renderAdminHistory(movements));
 }
 
 async function loadAdminUsers() {
   if (!canAdmin() || !state.token) return;
   const data = await apiRequest("/api/admin/users");
-  renderAdminUsers(data.users || []);
+  state.adminUsers = data.users || [];
+  state.pages.adminUsers = 1;
+  renderAdminUsers(state.adminUsers);
 }
 
 async function loadAdminHistoryByUser() {
   if (!canAdmin() || !state.token) return;
   const email = String(refs.adminHistoryUser.value || "").trim().toLowerCase();
   if (!email) {
+    state.adminHistory = [];
     refs.adminHistoryList.innerHTML = '<p class="muted">Выберите пользователя.</p>';
+    if (refs.adminHistoryPager) {
+      refs.adminHistoryPager.hidden = true;
+      refs.adminHistoryPager.innerHTML = "";
+    }
     return;
   }
-  const query = new URLSearchParams({ user_email: email, limit: "160" }).toString();
+  const adminHistoryLimit = state.displayPrefs.adminHistory === -1 ? "500" : String(Math.max(160, state.displayPrefs.adminHistory));
+  const query = new URLSearchParams({ user_email: email, limit: adminHistoryLimit }).toString();
   const data = await apiRequest(`/api/admin/history?${query}`);
-  renderAdminHistory(data.movements || []);
+  state.adminHistory = data.movements || [];
+  state.pages.adminHistory = 1;
+  renderAdminHistory(state.adminHistory);
 }
 
 function setHistoryFiltersFromInputs() {
@@ -1050,7 +1205,8 @@ function applyHistoryFilters(list = state.history) {
 
 function historyQueryString() {
   const params = new URLSearchParams();
-  params.set("limit", "120");
+  const historyLimit = state.displayPrefs.history === -1 ? "300" : String(Math.max(120, state.displayPrefs.history));
+  params.set("limit", historyLimit);
   if (state.historyFilters.itemId) params.set("item_id", state.historyFilters.itemId);
   if (state.historyFilters.userEmail) params.set("user_email", state.historyFilters.userEmail);
   if (state.historyFilters.reason) params.set("reason", state.historyFilters.reason);
@@ -1078,10 +1234,15 @@ function renderHistory(list = state.historyFiltered) {
   refs.historyList.innerHTML = "";
   if (!list.length) {
     refs.historyList.innerHTML = '<p class="muted">История пока пустая.</p>';
+    if (refs.historyPager) {
+      refs.historyPager.hidden = true;
+      refs.historyPager.innerHTML = "";
+    }
     return;
   }
 
-  for (const row of list) {
+  const page = paginateList(list, "history");
+  for (const row of page.items) {
     const item = state.items.find((it) => it.id === row.item_id);
     const itemName = item?.name || row.item_id || "Без названия";
     const block = document.createElement("article");
@@ -1094,6 +1255,8 @@ function renderHistory(list = state.historyFiltered) {
     `;
     refs.historyList.appendChild(block);
   }
+
+  renderPager(refs.historyPager, "history", page, () => renderHistory(list));
 }
 
 function csvEscape(value) {
@@ -1189,6 +1352,8 @@ async function loadItems() {
   if (!state.token) {
     state.items = [];
     state.groups = [];
+    state.pages.items = 1;
+    state.pages.alerts = 1;
     renderTable();
     renderAlerts();
     renderGroupOptions();
@@ -1211,6 +1376,9 @@ async function loadItems() {
     state.groups = [];
     showToast("Не удалось загрузить расходники");
   }
+
+  state.pages.items = 1;
+  state.pages.alerts = 1;
 
   renderGroupOptions();
   renderReminderItems();
@@ -1280,6 +1448,7 @@ async function loadHistory() {
     state.history = [];
     state.historyFiltered = [];
     applyHistoryFilters(state.history);
+    state.pages.history = 1;
     renderHistory();
     return;
   }
@@ -1292,6 +1461,7 @@ async function loadHistory() {
   }
 
   applyHistoryFilters(state.history);
+  state.pages.history = 1;
   renderHistory();
 }
 
@@ -1746,6 +1916,24 @@ if (refs.settingsNotificationsSaveBtn) refs.settingsNotificationsSaveBtn.addEven
   }
 });
 
+if (refs.displaySettingsForm) refs.displaySettingsForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  readDisplayPrefsForm();
+  saveDisplayPrefs();
+  state.pages.items = 1;
+  state.pages.history = 1;
+  state.pages.alerts = 1;
+  state.pages.adminUsers = 1;
+  state.pages.adminHistory = 1;
+  renderTable(filteredItems());
+  renderHistory();
+  renderAlerts();
+  renderAdminUsers(state.adminUsers);
+  renderAdminHistory(state.adminHistory);
+  showToast("Настройки отображения сохранены");
+  hapticSuccess();
+});
+
 if (refs.adminHistoryLoadBtn) refs.adminHistoryLoadBtn.addEventListener("click", async () => {
   try {
     await runDbAction(() => loadAdminHistoryByUser(), {
@@ -2108,11 +2296,13 @@ window.addEventListener("resize", () => {
 setAuthTab("login");
 setModuleView("home");
 setInventoryTab("main");
+loadDisplayPrefs();
 sanitizeInitialSession();
 updateAuthButton();
 applyRoleAccess();
 applyPrintAccess();
 initCollapsiblePanels();
+fillDisplayPrefsForm();
 loadItems();
 loadHistory();
 initTelegram();

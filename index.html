@@ -247,6 +247,7 @@
                 <tbody id="itemsTableBody"></tbody>
               </table>
             </div>
+            <div class="pager" id="itemsPager" hidden></div>
           </section>
         </section>
 
@@ -260,6 +261,7 @@
               <div class="alert-box" id="alertsBox">
                 <p class="muted">Пока все в норме.</p>
               </div>
+              <div class="pager" id="alertsPager" hidden></div>
               <div class="hero-actions">
                 <button class="secondary-btn full btn-with-icon" id="checkAlertsBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-chart"></use></svg></span><span>Проверить лимиты</span></button>
                 <button class="primary-btn full btn-with-icon" id="notifyAlertsBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-bell"></use></svg></span><span>Отправить в личку</span></button>
@@ -321,6 +323,7 @@
             <div class="history-list" id="historyList">
               <p class="muted">История пока пустая.</p>
             </div>
+            <div class="pager" id="historyPager" hidden></div>
           </section>
         </section>
       </section>
@@ -412,6 +415,63 @@
           </section>
         </section>
 
+        <section class="panel panel-collapsible">
+          <div class="section-head">
+            <h3>Отображение списков</h3>
+            <p>По умолчанию показываем 10 элементов. Настройте лимиты для всех разделов.</p>
+          </div>
+          <form class="history-filters display-settings-grid" id="displaySettingsForm" novalidate>
+            <label>
+              Каталог расходников
+              <select id="displayItemsLimit">
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="30">30</option>
+                <option value="-1">Все</option>
+              </select>
+            </label>
+            <label>
+              История движений
+              <select id="displayHistoryLimit">
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="30">30</option>
+                <option value="-1">Все</option>
+              </select>
+            </label>
+            <label>
+              Уведомления в личку
+              <select id="displayAlertsLimit">
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="30">30</option>
+                <option value="-1">Все</option>
+              </select>
+            </label>
+            <label>
+              Админка: пользователи
+              <select id="displayAdminUsersLimit">
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="30">30</option>
+                <option value="-1">Все</option>
+              </select>
+            </label>
+            <label>
+              Админка: история пользователя
+              <select id="displayAdminHistoryLimit">
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="30">30</option>
+                <option value="-1">Все</option>
+              </select>
+            </label>
+            <button class="primary-btn btn-with-icon" id="saveDisplaySettingsBtn" type="submit">
+              <span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить отображение</span>
+            </button>
+          </form>
+        </section>
+
         <section class="panel panel-collapsible admin-only is-hidden" id="adminPanel">
           <div class="section-head">
             <h3>Админка</h3>
@@ -427,6 +487,7 @@
               <div class="history-list" id="adminUsersList">
                 <p class="muted">Нет данных.</p>
               </div>
+              <div class="pager" id="adminUsersPager" hidden></div>
             </section>
 
             <section class="panel panel-collapsible">
@@ -441,6 +502,7 @@
               <div class="history-list" id="adminHistoryList">
                 <p class="muted">Выберите пользователя.</p>
               </div>
+              <div class="pager" id="adminHistoryPager" hidden></div>
             </section>
           </div>
 
