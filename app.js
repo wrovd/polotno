@@ -1273,6 +1273,11 @@ function csvEscape(value) {
   return text;
 }
 
+function withUtf8Bom(text) {
+  const source = String(text ?? "");
+  return source.startsWith("\uFEFF") ? source : `\uFEFF${source}`;
+}
+
 async function copyTextToClipboard(text) {
   if (!navigator.clipboard?.writeText) return false;
   try {
@@ -1284,6 +1289,8 @@ async function copyTextToClipboard(text) {
 }
 
 async function downloadCsvWithFallback(fileName, csvText) {
+  const csvWithBom = withUtf8Bom(csvText);
+
   if ("showSaveFilePicker" in window) {
     try {
       const handle = await window.showSaveFilePicker({
@@ -1291,7 +1298,7 @@ async function downloadCsvWithFallback(fileName, csvText) {
         types: [{ description: "CSV File", accept: { "text/csv": [".csv"] } }],
       });
       const writable = await handle.createWritable();
-      await writable.write(csvText);
+      await writable.write(csvWithBom);
       await writable.close();
       return true;
     } catch {
@@ -1300,7 +1307,7 @@ async function downloadCsvWithFallback(fileName, csvText) {
   }
 
   try {
-    const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob([csvWithBom], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -1316,14 +1323,14 @@ async function downloadCsvWithFallback(fileName, csvText) {
   }
 
   try {
-    const dataUri = `data:text/csv;charset=utf-8,${encodeURIComponent(csvText)}`;
+    const dataUri = `data:text/csv;charset=utf-8,${encodeURIComponent(csvWithBom)}`;
     const popup = window.open(dataUri, "_blank");
     if (popup) return true;
   } catch {
     // continue fallback chain
   }
 
-  const copied = await copyTextToClipboard(csvText);
+  const copied = await copyTextToClipboard(csvWithBom);
   return copied;
 }
 
@@ -1403,7 +1410,7 @@ function parseCsv(text) {
 
 function csvRowsToObjects(rows) {
   if (!rows.length) return [];
-  const headers = rows[0].map((h) => String(h || "").trim().toLowerCase());
+  const headers = rows[0].map((h) => String(h || "").replace(/^\uFEFF/, "").trim().toLowerCase());
   return rows.slice(1).map((r) => {
     const out = {};
     headers.forEach((h, idx) => {
