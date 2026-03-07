@@ -280,6 +280,7 @@ button:active {
   border-color: var(--line);
   color: #34425c;
   padding: 10px 12px;
+  border-radius: var(--radius-md);
 }
 
 .seg-btn.active,
@@ -342,6 +343,28 @@ button:active {
   margin-top: 4px;
   color: var(--muted);
   line-height: 1.45;
+}
+
+.panel-collapsible .section-head {
+  position: relative;
+  padding-right: 110px;
+}
+
+.section-controls {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.collapse-btn {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 10px;
+}
+
+.panel.panel-collapsible.is-collapsed > :not(.section-head) {
+  display: none !important;
 }
 
 .search-panel {
@@ -499,6 +522,59 @@ td .actions {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+.item-main {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.item-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #87a9ea, #6a97ef);
+  color: #fff;
+  font-weight: 800;
+  font-size: 15px;
+  box-shadow: 0 6px 14px rgba(66, 101, 168, 0.24);
+  flex: 0 0 auto;
+}
+
+.item-copy {
+  min-width: 0;
+}
+
+.compact-actions {
+  gap: 5px;
+}
+
+.action-btn {
+  min-height: 34px;
+  padding: 7px 9px;
+  border-radius: 10px;
+  gap: 6px;
+}
+
+.action-btn .btn-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.action-text {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.action-btn.danger {
+  color: #8f2f43;
+  border-color: #e7c3ca;
+  background: #fff4f5;
 }
 
 .badge {
@@ -1055,13 +1131,23 @@ button.is-loading::after {
   td .actions {
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
   }
 
   td .actions button {
-    width: calc(50% - 4px);
-    min-height: 44px;
+    width: calc(33.333% - 4px);
+    min-height: 40px;
     justify-content: center;
+    padding-inline: 8px;
+  }
+
+  .action-text {
+    font-size: 10px;
+  }
+
+  .item-avatar {
+    width: 32px;
+    height: 32px;
   }
 
   .auth-card,

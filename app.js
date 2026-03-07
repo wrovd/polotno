@@ -69,6 +69,7 @@ const refs = {
   settingsLowStockToggle: document.getElementById("settingsLowStockToggle"),
   settingsReminderInterval: document.getElementById("settingsReminderInterval"),
   settingsReminderItems: document.getElementById("settingsReminderItems"),
+  settingsNotificationsSaveBtn: document.getElementById("settingsNotificationsSaveBtn"),
   adminPanel: document.getElementById("adminPanel"),
   adminUsersList: document.getElementById("adminUsersList"),
   adminHistoryUser: document.getElementById("adminHistoryUser"),
@@ -491,6 +492,24 @@ async function loadProfile() {
   state.profileLoaded = true;
 }
 
+async function saveNotificationsSettings(submitBtn = null) {
+  if (!state.token) throw new Error("Требуется вход в систему");
+  const data = await runDbAction(
+    () =>
+      apiRequest("/api/auth/profile", {
+        method: "PATCH",
+        body: {
+          lowStockNotifications: refs.settingsLowStockToggle.checked,
+          reminderItemIds: selectedReminderItemIds(),
+          reminderIntervalMinutes: Number(refs.settingsReminderInterval.value || 0),
+        },
+      }),
+    { button: submitBtn, message: "Сохраняем уведомления..." }
+  );
+  applyUserFromServer(data.user, data.token);
+  fillSettingsForm();
+}
+
 async function openSettingsView() {
   if (!state.user?.email || !state.token) {
     openAuthModal();
@@ -553,6 +572,38 @@ function canDesktopPrint() {
 
 function iconSpan(name) {
   return `<span class="btn-icon" aria-hidden="true"><svg><use href="#i-${name}"></use></svg></span>`;
+}
+
+function initialFromName(name) {
+  const text = String(name || "").trim();
+  if (!text) return "?";
+  return text[0].toUpperCase();
+}
+
+function initCollapsiblePanels() {
+  const panels = [...document.querySelectorAll(".panel.panel-collapsible")];
+  panels.forEach((panel, index) => {
+    const head = panel.querySelector(".section-head");
+    if (!head) return;
+    if (head.querySelector(".collapse-btn")) return;
+
+    const controls = document.createElement("div");
+    controls.className = "section-controls";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "glass-btn collapse-btn";
+    button.dataset.collapseIndex = String(index);
+    button.textContent = "Свернуть";
+    controls.appendChild(button);
+    head.appendChild(controls);
+
+    button.addEventListener("click", () => {
+      const collapsed = panel.classList.toggle("is-collapsed");
+      button.textContent = collapsed ? "Развернуть" : "Свернуть";
+      hapticSelection();
+    });
+  });
 }
 
 function updateMobileScanFab() {
@@ -828,19 +879,27 @@ function renderTable(list = state.items) {
     const groupLine = item.group_name
       ? `<span class="muted">Группа: ${item.group_name}</span><br />`
       : "";
+    const initial = initialFromName(item.name);
     const row = document.createElement("tr");
     row.innerHTML = `
-      <td data-label="Расходник"><strong>${item.name}</strong><br />${groupLine}<span class="muted">${item.notes || "Без заметок"}</span></td>
+      <td data-label="Расходник">
+        <div class="item-main">
+          <span class="item-avatar">${initial}</span>
+          <div class="item-copy">
+            <strong>${item.name}</strong><br />${groupLine}<span class="muted">${item.notes || "Без заметок"}</span>
+          </div>
+        </div>
+      </td>
       <td data-label="Остаток">${item.qty}</td>
       <td data-label="Лимит">${item.threshold}</td>
       <td data-label="QR-код">${item.id}<br />${statusBadge(item)}</td>
       <td data-label="Действия">
-        <div class="actions">
-          <button class="secondary-btn btn-with-icon ${canDesktopPrint() ? "" : "is-hidden"}" data-action="print" data-id="${item.id}" type="button">${iconSpan("print")}<span>Печать QR</span></button>
-          <button class="secondary-btn btn-with-icon ${canAdmin() ? "" : "is-hidden"}" data-action="plus-one" data-id="${item.id}" type="button">${iconSpan("plus")}<span>+1</span></button>
-          <button class="secondary-btn btn-with-icon ${canAdmin() ? "" : "is-hidden"}" data-action="edit" data-id="${item.id}" type="button">${iconSpan("edit")}<span>Редактировать</span></button>
-          <button class="glass-btn btn-with-icon ${canAdmin() ? "" : "is-hidden"}" data-action="delete" data-id="${item.id}" type="button">${iconSpan("trash")}<span>Удалить</span></button>
-          <button class="glass-btn btn-with-icon" data-action="consume" data-id="${item.id}" type="button">${iconSpan("minus")}<span>-1</span></button>
+        <div class="actions compact-actions">
+          <button title="Печать QR" class="secondary-btn btn-with-icon action-btn ${canDesktopPrint() ? "" : "is-hidden"}" data-action="print" data-id="${item.id}" type="button">${iconSpan("print")}<span class="action-text">Печать</span></button>
+          <button title="Добавить +1" class="secondary-btn btn-with-icon action-btn ${canAdmin() ? "" : "is-hidden"}" data-action="plus-one" data-id="${item.id}" type="button">${iconSpan("plus")}<span class="action-text">+1</span></button>
+          <button title="Редактировать" class="secondary-btn btn-with-icon action-btn ${canAdmin() ? "" : "is-hidden"}" data-action="edit" data-id="${item.id}" type="button">${iconSpan("edit")}<span class="action-text">Ред</span></button>
+          <button title="Удалить" class="glass-btn btn-with-icon action-btn danger ${canAdmin() ? "" : "is-hidden"}" data-action="delete" data-id="${item.id}" type="button">${iconSpan("trash")}<span class="action-text">Del</span></button>
+          <button title="Списать -1" class="glass-btn btn-with-icon action-btn" data-action="consume" data-id="${item.id}" type="button">${iconSpan("minus")}<span class="action-text">-1</span></button>
         </div>
       </td>
     `;
@@ -1675,6 +1734,18 @@ if (refs.settingsForm) refs.settingsForm.addEventListener("submit", async (event
   }
 });
 
+if (refs.settingsNotificationsSaveBtn) refs.settingsNotificationsSaveBtn.addEventListener("click", async (event) => {
+  const submitBtn = event.currentTarget instanceof HTMLButtonElement ? event.currentTarget : null;
+  try {
+    await saveNotificationsSettings(submitBtn);
+    showToast("Уведомления сохранены");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+
 if (refs.adminHistoryLoadBtn) refs.adminHistoryLoadBtn.addEventListener("click", async () => {
   try {
     await runDbAction(() => loadAdminHistoryByUser(), {
@@ -2041,6 +2112,7 @@ sanitizeInitialSession();
 updateAuthButton();
 applyRoleAccess();
 applyPrintAccess();
+initCollapsiblePanels();
 loadItems();
 loadHistory();
 initTelegram();

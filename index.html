@@ -178,7 +178,7 @@
           </section>
 
           <section class="layout-grid">
-            <section class="panel" id="stockManagePanel">
+            <section class="panel panel-collapsible" id="stockManagePanel">
               <div class="section-head">
                 <h3>Добавить расходник</h3>
                 <p>QR генерируется автоматически для печати и сканирования.</p>
@@ -210,7 +210,7 @@
               </form>
             </section>
 
-            <section class="panel">
+            <section class="panel panel-collapsible">
               <div class="section-head">
                 <h3>Быстрые действия</h3>
                 <p>Все второстепенные функции вынесены в отдельную вкладку «Инструменты».</p>
@@ -228,7 +228,7 @@
             </section>
           </section>
 
-          <section class="panel">
+          <section class="panel panel-collapsible">
             <div class="section-head">
               <h3>Каталог расходников</h3>
               <p>Нажмите на строку, чтобы распечатать QR или списать единицу.</p>
@@ -252,7 +252,7 @@
 
         <section id="toolsTab" class="tab-panel">
           <section class="layout-grid">
-            <section class="panel">
+            <section class="panel panel-collapsible">
               <div class="section-head">
                 <h3>Уведомления в личку</h3>
                 <p>Бот отправит вам сообщение, если остаток ниже лимита.</p>
@@ -266,7 +266,7 @@
               </div>
             </section>
 
-            <section class="panel">
+            <section class="panel panel-collapsible">
               <div class="section-head">
                 <h3>Этикетки и сканирование</h3>
                 <p>Сканер встроен в экран. Печать этикеток доступна только на ПК.</p>
@@ -282,7 +282,7 @@
             </section>
           </section>
 
-          <section class="panel admin-only" id="adjustPanel">
+          <section class="panel panel-collapsible admin-only" id="adjustPanel">
             <div class="section-head">
               <h3>Корректировка остатков</h3>
               <p>Для администратора: приход (+N) или списание (-N) с записью в историю.</p>
@@ -296,7 +296,7 @@
         </section>
 
         <section id="historyTab" class="tab-panel">
-          <section class="panel">
+          <section class="panel panel-collapsible">
             <div class="section-head">
               <h3>История движений</h3>
               <p>Журнал изменений: создание, редактирование и списания расходников.</p>
@@ -338,7 +338,7 @@
         </section>
 
         <section class="layout-grid settings-layout">
-          <section class="panel">
+          <section class="panel panel-collapsible">
             <div class="section-head">
               <h3>Профиль пользователя</h3>
               <p>Изменяйте личные данные самостоятельно, без администратора.</p>
@@ -370,7 +370,7 @@
             </form>
           </section>
 
-          <section class="panel">
+          <section class="panel panel-collapsible">
             <div class="section-head">
               <h3>Уведомления</h3>
               <p>Личные уведомления, когда расходник ниже лимита.</p>
@@ -406,17 +406,20 @@
             <div class="reminder-items" id="settingsReminderItems">
               <p class="muted">Список товаров загрузится после входа.</p>
             </div>
+            <button class="primary-btn full btn-with-icon" id="settingsNotificationsSaveBtn" type="button">
+              <span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить уведомления</span>
+            </button>
           </section>
         </section>
 
-        <section class="panel admin-only is-hidden" id="adminPanel">
+        <section class="panel panel-collapsible admin-only is-hidden" id="adminPanel">
           <div class="section-head">
             <h3>Админка</h3>
             <p>Пользователи, история действий и рассылка от имени бота.</p>
           </div>
 
           <div class="layout-grid admin-grid">
-            <section class="panel">
+            <section class="panel panel-collapsible">
               <div class="section-head">
                 <h3>Пользователи</h3>
                 <p>Зарегистрированные аккаунты и роли.</p>
@@ -426,7 +429,7 @@
               </div>
             </section>
 
-            <section class="panel">
+            <section class="panel panel-collapsible">
               <div class="section-head">
                 <h3>История пользователя</h3>
                 <p>Показываются только действия выбранного пользователя.</p>
@@ -441,7 +444,7 @@
             </section>
           </div>
 
-          <section class="panel">
+          <section class="panel panel-collapsible">
             <div class="section-head">
               <h3>Анонс от бота</h3>
               <p>Отправка сообщения сотрудникам от имени Telegram-бота.</p>
