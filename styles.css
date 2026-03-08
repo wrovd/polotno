@@ -306,14 +306,6 @@ h1 {
   fill: none;
 }
 
-.home-process-icon img {
-  width: 24px;
-  height: 24px;
-  display: block;
-  object-fit: contain;
-  border-radius: 6px;
-}
-
 .home-process-dots {
   width: 28px;
   height: 28px;
@@ -326,22 +318,6 @@ h1 {
   letter-spacing: 0.02em;
   border: 0;
   color: #fff;
-}
-
-.home-process-dots-btn {
-  cursor: pointer;
-  min-width: 28px;
-  min-height: 28px;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  line-height: 1;
-  flex: 0 0 28px;
-}
-
-.home-process-dots-btn:hover,
-.home-process-dots-btn:active {
-  transform: none;
 }
 
 .home-process-name {
