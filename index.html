@@ -122,27 +122,57 @@
       </header>
 
       <section id="homeView" class="view active">
-        <section class="hero-card">
-          <div class="hero-copy">
-            <p class="eyebrow">Главная</p>
-            <h2>Управление процессами в одном месте</h2>
-            <p>Лаконичный интерфейс для быстрой работы с расходниками, QR и уведомлениями.</p>
+        <section class="home-auth">
+          <div>
+            <p class="home-auth-caption" id="homeAuthCaption">Вы вошли как</p>
+            <p class="home-auth-email" id="homeAuthEmail">Гость</p>
           </div>
-        </section>
-
-        <section class="tile-grid">
-          <button class="module-tile" id="openInventoryTile" type="button">
-            <span class="tile-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
-                <path d="M12 3L20 7V17L12 21L4 17V7L12 3Z" stroke="currentColor" stroke-width="1.8" />
-                <path d="M4 7L12 11L20 7" stroke="currentColor" stroke-width="1.8" />
-                <path d="M12 11V21" stroke="currentColor" stroke-width="1.8" />
-              </svg>
-            </span>
-            <span class="tile-title">Учет расходников</span>
-            <span class="tile-caption">Остатки, QR, уведомления</span>
+          <button class="home-profile-btn" id="homeProfileBtn" type="button" aria-label="Профиль">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
+              <circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.9" />
+              <path d="M5.2 19a6.8 6.8 0 0 1 13.6 0" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
+            </svg>
           </button>
         </section>
+
+        <h2 class="home-title">Все доступные процессы</h2>
+
+        <label class="home-search" aria-label="Поиск процессов">
+          <span class="home-search-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span>
+          <input id="homeProcessSearch" type="search" placeholder="Поиск" autocomplete="off" />
+        </label>
+
+        <section class="home-process-grid" id="homeProcessGrid">
+          <button class="home-process-card home-process-card-blue" id="openInventoryTile" type="button" data-process-title="Учет расходников">
+            <div class="home-process-head">
+              <span class="home-process-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
+                  <path d="M12 3L20 7V17L12 21L4 17V7L12 3Z" stroke="currentColor" stroke-width="1.8" />
+                  <path d="M4 7L12 11L20 7" stroke="currentColor" stroke-width="1.8" />
+                  <path d="M12 11V21" stroke="currentColor" stroke-width="1.8" />
+                </svg>
+              </span>
+              <span class="home-process-dots" aria-hidden="true">•••</span>
+            </div>
+            <span class="home-process-name">Учет расходников</span>
+          </button>
+          <button class="home-process-card home-process-card-gold" id="openFilmsTile" type="button" data-process-title="Готовые пленки">
+            <div class="home-process-head">
+              <span class="home-process-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
+                  <rect x="5" y="5" width="14" height="14" rx="3" stroke="currentColor" stroke-width="1.8" />
+                  <path d="M8.2 12.2l2.4 2.3 5.2-5.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+              <span class="home-process-dots" aria-hidden="true">•••</span>
+            </div>
+            <span class="home-process-name">Готовые пленки</span>
+          </button>
+        </section>
+
+        <button class="home-scan-btn" id="homeScanBtn" type="button">
+          <span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span><span>Сканирование</span>
+        </button>
       </section>
 
       <section id="inventoryView" class="view">

@@ -64,6 +64,13 @@ const refs = {
   inventoryView: document.getElementById("inventoryView"),
   settingsView: document.getElementById("settingsView"),
   openInventoryTile: document.getElementById("openInventoryTile"),
+  openFilmsTile: document.getElementById("openFilmsTile"),
+  homeProfileBtn: document.getElementById("homeProfileBtn"),
+  homeAuthCaption: document.getElementById("homeAuthCaption"),
+  homeAuthEmail: document.getElementById("homeAuthEmail"),
+  homeProcessSearch: document.getElementById("homeProcessSearch"),
+  homeProcessGrid: document.getElementById("homeProcessGrid"),
+  homeScanBtn: document.getElementById("homeScanBtn"),
   homeBtn: document.getElementById("homeBtn"),
   mainTabBtn: document.getElementById("mainTabBtn"),
   toolsTabBtn: document.getElementById("toolsTabBtn"),
@@ -474,12 +481,25 @@ function updateAuthButton() {
     refs.openAuthBtn.innerHTML = `${iconSpan("user")}<span>${state.user.email} • ${role}</span>`;
     refs.openAuthBtn.classList.remove("primary-btn");
     refs.openAuthBtn.classList.add("glass-btn");
+    if (refs.homeAuthCaption) refs.homeAuthCaption.textContent = "Вы вошли как";
+    if (refs.homeAuthEmail) refs.homeAuthEmail.textContent = state.user.email;
     return;
   }
 
   refs.openAuthBtn.innerHTML = `${iconSpan("lock")}<span>Войти</span>`;
   refs.openAuthBtn.classList.remove("glass-btn");
   refs.openAuthBtn.classList.add("primary-btn");
+  if (refs.homeAuthCaption) refs.homeAuthCaption.textContent = "Вы вошли как";
+  if (refs.homeAuthEmail) refs.homeAuthEmail.textContent = "Гость";
+}
+
+function renderHomeProcessCards() {
+  if (!refs.homeProcessGrid) return;
+  const query = String(refs.homeProcessSearch?.value || "").trim().toLowerCase();
+  refs.homeProcessGrid.querySelectorAll("[data-process-title]").forEach((node) => {
+    const title = String(node.getAttribute("data-process-title") || "").toLowerCase();
+    node.hidden = Boolean(query) && !title.includes(query);
+  });
 }
 
 function userNotifyEnabled() {
@@ -1943,6 +1963,14 @@ refs.openAuthBtn.addEventListener("click", () => {
 
   openAuthModal();
 });
+if (refs.homeProfileBtn) refs.homeProfileBtn.addEventListener("click", () => {
+  hapticSelection();
+  if (state.user?.email) {
+    toggleAccountMenu();
+    return;
+  }
+  openAuthModal();
+});
 
 refs.closeAuthBtn.addEventListener("click", closeAuthModal);
 refs.authBackdrop.addEventListener("click", closeAuthModal);
@@ -1954,6 +1982,14 @@ refs.openInventoryTile.addEventListener("click", () => {
   setInventoryTab("main");
   setTimeout(() => refs.searchInput.focus(), 120);
 });
+if (refs.openFilmsTile) refs.openFilmsTile.addEventListener("click", () => {
+  showToast("Раздел «Готовые пленки» в разработке");
+});
+if (refs.homeScanBtn) refs.homeScanBtn.addEventListener("click", async () => {
+  openScanModal();
+  await startScanner();
+});
+if (refs.homeProcessSearch) refs.homeProcessSearch.addEventListener("input", renderHomeProcessCards);
 refs.homeBtn.addEventListener("click", () => setModuleView("home"));
 refs.mainTabBtn.addEventListener("click", () => setInventoryTab("main"));
 refs.toolsTabBtn.addEventListener("click", () => setInventoryTab("tools"));
@@ -2500,8 +2536,9 @@ document.addEventListener("click", (event) => {
   if (!(target instanceof HTMLElement)) return;
   if (refs.accountMenu.hidden) return;
   const insideButton = refs.openAuthBtn.contains(target);
+  const insideHomeProfile = refs.homeProfileBtn?.contains(target);
   const insideMenu = refs.accountMenu.contains(target);
-  if (!insideButton && !insideMenu) {
+  if (!insideButton && !insideHomeProfile && !insideMenu) {
     closeAccountMenu();
   }
 });
@@ -2534,6 +2571,7 @@ applyRoleAccess();
 applyPrintAccess();
 initCollapsiblePanels();
 fillDisplayPrefsForm();
+renderHomeProcessCards();
 loadItems();
 loadHistory();
 initTelegram();
