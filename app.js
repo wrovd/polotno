@@ -46,6 +46,7 @@ const state = {
 
 const ONBOARDING_KEY = "polotno_onboarding_seen_v1";
 const DISPLAY_PREFS_KEY = "polotno_display_prefs_v1";
+const HOME_CARD_ICONS_KEY = "polotno_home_card_icons_v1";
 
 const refs = {
   openAuthBtn: document.getElementById("openAuthBtn"),
@@ -71,6 +72,10 @@ const refs = {
   homeProcessSearch: document.getElementById("homeProcessSearch"),
   homeProcessGrid: document.getElementById("homeProcessGrid"),
   homeScanBtn: document.getElementById("homeScanBtn"),
+  homeInventoryIcon: document.getElementById("homeInventoryIcon"),
+  homeFilmsIcon: document.getElementById("homeFilmsIcon"),
+  homeInventoryIconInput: document.getElementById("homeInventoryIconInput"),
+  homeFilmsIconInput: document.getElementById("homeFilmsIconInput"),
   homeBtn: document.getElementById("homeBtn"),
   mainTabBtn: document.getElementById("mainTabBtn"),
   toolsTabBtn: document.getElementById("toolsTabBtn"),
@@ -502,6 +507,45 @@ function renderHomeProcessCards() {
   });
 }
 
+function loadHomeCardIcons() {
+  const saved = safeParse(localStorage.getItem(HOME_CARD_ICONS_KEY));
+  if (!saved || typeof saved !== "object") return { inventory: "", films: "" };
+  return {
+    inventory: String(saved.inventory || ""),
+    films: String(saved.films || ""),
+  };
+}
+
+function saveHomeCardIcons(next) {
+  localStorage.setItem(HOME_CARD_ICONS_KEY, JSON.stringify(next));
+}
+
+function applyHomeCardIcons() {
+  const icons = loadHomeCardIcons();
+  const applyIcon = (el, dataUrl) => {
+    if (!el) return;
+    if (!el.dataset.defaultMarkup) {
+      el.dataset.defaultMarkup = el.innerHTML;
+    }
+    if (!dataUrl) {
+      el.innerHTML = el.dataset.defaultMarkup;
+      return;
+    }
+    el.innerHTML = `<img src="${dataUrl}" alt="" />`;
+  };
+  applyIcon(refs.homeInventoryIcon, icons.inventory);
+  applyIcon(refs.homeFilmsIcon, icons.films);
+}
+
+async function readImageAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Не удалось прочитать файл"));
+    reader.readAsDataURL(file);
+  });
+}
+
 function userNotifyEnabled() {
   const value = state.user?.low_stock_notifications;
   if (value === undefined || value === null || value === "") return true;
@@ -748,16 +792,7 @@ function initCollapsiblePanels() {
 
 function updateMobileScanFab() {
   if (!refs.mobileScanFab) return;
-  if ((refs.scanModal && !refs.scanModal.hidden) || (refs.onboarding && !refs.onboarding.hidden)) {
-    refs.mobileScanFab.hidden = true;
-    return;
-  }
-  refs.mobileScanFab.hidden = false;
-  const scanning = Boolean(state.stream);
-  refs.mobileScanFab.classList.toggle("is-active", scanning);
-  refs.mobileScanFab.setAttribute("aria-label", scanning ? "Остановить сканер" : "Сканировать QR");
-  refs.mobileScanFab.title = scanning ? "Остановить сканер" : "Сканировать QR";
-  refs.mobileScanFab.innerHTML = scanning ? iconSpan("stop") : iconSpan("camera");
+  refs.mobileScanFab.hidden = true;
 }
 
 function getActiveScannerRefs() {
@@ -1993,6 +2028,41 @@ if (refs.homeScanBtn) refs.homeScanBtn.addEventListener("click", async () => {
   await startScanner();
 });
 if (refs.homeProcessSearch) refs.homeProcessSearch.addEventListener("input", renderHomeProcessCards);
+if (refs.homeProcessGrid) refs.homeProcessGrid.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const btn = target.closest(".home-process-dots-btn");
+  if (!(btn instanceof HTMLButtonElement)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const kind = String(btn.dataset.uploadTarget || "");
+  if (kind === "inventory" && refs.homeInventoryIconInput) {
+    refs.homeInventoryIconInput.value = "";
+    refs.homeInventoryIconInput.click();
+  }
+  if (kind === "films" && refs.homeFilmsIconInput) {
+    refs.homeFilmsIconInput.value = "";
+    refs.homeFilmsIconInput.click();
+  }
+});
+if (refs.homeInventoryIconInput) refs.homeInventoryIconInput.addEventListener("change", async () => {
+  const file = refs.homeInventoryIconInput.files?.[0];
+  if (!file || !String(file.type || "").startsWith("image/")) return;
+  const icons = loadHomeCardIcons();
+  icons.inventory = await readImageAsDataUrl(file);
+  saveHomeCardIcons(icons);
+  applyHomeCardIcons();
+  showToast("Иконка «Учет расходников» обновлена");
+});
+if (refs.homeFilmsIconInput) refs.homeFilmsIconInput.addEventListener("change", async () => {
+  const file = refs.homeFilmsIconInput.files?.[0];
+  if (!file || !String(file.type || "").startsWith("image/")) return;
+  const icons = loadHomeCardIcons();
+  icons.films = await readImageAsDataUrl(file);
+  saveHomeCardIcons(icons);
+  applyHomeCardIcons();
+  showToast("Иконка «Готовые пленки» обновлена");
+});
 refs.homeBtn.addEventListener("click", () => setModuleView("home"));
 refs.mainTabBtn.addEventListener("click", () => setInventoryTab("main"));
 refs.toolsTabBtn.addEventListener("click", () => setInventoryTab("tools"));
@@ -2575,6 +2645,7 @@ applyPrintAccess();
 initCollapsiblePanels();
 fillDisplayPrefsForm();
 renderHomeProcessCards();
+applyHomeCardIcons();
 loadItems();
 loadHistory();
 initTelegram();

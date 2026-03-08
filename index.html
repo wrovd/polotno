@@ -145,30 +145,32 @@
         <section class="home-process-grid" id="homeProcessGrid">
           <button class="home-process-card home-process-card-blue" id="openInventoryTile" type="button" data-process-title="Учет расходников">
             <div class="home-process-head">
-              <span class="home-process-icon" aria-hidden="true">
+              <span class="home-process-icon" id="homeInventoryIcon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
                   <path d="M12 3L20 7V17L12 21L4 17V7L12 3Z" stroke="currentColor" stroke-width="1.8" />
                   <path d="M4 7L12 11L20 7" stroke="currentColor" stroke-width="1.8" />
                   <path d="M12 11V21" stroke="currentColor" stroke-width="1.8" />
                 </svg>
               </span>
-              <span class="home-process-dots" aria-hidden="true">•••</span>
+              <button class="home-process-dots home-process-dots-btn" type="button" data-upload-target="inventory" aria-label="Изменить иконку">•••</button>
             </div>
             <span class="home-process-name">Учет расходников</span>
           </button>
           <button class="home-process-card home-process-card-gold" id="openFilmsTile" type="button" data-process-title="Готовые пленки">
             <div class="home-process-head">
-              <span class="home-process-icon" aria-hidden="true">
+              <span class="home-process-icon" id="homeFilmsIcon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
                   <rect x="5" y="5" width="14" height="14" rx="3" stroke="currentColor" stroke-width="1.8" />
                   <path d="M8.2 12.2l2.4 2.3 5.2-5.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </span>
-              <span class="home-process-dots" aria-hidden="true">•••</span>
+              <button class="home-process-dots home-process-dots-btn" type="button" data-upload-target="films" aria-label="Изменить иконку">•••</button>
             </div>
             <span class="home-process-name">Готовые пленки</span>
           </button>
         </section>
+        <input id="homeInventoryIconInput" type="file" accept="image/*" hidden />
+        <input id="homeFilmsIconInput" type="file" accept="image/*" hidden />
 
         <button class="home-scan-btn" id="homeScanBtn" type="button">
           <span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span><span>Сканирование</span>
