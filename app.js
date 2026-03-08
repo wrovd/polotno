@@ -32,6 +32,7 @@ const state = {
   groups: [],
   adminUsers: [],
   adminHistory: [],
+  homeProfilePhotoChatId: "",
   displayPrefs: {
     all: 10,
   },
@@ -483,6 +484,7 @@ function updateAuthButton() {
     refs.openAuthBtn.classList.add("glass-btn");
     if (refs.homeAuthCaption) refs.homeAuthCaption.textContent = "Вы вошли как";
     if (refs.homeAuthEmail) refs.homeAuthEmail.textContent = state.user.email;
+    void updateHomeProfilePhoto().catch(() => setHomeProfileButtonPhoto(""));
     return;
   }
 
@@ -491,6 +493,7 @@ function updateAuthButton() {
   refs.openAuthBtn.classList.add("primary-btn");
   if (refs.homeAuthCaption) refs.homeAuthCaption.textContent = "Вы вошли как";
   if (refs.homeAuthEmail) refs.homeAuthEmail.textContent = "Гость";
+  setHomeProfileButtonPhoto("");
 }
 
 function renderHomeProcessCards() {
@@ -500,6 +503,44 @@ function renderHomeProcessCards() {
     const title = String(node.getAttribute("data-process-title") || "").toLowerCase();
     node.hidden = Boolean(query) && !title.includes(query);
   });
+}
+
+function setHomeProfileButtonPhoto(dataUrl = "") {
+  if (!refs.homeProfileBtn) return;
+  if (!refs.homeProfileBtn.dataset.defaultMarkup) {
+    refs.homeProfileBtn.dataset.defaultMarkup = refs.homeProfileBtn.innerHTML;
+  }
+  if (!dataUrl) {
+    refs.homeProfileBtn.innerHTML = refs.homeProfileBtn.dataset.defaultMarkup;
+    refs.homeProfileBtn.classList.remove("has-photo");
+    return;
+  }
+  refs.homeProfileBtn.innerHTML = `<img src="${dataUrl}" alt="" />`;
+  refs.homeProfileBtn.classList.add("has-photo");
+}
+
+async function updateHomeProfilePhoto(force = false) {
+  if (!state.token || !state.user?.email) {
+    state.homeProfilePhotoChatId = "";
+    setHomeProfileButtonPhoto("");
+    return;
+  }
+
+  const chatId = String(state.user.telegram_chat_id || "").trim();
+  if (!chatId) {
+    state.homeProfilePhotoChatId = "";
+    setHomeProfileButtonPhoto("");
+    return;
+  }
+
+  if (!force && state.homeProfilePhotoChatId === chatId && refs.homeProfileBtn?.classList.contains("has-photo")) {
+    return;
+  }
+
+  const data = await apiRequest("/api/auth/profile-photo");
+  const photo = String(data?.photoDataUrl || "");
+  setHomeProfileButtonPhoto(photo);
+  state.homeProfilePhotoChatId = chatId;
 }
 
 function userNotifyEnabled() {
@@ -682,6 +723,7 @@ function clearSession() {
   localStorage.removeItem("sf_user");
   state.token = "";
   state.user = null;
+  state.homeProfilePhotoChatId = "";
   state.profileLoaded = false;
   updateAuthButton();
   applyRoleAccess();

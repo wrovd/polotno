@@ -1,6 +1,7 @@
 const { createUser, findUserByEmail, listUsers, updateUserByEmail } = require("../lib/sheets");
 const { getBearerToken, hashPassword, signToken, verifyPassword, verifyToken } = require("../lib/security");
 const { send, methodNotAllowed, parseJsonBody } = require("../lib/http");
+const { getTelegramProfilePhotoDataUrl } = require("../lib/telegram");
 
 function actionFromReq(req) {
   return String(req.query?.action || "").trim().toLowerCase();
@@ -70,7 +71,15 @@ async function handleLogin(req, res) {
     if (!email || !password) return send(res, 400, { error: "Email and password are required" });
 
     const user = await findUserByEmail(email);
-    if (!user || !verifyPassword(password, user.password_hash)) {
+    if (!user) {
+      const users = await listUsers();
+      if (!users.length) {
+        return send(res, 401, { error: "Нет пользователей в базе. Создайте первого админа через вкладку 'Админ' с ADMIN_KEY" });
+      }
+      return send(res, 401, { error: "Invalid credentials" });
+    }
+
+    if (!verifyPassword(password, user.password_hash)) {
       return send(res, 401, { error: "Invalid credentials" });
     }
 
@@ -200,10 +209,30 @@ async function handleProfile(req, res) {
   }
 }
 
+async function handleProfilePhoto(req, res) {
+  if (req.method !== "GET") return methodNotAllowed(req, res, ["GET"]);
+  const token = getBearerToken(req);
+  const auth = verifyToken(token);
+  if (!auth?.email) return send(res, 401, { error: "Unauthorized" });
+
+  try {
+    const current = await findUserByEmail(auth.email);
+    if (!current) return send(res, 401, { error: "Unauthorized" });
+    const chatId = String(current.telegram_chat_id || "").trim();
+    if (!chatId) return send(res, 200, { photoDataUrl: "" });
+
+    const photoDataUrl = await getTelegramProfilePhotoDataUrl(chatId);
+    return send(res, 200, { photoDataUrl });
+  } catch (error) {
+    return send(res, 200, { photoDataUrl: "" });
+  }
+}
+
 module.exports = async function handler(req, res) {
   const action = actionFromReq(req);
   if (action === "login") return handleLogin(req, res);
   if (action === "create-user") return handleCreateUser(req, res);
   if (action === "profile") return handleProfile(req, res);
+  if (action === "profile-photo") return handleProfilePhoto(req, res);
   return send(res, 404, { error: "Unknown auth action" });
 };
