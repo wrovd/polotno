@@ -1965,11 +1965,14 @@ refs.openAuthBtn.addEventListener("click", () => {
 });
 if (refs.homeProfileBtn) refs.homeProfileBtn.addEventListener("click", () => {
   hapticSelection();
-  if (state.user?.email) {
-    toggleAccountMenu();
+  if (!state.user?.email || !state.token) {
+    openAuthModal();
     return;
   }
-  openAuthModal();
+  openSettingsView().catch((error) => {
+    showToast(error.message);
+    hapticWarning();
+  });
 });
 
 refs.closeAuthBtn.addEventListener("click", closeAuthModal);

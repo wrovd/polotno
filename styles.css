@@ -35,6 +35,7 @@ body {
 
 body {
   padding: 14px 10px 20px;
+  background: #eef0f3;
 }
 
 h1,
@@ -45,10 +46,7 @@ p {
 }
 
 .bg-shape {
-  position: fixed;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.5;
+  display: none;
 }
 
 .bg-shape-top {
@@ -235,7 +233,7 @@ h1 {
   height: 44px;
   border-radius: 16px;
   border: 1px solid transparent;
-  background: #f3f3f3;
+  background: #e4dfdf;
   padding-left: 42px;
   font-size: 16px;
 }
@@ -267,7 +265,7 @@ h1 {
 
 .home-process-card {
   height: 120px;
-  border-radius: 22px;
+  border-radius: 30px;
   border: 0;
   color: #fff;
   padding: 16px;
@@ -1208,14 +1206,24 @@ button.is-loading::after {
 
   #homeView {
     max-width: 1080px;
+    gap: 18px;
   }
 
   .home-title {
     font-size: 28px;
   }
 
+  .home-auth {
+    max-width: 560px;
+  }
+
+  .home-search {
+    max-width: 560px;
+  }
+
   .home-process-grid {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
   }
 
   .home-scan-btn {
