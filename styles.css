@@ -273,6 +273,8 @@ h1 {
   flex-direction: column;
   justify-content: space-between;
   text-align: left;
+  align-items: stretch;
+  overflow: hidden;
 }
 
 .home-process-card-blue {
@@ -287,6 +289,7 @@ h1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  min-height: 28px;
 }
 
 .home-process-icon {
@@ -327,13 +330,28 @@ h1 {
 
 .home-process-dots-btn {
   cursor: pointer;
+  min-width: 28px;
+  min-height: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  line-height: 1;
+  flex: 0 0 28px;
+}
+
+.home-process-dots-btn:hover,
+.home-process-dots-btn:active {
+  transform: none;
 }
 
 .home-process-name {
+  display: block;
+  margin-top: auto;
   font-size: 18px;
   line-height: 1.2;
   font-weight: 600;
-  max-width: 10ch;
+  max-width: 100%;
+  word-break: break-word;
 }
 
 .home-scan-btn {
