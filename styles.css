@@ -448,6 +448,10 @@ h1 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.segmented-five {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 button {
   font: inherit;
   border: 1px solid transparent;
@@ -1320,6 +1324,10 @@ button.is-loading::after {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .segmented-five {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .history-filters {
     grid-template-columns: 1fr;
   }
@@ -1529,6 +1537,35 @@ button.is-loading::after {
   #mainTab .compact-actions .btn-icon {
     width: 15px;
     height: 15px;
+  }
+
+  #filmsTab tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    padding: 7px;
+    margin-bottom: 7px;
+  }
+
+  #filmsTab td {
+    padding: 5px 6px;
+  }
+
+  #filmsTab td::before {
+    margin-bottom: 2px;
+    font-size: 10px;
+  }
+
+  #filmsTab td[data-label="Товар"],
+  #filmsTab td[data-label="Действия"] {
+    grid-column: 1 / -1;
+  }
+
+  #filmsTab td .compact-actions .action-btn {
+    width: calc(50% - 4px);
+    min-height: 36px;
+    padding: 6px 8px;
+    border-radius: 9px;
   }
 
   .auth-card,

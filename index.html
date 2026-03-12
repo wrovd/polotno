@@ -93,6 +93,10 @@
       <symbol id="i-trash" viewBox="0 0 24 24">
         <path d="M5 7h14M9 7V5h6v2M8 7l1 12h6l1-12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
       </symbol>
+      <symbol id="i-warehouse" viewBox="0 0 24 24">
+        <path d="M3.5 10.2L12 4l8.5 6.2V20h-17z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+        <path d="M8 20v-6h8v6M9 9h.01M12 9h.01M15 9h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+      </symbol>
     </svg>
 
     <div class="bg-shape bg-shape-top" aria-hidden="true"></div>
@@ -177,9 +181,10 @@
 
       <section id="inventoryView" class="view">
         <section class="panel nav-panel">
-          <div class="segmented segmented-four">
+          <div class="segmented segmented-five">
             <button class="seg-btn btn-with-icon" id="homeBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-home"></use></svg></span><span>Главная</span></button>
             <button class="seg-btn btn-with-icon active" id="mainTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span><span>Основное</span></button>
+            <button class="seg-btn btn-with-icon" id="filmsTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-warehouse"></use></svg></span><span>Склад пленок</span></button>
             <button class="seg-btn btn-with-icon" id="toolsTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-toolbox"></use></svg></span><span>Инструменты</span></button>
             <button class="seg-btn btn-with-icon" id="historyTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-history"></use></svg></span><span>История</span></button>
           </div>
@@ -328,6 +333,80 @@
               <input type="number" id="adjustDelta" placeholder="Изменение, например +15 или -3" required />
               <button class="primary-btn btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-check"></use></svg></span><span>Применить корректировку</span></button>
             </form>
+          </section>
+        </section>
+
+        <section id="filmsTab" class="tab-panel">
+          <section class="panel search-panel">
+            <label for="filmsSearchInput">Поиск пленок</label>
+            <div class="search-row">
+              <input id="filmsSearchInput" type="search" placeholder="Наименование, штрихкод или ячейка" autocomplete="off" />
+              <button class="primary-btn btn-with-icon" id="filmsSearchBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Найти</span></button>
+            </div>
+            <div class="history-filters main-filters">
+              <input id="filmsBarcodeFilter" type="search" placeholder="Фильтр по штрихкоду" autocomplete="off" />
+              <input id="filmsCellFilter" type="search" placeholder="Фильтр по ячейке" autocomplete="off" />
+              <button class="secondary-btn btn-with-icon" id="applyFilmsFiltersBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-check"></use></svg></span><span>Применить</span></button>
+              <button class="glass-btn btn-with-icon" id="resetFilmsFiltersBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-reset"></use></svg></span><span>Сбросить</span></button>
+              <button class="secondary-btn btn-with-icon desktop-only" id="downloadFilmsTemplateBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-download"></use></svg></span><span>Скачать шаблон Excel</span></button>
+              <button class="secondary-btn btn-with-icon desktop-only" id="importFilmsExcelBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Загрузить Excel</span></button>
+            </div>
+            <input id="importFilmsFile" type="file" accept=".xlsx,.xls,.csv" hidden />
+          </section>
+
+          <section class="layout-grid">
+            <section class="panel panel-collapsible">
+              <div class="section-head">
+                <h3>Добавить пленку</h3>
+                <p>Одинаковый штрихкод может храниться в нескольких ячейках.</p>
+              </div>
+              <form class="stock-form" id="filmForm" novalidate>
+                <label>
+                  Наименование товара
+                  <input type="text" id="filmName" placeholder="Например, Матовая пленка A4" required />
+                </label>
+                <label>
+                  Штрихкод товара
+                  <input type="text" id="filmBarcode" placeholder="Например, 1234567890123" required />
+                </label>
+                <label>
+                  Номер ячейки
+                  <input type="text" id="filmCellNo" placeholder="Например, A-12" required />
+                </label>
+                <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить пленку</span></button>
+              </form>
+            </section>
+
+            <section class="panel panel-collapsible">
+              <div class="section-head">
+                <h3>Работа сборщика</h3>
+                <p>Нажмите кнопку сканирования. В режиме «Склад пленок» сканер покажет ячейки товара.</p>
+              </div>
+              <div class="hero-actions">
+                <button class="secondary-btn full btn-with-icon" id="filmsStartScanBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span><span>Сканировать штрихкод</span></button>
+              </div>
+            </section>
+          </section>
+
+          <section class="panel panel-collapsible">
+            <div class="section-head">
+              <h3>Список пленок</h3>
+              <p>Компактный список по всем ячейкам хранения.</p>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Товар</th>
+                    <th>Штрихкод</th>
+                    <th>Ячейка</th>
+                    <th>Действия</th>
+                  </tr>
+                </thead>
+                <tbody id="filmsTableBody"></tbody>
+              </table>
+            </div>
+            <div class="pager" id="filmsPager" hidden></div>
           </section>
         </section>
 
@@ -698,8 +777,62 @@
       </section>
     </div>
 
+    <div class="auth-modal" id="filmFoundModal" hidden>
+      <div class="auth-backdrop" id="filmFoundBackdrop"></div>
+      <section class="auth-card" role="dialog" aria-modal="true" aria-label="Пленка найдена">
+        <button class="close-btn" id="closeFilmFoundBtn" type="button" aria-label="Закрыть">×</button>
+        <h3>Пленка найдена</h3>
+        <p class="helper" id="filmFoundSummary">Список ячеек для выбранного штрихкода.</p>
+        <div class="history-list" id="filmFoundCellsList"></div>
+        <div class="hero-actions">
+          <button class="secondary-btn full btn-with-icon" id="filmFoundAddBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Добавить</span></button>
+          <button class="glass-btn full btn-with-icon" id="filmFoundDeleteBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-trash"></use></svg></span><span>Удалить</span></button>
+        </div>
+      </section>
+    </div>
+
+    <div class="auth-modal" id="filmAddModal" hidden>
+      <div class="auth-backdrop" id="filmAddBackdrop"></div>
+      <section class="auth-card" role="dialog" aria-modal="true" aria-label="Добавить пленку в ячейку">
+        <button class="close-btn" id="closeFilmAddBtn" type="button" aria-label="Закрыть">×</button>
+        <h3>Добавить в ячейку</h3>
+        <form class="stock-form" id="filmAddForm" novalidate>
+          <label>
+            Наименование товара
+            <input type="text" id="filmAddName" required />
+          </label>
+          <label>
+            Штрихкод
+            <input type="text" id="filmAddBarcode" readonly />
+          </label>
+          <label>
+            Номер новой ячейки
+            <input type="text" id="filmAddCellNo" placeholder="Например, B-03" required />
+          </label>
+          <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Добавить</span></button>
+        </form>
+      </section>
+    </div>
+
+    <div class="auth-modal" id="filmDeleteModal" hidden>
+      <div class="auth-backdrop" id="filmDeleteBackdrop"></div>
+      <section class="auth-card" role="dialog" aria-modal="true" aria-label="Удалить пленку из ячейки">
+        <button class="close-btn" id="closeFilmDeleteBtn" type="button" aria-label="Закрыть">×</button>
+        <h3>Удаление из ячейки</h3>
+        <p class="helper">С какой ячейки удалить товар?</p>
+        <form class="stock-form" id="filmDeleteForm" novalidate>
+          <label>
+            Ячейка
+            <select id="filmDeleteCellSelect" required></select>
+          </label>
+          <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-trash"></use></svg></span><span>Удалить из ячейки</span></button>
+        </form>
+      </section>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>

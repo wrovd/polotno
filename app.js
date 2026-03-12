@@ -2,6 +2,7 @@ const state = {
   authTab: "login",
   moduleView: "home",
   inventoryTab: "main",
+  scanContext: "inventory",
   profileLoaded: false,
   token: localStorage.getItem("sf_token") || "",
   user: safeParse(localStorage.getItem("sf_user")) || null,
@@ -32,6 +33,13 @@ const state = {
   groups: [],
   adminUsers: [],
   adminHistory: [],
+  films: [],
+  filmsFilters: {
+    search: "",
+    barcode: "",
+    cell: "",
+  },
+  scanFilmMatches: [],
   homeProfilePhotoChatId: "",
   displayPrefs: {
     all: 10,
@@ -40,6 +48,7 @@ const state = {
     items: 1,
     history: 1,
     alerts: 1,
+    films: 1,
     adminUsers: 1,
     adminHistory: 1,
   },
@@ -74,9 +83,11 @@ const refs = {
   homeScanBtn: document.getElementById("homeScanBtn"),
   homeBtn: document.getElementById("homeBtn"),
   mainTabBtn: document.getElementById("mainTabBtn"),
+  filmsTabBtn: document.getElementById("filmsTabBtn"),
   toolsTabBtn: document.getElementById("toolsTabBtn"),
   historyTabBtn: document.getElementById("historyTabBtn"),
   mainTab: document.getElementById("mainTab"),
+  filmsTab: document.getElementById("filmsTab"),
   toolsTab: document.getElementById("toolsTab"),
   historyTab: document.getElementById("historyTab"),
   historyList: document.getElementById("historyList"),
@@ -130,6 +141,22 @@ const refs = {
   importInventoryBtn: document.getElementById("importInventoryBtn"),
   exportInventorySheetBtn: document.getElementById("exportInventorySheetBtn"),
   importInventoryFile: document.getElementById("importInventoryFile"),
+  filmsSearchInput: document.getElementById("filmsSearchInput"),
+  filmsSearchBtn: document.getElementById("filmsSearchBtn"),
+  filmsBarcodeFilter: document.getElementById("filmsBarcodeFilter"),
+  filmsCellFilter: document.getElementById("filmsCellFilter"),
+  applyFilmsFiltersBtn: document.getElementById("applyFilmsFiltersBtn"),
+  resetFilmsFiltersBtn: document.getElementById("resetFilmsFiltersBtn"),
+  downloadFilmsTemplateBtn: document.getElementById("downloadFilmsTemplateBtn"),
+  importFilmsExcelBtn: document.getElementById("importFilmsExcelBtn"),
+  importFilmsFile: document.getElementById("importFilmsFile"),
+  filmForm: document.getElementById("filmForm"),
+  filmName: document.getElementById("filmName"),
+  filmBarcode: document.getElementById("filmBarcode"),
+  filmCellNo: document.getElementById("filmCellNo"),
+  filmsStartScanBtn: document.getElementById("filmsStartScanBtn"),
+  filmsTableBody: document.getElementById("filmsTableBody"),
+  filmsPager: document.getElementById("filmsPager"),
   toToolsBtn: document.getElementById("toToolsBtn"),
   stockManagePanel: document.getElementById("stockManagePanel"),
   adjustPanel: document.getElementById("adjustPanel"),
@@ -182,6 +209,25 @@ const refs = {
   loadingOverlay: document.getElementById("loadingOverlay"),
   loadingText: document.getElementById("loadingText"),
   mobileScanFab: document.getElementById("mobileScanFab"),
+  filmFoundModal: document.getElementById("filmFoundModal"),
+  filmFoundBackdrop: document.getElementById("filmFoundBackdrop"),
+  closeFilmFoundBtn: document.getElementById("closeFilmFoundBtn"),
+  filmFoundSummary: document.getElementById("filmFoundSummary"),
+  filmFoundCellsList: document.getElementById("filmFoundCellsList"),
+  filmFoundAddBtn: document.getElementById("filmFoundAddBtn"),
+  filmFoundDeleteBtn: document.getElementById("filmFoundDeleteBtn"),
+  filmAddModal: document.getElementById("filmAddModal"),
+  filmAddBackdrop: document.getElementById("filmAddBackdrop"),
+  closeFilmAddBtn: document.getElementById("closeFilmAddBtn"),
+  filmAddForm: document.getElementById("filmAddForm"),
+  filmAddName: document.getElementById("filmAddName"),
+  filmAddBarcode: document.getElementById("filmAddBarcode"),
+  filmAddCellNo: document.getElementById("filmAddCellNo"),
+  filmDeleteModal: document.getElementById("filmDeleteModal"),
+  filmDeleteBackdrop: document.getElementById("filmDeleteBackdrop"),
+  closeFilmDeleteBtn: document.getElementById("closeFilmDeleteBtn"),
+  filmDeleteForm: document.getElementById("filmDeleteForm"),
+  filmDeleteCellSelect: document.getElementById("filmDeleteCellSelect"),
 };
 
 function safeParse(text) {
@@ -447,6 +493,7 @@ function setModuleView(view) {
   refs.settingsView.classList.toggle("active", showSettings);
   if (!showInventory) {
     stopScanner();
+    state.scanContext = "inventory";
   }
   closeAccountMenu();
   updateMobileScanFab();
@@ -456,17 +503,25 @@ function setModuleView(view) {
 function setInventoryTab(tab) {
   state.inventoryTab = tab;
   const isMain = tab === "main";
+  const isFilms = tab === "films";
   const isTools = tab === "tools";
   const isHistory = tab === "history";
 
   refs.mainTabBtn.classList.toggle("active", isMain);
+  refs.filmsTabBtn.classList.toggle("active", isFilms);
   refs.toolsTabBtn.classList.toggle("active", isTools);
   refs.historyTabBtn.classList.toggle("active", isHistory);
   refs.mainTab.classList.toggle("active", isMain);
+  refs.filmsTab.classList.toggle("active", isFilms);
   refs.toolsTab.classList.toggle("active", isTools);
   refs.historyTab.classList.toggle("active", isHistory);
+  state.scanContext = isFilms ? "films" : "inventory";
   if (isMain) {
     stopScanner();
+  }
+  if (isFilms) {
+    stopScanner();
+    loadFilms();
   }
   if (isHistory) {
     stopScanner();
@@ -714,6 +769,7 @@ function performLogout() {
   setModuleView("home");
   loadItems();
   loadHistory();
+  loadFilms();
   showToast("Вы вышли из аккаунта");
   hapticSuccess();
 }
@@ -817,10 +873,17 @@ function setScanStatus(text, options = {}) {
   target.status.classList.toggle("is-busy", busy);
 }
 
+function scannerIdleHint() {
+  return state.scanContext === "films"
+    ? "Наведите камеру на штрихкод пленки."
+    : "Наведите камеру на QR-код расходника.";
+}
+
 function openScanModal() {
   if (!refs.scanModal) return;
   refs.scanModal.hidden = false;
   document.body.style.overflow = "hidden";
+  setScanStatus(scannerIdleHint(), { refsOverride: getActiveScannerRefs() });
   updateMobileScanFab();
 }
 
@@ -1086,6 +1149,73 @@ function renderTable(list = state.items) {
   }
 
   renderPager(refs.itemsPager, "items", page, () => renderTable(list));
+}
+
+function applyFilmsFiltersFromInputs() {
+  state.filmsFilters.search = String(refs.filmsSearchInput?.value || "").trim().toLowerCase();
+  state.filmsFilters.barcode = String(refs.filmsBarcodeFilter?.value || "").trim().toLowerCase();
+  state.filmsFilters.cell = String(refs.filmsCellFilter?.value || "").trim().toLowerCase();
+}
+
+function filteredFilms() {
+  const { search, barcode, cell } = state.filmsFilters;
+  return state.films.filter((film) => {
+    if (search) {
+      const matchSearch =
+        String(film.name || "").toLowerCase().includes(search) ||
+        String(film.barcode || "").toLowerCase().includes(search) ||
+        String(film.cell_no || "").toLowerCase().includes(search);
+      if (!matchSearch) return false;
+    }
+    if (barcode && !String(film.barcode || "").toLowerCase().includes(barcode)) return false;
+    if (cell && !String(film.cell_no || "").toLowerCase().includes(cell)) return false;
+    return true;
+  });
+}
+
+function renderFilmsTable(list = filteredFilms()) {
+  if (!refs.filmsTableBody) return;
+  refs.filmsTableBody.innerHTML = "";
+
+  if (!list.length) {
+    const emptyMessage = state.token
+      ? "Пленки не найдены. Добавьте вручную или через Excel."
+      : "Для загрузки склада пленок выполните вход в систему.";
+    refs.filmsTableBody.innerHTML = `<tr><td colspan="4" class="muted">${emptyMessage}</td></tr>`;
+    if (refs.filmsPager) {
+      refs.filmsPager.hidden = true;
+      refs.filmsPager.innerHTML = "";
+    }
+    return;
+  }
+
+  const page = paginateList(list, "films");
+  for (const film of page.items) {
+    const row = document.createElement("tr");
+    const avatar = initialFromName(film.name);
+    row.innerHTML = `
+      <td data-label="Товар">
+        <div class="item-main">
+          <span class="item-avatar">${avatar}</span>
+          <div class="item-copy">
+            <strong>${film.name}</strong><br />
+            <span class="muted">ID записи: ${film.id}</span>
+          </div>
+        </div>
+      </td>
+      <td data-label="Штрихкод">${film.barcode}</td>
+      <td data-label="Ячейка"><span class="badge badge-ok">${film.cell_no}</span></td>
+      <td data-label="Действия">
+        <div class="actions compact-actions">
+          <button title="Добавить такую же пленку" class="secondary-btn btn-with-icon action-btn" data-film-action="clone" data-film-barcode="${film.barcode}" type="button">${iconSpan("plus")}<span class="action-text">Добавить</span></button>
+          <button title="Удалить из ячейки" class="glass-btn btn-with-icon action-btn danger" data-film-action="delete" data-film-barcode="${film.barcode}" data-film-cell="${film.cell_no}" type="button">${iconSpan("trash")}<span class="action-text">Удалить</span></button>
+        </div>
+      </td>
+    `;
+    refs.filmsTableBody.appendChild(row);
+  }
+
+  renderPager(refs.filmsPager, "films", page, () => renderFilmsTable(list));
 }
 
 function renderAlerts(lowItems = null) {
@@ -1473,6 +1603,115 @@ function csvRowsToObjects(rows) {
   });
 }
 
+function filmExcelColumns() {
+  return ["Наименование товара", "Штрихкод", "Номер ячейки"];
+}
+
+function normalizeFilmImportRow(row = {}) {
+  return {
+    name: String(row["Наименование товара"] ?? row["наименование товара"] ?? row.name ?? "").trim(),
+    barcode: String(row["Штрихкод"] ?? row["штрихкод"] ?? row.barcode ?? "").trim(),
+    cellNo: String(row["Номер ячейки"] ?? row["номер ячейки"] ?? row.cell_no ?? row.cellNo ?? "").trim(),
+  };
+}
+
+async function downloadFilmsTemplate() {
+  const columns = filmExcelColumns();
+  const sampleRows = [
+    { "Наименование товара": "Матовая пленка A4", "Штрихкод": "1234567890123", "Номер ячейки": "A-12" },
+    { "Наименование товара": "Глянцевая пленка A3", "Штрихкод": "1234567890999", "Номер ячейки": "B-03" },
+  ];
+
+  if (window.XLSX?.utils?.book_new) {
+    const ws = window.XLSX.utils.json_to_sheet(sampleRows, { header: columns });
+    ws["!cols"] = [{ wch: 32 }, { wch: 20 }, { wch: 16 }];
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, "Films");
+    window.XLSX.writeFile(wb, "polotno-films-template.xlsx");
+    showToast("Шаблон Excel скачан");
+    return;
+  }
+
+  const csv = [columns.join(","), ...sampleRows.map((r) => columns.map((c) => csvEscape(r[c])).join(","))].join("\n");
+  const ok = await downloadCsvWithFallback("polotno-films-template.csv", csv);
+  if (ok) showToast("Шаблон CSV скачан");
+}
+
+async function parseFilmsImportFile(file) {
+  if (!file) return [];
+  const lower = String(file.name || "").toLowerCase();
+
+  if ((lower.endsWith(".xlsx") || lower.endsWith(".xls")) && window.XLSX?.read) {
+    const buffer = await file.arrayBuffer();
+    const wb = window.XLSX.read(buffer, { type: "array" });
+    const firstSheet = wb.Sheets[wb.SheetNames[0]];
+    if (!firstSheet) return [];
+    const rows = window.XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+    return rows.map(normalizeFilmImportRow);
+  }
+
+  const text = await file.text();
+  const rows = parseCsv(text);
+  const objects = csvRowsToObjects(rows);
+  return objects.map(normalizeFilmImportRow);
+}
+
+async function importFilmsExcel(file) {
+  if (!file) return;
+  if (!state.token) throw new Error("Требуется вход в систему");
+
+  const rows = await parseFilmsImportFile(file);
+  if (!rows.length) throw new Error("Файл пустой или не содержит строк");
+
+  const validRows = [];
+  const validationErrors = [];
+
+  rows.forEach((row, idx) => {
+    const line = idx + 2;
+    if (!row.name) {
+      validationErrors.push(`Строка ${line}: пустое наименование товара`);
+      return;
+    }
+    if (!row.barcode) {
+      validationErrors.push(`Строка ${line}: пустой штрихкод`);
+      return;
+    }
+    if (!row.cellNo) {
+      validationErrors.push(`Строка ${line}: пустой номер ячейки`);
+      return;
+    }
+    validRows.push(row);
+  });
+
+  let success = 0;
+  const importErrors = [...validationErrors];
+
+  if (validRows.length) {
+    const payloadRows = validRows.map((row) => ({
+      name: row.name,
+      barcode: row.barcode,
+      cellNo: row.cellNo,
+    }));
+    const data = await apiRequest("/api/films?action=bulk-upsert", {
+      method: "POST",
+      body: { rows: payloadRows },
+    });
+    success = Number(data?.report?.success || 0);
+    const apiErrors = Array.isArray(data?.report?.errors) ? data.report.errors : [];
+    apiErrors.forEach((err) => {
+      importErrors.push(`Строка ${err.line}: ${err.error}`);
+    });
+  }
+
+  await loadFilms();
+  const failed = importErrors.length;
+  showToast(`Импорт пленок: успешно ${success}, с ошибками ${failed}`);
+  if (failed) {
+    const preview = importErrors.slice(0, 6).join("\n");
+    window.alert(`Отчет импорта:\nУспешно: ${success}\nОшибок: ${failed}\n\n${preview}${failed > 6 ? "\n..." : ""}`);
+  }
+}
+
 async function exportInventoryCsv() {
   if (!canDesktopPrint()) {
     showToast("Экспорт доступен только на ПК");
@@ -1618,6 +1857,120 @@ async function loadItems() {
   renderMainByFilters();
   renderAlerts();
   refreshAdjustItemOptions();
+}
+
+async function loadFilms() {
+  if (!state.token) {
+    state.films = [];
+    state.pages.films = 1;
+    renderFilmsTable([]);
+    return;
+  }
+
+  try {
+    const params = new URLSearchParams();
+    params.set("action", "list");
+    params.set("limit", String(Math.max(300, state.displayPrefs.all * 8)));
+    const data = await apiRequest(`/api/films?${params.toString()}`);
+    state.films = data.films || [];
+  } catch (error) {
+    state.films = [];
+    showToast(error.message || "Не удалось загрузить склад пленок");
+  }
+
+  state.pages.films = 1;
+  renderFilmsTable(filteredFilms());
+}
+
+function handleFilmsSearch() {
+  applyFilmsFiltersFromInputs();
+  state.pages.films = 1;
+  renderFilmsTable(filteredFilms());
+}
+
+function resetFilmsFilters() {
+  if (refs.filmsSearchInput) refs.filmsSearchInput.value = "";
+  if (refs.filmsBarcodeFilter) refs.filmsBarcodeFilter.value = "";
+  if (refs.filmsCellFilter) refs.filmsCellFilter.value = "";
+  state.filmsFilters = { search: "", barcode: "", cell: "" };
+  state.pages.films = 1;
+  renderFilmsTable(state.films);
+}
+
+async function saveFilm(film) {
+  if (!state.token) throw new Error("Требуется вход в систему");
+  await apiRequest("/api/films?action=upsert", { method: "POST", body: film });
+  await loadFilms();
+}
+
+async function deleteFilm(barcode, cellNo) {
+  if (!state.token) throw new Error("Требуется вход в систему");
+  await apiRequest("/api/films?action=delete", {
+    method: "POST",
+    body: { barcode, cellNo },
+  });
+  await loadFilms();
+}
+
+function renderScanFilmFoundModal() {
+  if (!refs.filmFoundCellsList || !refs.filmFoundSummary) return;
+  const films = state.scanFilmMatches || [];
+  refs.filmFoundCellsList.innerHTML = "";
+  if (!films.length) {
+    refs.filmFoundSummary.textContent = "Совпадений не найдено.";
+    refs.filmFoundCellsList.innerHTML = '<p class="muted">Штрихкод отсутствует на складе пленок.</p>';
+    return;
+  }
+
+  const sample = films[0];
+  const cells = [...new Set(films.map((x) => String(x.cell_no || "").trim()).filter(Boolean))];
+  refs.filmFoundSummary.textContent = `${sample.name} • Штрихкод: ${sample.barcode}`;
+  cells.forEach((cell) => {
+    const card = document.createElement("article");
+    card.className = "history-item";
+    card.innerHTML = `<div><strong>Ячейка ${cell}</strong></div>`;
+    refs.filmFoundCellsList.appendChild(card);
+  });
+}
+
+function openFilmFoundModal(films) {
+  state.scanFilmMatches = Array.isArray(films) ? films : [];
+  renderScanFilmFoundModal();
+  openSimpleModal(refs.filmFoundModal);
+}
+
+function closeFilmFoundModal() {
+  closeSimpleModal(refs.filmFoundModal);
+}
+
+function openFilmAddModalFromScan() {
+  const sample = state.scanFilmMatches?.[0];
+  if (!sample) return;
+  refs.filmAddName.value = String(sample.name || "");
+  refs.filmAddBarcode.value = String(sample.barcode || "");
+  refs.filmAddCellNo.value = "";
+  openSimpleModal(refs.filmAddModal);
+}
+
+function closeFilmAddModal() {
+  closeSimpleModal(refs.filmAddModal);
+}
+
+function openFilmDeleteModalFromScan() {
+  if (!refs.filmDeleteCellSelect) return;
+  refs.filmDeleteCellSelect.innerHTML = "";
+  const cells = [...new Set((state.scanFilmMatches || []).map((x) => String(x.cell_no || "").trim()).filter(Boolean))];
+  cells.forEach((cell) => {
+    const option = document.createElement("option");
+    option.value = cell;
+    option.textContent = cell;
+    refs.filmDeleteCellSelect.appendChild(option);
+  });
+  openSimpleModal(refs.filmDeleteModal);
+}
+
+function closeFilmDeleteModal() {
+  closeSimpleModal(refs.filmDeleteModal);
 }
 
 function renderGroupOptions() {
@@ -1800,6 +2153,45 @@ function extractItemIdFromScan(rawValue) {
   return match ? match[0].toUpperCase() : text.toUpperCase();
 }
 
+function extractBarcodeFromScan(rawValue) {
+  const text = String(rawValue || "").trim();
+  if (!text) return "";
+  try {
+    const obj = JSON.parse(text);
+    if (obj && typeof obj.barcode === "string") return obj.barcode.trim();
+    if (obj && typeof obj.id === "string" && !/^SUP-\d{3,}$/i.test(obj.id.trim())) return obj.id.trim();
+    if (obj && typeof obj.id === "string") return obj.id.trim();
+  } catch {
+    // ignore
+  }
+  return text;
+}
+
+async function processFilmScanValue(rawValue) {
+  const barcode = extractBarcodeFromScan(rawValue);
+  if (!barcode) {
+    setScanStatus("Штрихкод не распознан.");
+    hapticWarning();
+    return;
+  }
+
+  setScanStatus("Ищем пленку на складе...", { busy: true });
+  const data = await apiRequest(`/api/films?action=find-by-barcode&barcode=${encodeURIComponent(barcode)}`);
+  const films = data.films || [];
+  if (!films.length) {
+    setScanStatus("Пленка не найдена на складе.");
+    showToast(`Штрихкод ${barcode}: не найден`);
+    hapticWarning();
+    return;
+  }
+
+  setScanStatus(`Найдено ячеек: ${films.length}`);
+  closeScanModal();
+  openFilmFoundModal(films);
+  showToast(`Найдено: ${films[0].name}`);
+  hapticSuccess();
+}
+
 async function processScanValue(rawValue) {
   const now = Date.now();
   if (rawValue === state.lastScanValue && now - state.lastScanAt < 1600) {
@@ -1807,6 +2199,11 @@ async function processScanValue(rawValue) {
   }
   state.lastScanValue = rawValue;
   state.lastScanAt = now;
+
+  if (state.scanContext === "films") {
+    await processFilmScanValue(rawValue);
+    return;
+  }
 
   const id = extractItemIdFromScan(rawValue);
   const item = state.items.find((it) => String(it.id).toUpperCase() === id);
@@ -1884,6 +2281,7 @@ async function startScanner() {
   }
 
   try {
+    setScanStatus(scannerIdleHint(), { refsOverride: active });
     const stream = await openPreferredCameraStream();
 
     state.stream = stream;
@@ -1970,9 +2368,9 @@ async function startScanner() {
 }
 
 function stopScanner() {
-  setScanStatus("Наведите камеру на QR-код расходника.");
+  setScanStatus(scannerIdleHint());
   if (refs.modalScanStatus) {
-    refs.modalScanStatus.textContent = "Наведите камеру на QR-код расходника.";
+    refs.modalScanStatus.textContent = scannerIdleHint();
     refs.modalScanStatus.classList.remove("is-busy");
   }
   stopScanLoops();
@@ -2019,7 +2417,9 @@ refs.openInventoryTile.addEventListener("click", () => {
   setTimeout(() => refs.searchInput.focus(), 120);
 });
 if (refs.openFilmsTile) refs.openFilmsTile.addEventListener("click", () => {
-  showToast("Раздел «Готовые пленки» в разработке");
+  setModuleView("inventory");
+  setInventoryTab("films");
+  setTimeout(() => refs.filmsSearchInput?.focus(), 120);
 });
 if (refs.homeScanBtn) refs.homeScanBtn.addEventListener("click", async () => {
   openScanModal();
@@ -2028,6 +2428,7 @@ if (refs.homeScanBtn) refs.homeScanBtn.addEventListener("click", async () => {
 if (refs.homeProcessSearch) refs.homeProcessSearch.addEventListener("input", renderHomeProcessCards);
 refs.homeBtn.addEventListener("click", () => setModuleView("home"));
 refs.mainTabBtn.addEventListener("click", () => setInventoryTab("main"));
+if (refs.filmsTabBtn) refs.filmsTabBtn.addEventListener("click", () => setInventoryTab("films"));
 refs.toolsTabBtn.addEventListener("click", () => setInventoryTab("tools"));
 refs.historyTabBtn.addEventListener("click", () => setInventoryTab("history"));
 refs.toToolsBtn.addEventListener("click", () => setInventoryTab("tools"));
@@ -2090,6 +2491,7 @@ refs.loginForm.addEventListener("submit", async (event) => {
       async () => {
         await loadItems();
         await loadHistory();
+        await loadFilms();
       },
       { message: "Загружаем данные аккаунта..." }
     );
@@ -2188,9 +2590,11 @@ if (refs.displaySettingsForm) refs.displaySettingsForm.addEventListener("submit"
   state.pages.items = 1;
   state.pages.history = 1;
   state.pages.alerts = 1;
+  state.pages.films = 1;
   state.pages.adminUsers = 1;
   state.pages.adminHistory = 1;
   renderTable(filteredItems());
+  renderFilmsTable(filteredFilms());
   renderHistory();
   renderAlerts();
   renderAdminUsers(state.adminUsers);
@@ -2409,6 +2813,104 @@ if (refs.importInventoryFile) refs.importInventoryFile.addEventListener("change"
   }
 });
 
+if (refs.filmForm) refs.filmForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!refs.filmForm.reportValidity()) return;
+  const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
+  try {
+    await runDbAction(
+      () =>
+        saveFilm({
+          name: refs.filmName.value.trim(),
+          barcode: refs.filmBarcode.value.trim(),
+          cellNo: refs.filmCellNo.value.trim(),
+        }),
+      { button: submitBtn, message: "Сохраняем пленку..." }
+    );
+    refs.filmForm.reset();
+    showToast("Пленка сохранена");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+
+if (refs.filmsSearchBtn) refs.filmsSearchBtn.addEventListener("click", handleFilmsSearch);
+if (refs.filmsSearchInput) refs.filmsSearchInput.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  handleFilmsSearch();
+});
+if (refs.filmsBarcodeFilter) refs.filmsBarcodeFilter.addEventListener("change", handleFilmsSearch);
+if (refs.filmsCellFilter) refs.filmsCellFilter.addEventListener("change", handleFilmsSearch);
+if (refs.applyFilmsFiltersBtn) refs.applyFilmsFiltersBtn.addEventListener("click", handleFilmsSearch);
+if (refs.resetFilmsFiltersBtn) refs.resetFilmsFiltersBtn.addEventListener("click", resetFilmsFilters);
+if (refs.downloadFilmsTemplateBtn) refs.downloadFilmsTemplateBtn.addEventListener("click", async () => {
+  try {
+    await downloadFilmsTemplate();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.importFilmsExcelBtn && refs.importFilmsFile) refs.importFilmsExcelBtn.addEventListener("click", () => {
+  if (!canDesktopPrint()) {
+    showToast("Импорт доступен только на ПК");
+    return;
+  }
+  refs.importFilmsFile.value = "";
+  refs.importFilmsFile.click();
+});
+if (refs.importFilmsFile) refs.importFilmsFile.addEventListener("change", async () => {
+  const file = refs.importFilmsFile.files?.[0];
+  if (!file) return;
+  try {
+    await runDbAction(() => importFilmsExcel(file), { message: "Импортируем пленки..." });
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.filmsStartScanBtn) refs.filmsStartScanBtn.addEventListener("click", async () => {
+  state.scanContext = "films";
+  openScanModal();
+  await startScanner();
+});
+if (refs.filmsTableBody) refs.filmsTableBody.addEventListener("click", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const button = target.closest("button[data-film-action]");
+  if (!(button instanceof HTMLButtonElement)) return;
+  const action = String(button.getAttribute("data-film-action") || "");
+  const barcode = String(button.getAttribute("data-film-barcode") || "").trim();
+  const cell = String(button.getAttribute("data-film-cell") || "").trim();
+
+  try {
+    if (action === "clone") {
+      const films = state.films.filter((x) => String(x.barcode) === barcode);
+      if (!films.length) return;
+      state.scanFilmMatches = films;
+      openFilmAddModalFromScan();
+      return;
+    }
+    if (action === "delete") {
+      const ok = window.confirm(`Удалить пленку ${barcode} из ячейки ${cell}?`);
+      if (!ok) return;
+      await runDbAction(() => deleteFilm(barcode, cell), {
+        button,
+        message: "Удаляем пленку...",
+      });
+      showToast("Пленка удалена");
+      hapticSuccess();
+    }
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+
 refs.groupForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!canAdmin()) {
@@ -2553,6 +3055,64 @@ refs.stopScannerBtn.addEventListener("click", () => {
 
 if (refs.closeScanModalBtn) refs.closeScanModalBtn.addEventListener("click", closeScanModal);
 if (refs.scanModalBackdrop) refs.scanModalBackdrop.addEventListener("click", closeScanModal);
+if (refs.closeFilmFoundBtn) refs.closeFilmFoundBtn.addEventListener("click", closeFilmFoundModal);
+if (refs.filmFoundBackdrop) refs.filmFoundBackdrop.addEventListener("click", closeFilmFoundModal);
+if (refs.closeFilmAddBtn) refs.closeFilmAddBtn.addEventListener("click", closeFilmAddModal);
+if (refs.filmAddBackdrop) refs.filmAddBackdrop.addEventListener("click", closeFilmAddModal);
+if (refs.closeFilmDeleteBtn) refs.closeFilmDeleteBtn.addEventListener("click", closeFilmDeleteModal);
+if (refs.filmDeleteBackdrop) refs.filmDeleteBackdrop.addEventListener("click", closeFilmDeleteModal);
+if (refs.filmFoundAddBtn) refs.filmFoundAddBtn.addEventListener("click", () => {
+  closeFilmFoundModal();
+  openFilmAddModalFromScan();
+});
+if (refs.filmFoundDeleteBtn) refs.filmFoundDeleteBtn.addEventListener("click", () => {
+  closeFilmFoundModal();
+  openFilmDeleteModalFromScan();
+});
+if (refs.filmAddForm) refs.filmAddForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!refs.filmAddForm.reportValidity()) return;
+  const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
+  try {
+    await runDbAction(
+      () =>
+        saveFilm({
+          name: refs.filmAddName.value.trim(),
+          barcode: refs.filmAddBarcode.value.trim(),
+          cellNo: refs.filmAddCellNo.value.trim(),
+        }),
+      { button: submitBtn, message: "Добавляем пленку в ячейку..." }
+    );
+    closeFilmAddModal();
+    showToast("Пленка добавлена в новую ячейку");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.filmDeleteForm) refs.filmDeleteForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!refs.filmDeleteForm.reportValidity()) return;
+  const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
+  const sample = state.scanFilmMatches?.[0];
+  if (!sample) return;
+  const cell = String(refs.filmDeleteCellSelect.value || "").trim();
+  if (!cell) return;
+
+  try {
+    await runDbAction(
+      () => deleteFilm(String(sample.barcode || ""), cell),
+      { button: submitBtn, message: "Удаляем пленку из выбранной ячейки..." }
+    );
+    closeFilmDeleteModal();
+    showToast(`Удалено из ячейки ${cell}`);
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
 
 if (refs.mobileScanFab) {
   refs.mobileScanFab.addEventListener("click", async () => {
@@ -2587,6 +3147,9 @@ document.addEventListener("keydown", (event) => {
     closeLogoutModal();
     closeSimpleModal(refs.remindersSettingsModal);
     closeSimpleModal(refs.displaySettingsModal);
+    closeFilmFoundModal();
+    closeFilmAddModal();
+    closeFilmDeleteModal();
     closeAccountMenu();
     stopScanner();
   }
@@ -2595,6 +3158,7 @@ document.addEventListener("keydown", (event) => {
 window.addEventListener("resize", () => {
   applyPrintAccess();
   renderTable();
+  renderFilmsTable(filteredFilms());
 });
 
 setAuthTab("login");
@@ -2610,6 +3174,7 @@ fillDisplayPrefsForm();
 renderHomeProcessCards();
 loadItems();
 loadHistory();
+loadFilms();
 initTelegram();
 updateMobileScanFab();
 
