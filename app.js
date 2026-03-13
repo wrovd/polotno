@@ -206,6 +206,8 @@ const refs = {
   searchInput: document.getElementById("searchInput"),
   iosSearchInput: document.getElementById("iosSearchInput"),
   iosFiltersChipBtn: document.getElementById("iosFiltersChipBtn"),
+  iosFilterParams: document.getElementById("iosFilterParams"),
+  iosItemsPager: document.getElementById("iosItemsPager"),
   mainBackBtn: document.getElementById("mainBackBtn"),
   mainScanBtn: document.getElementById("mainScanBtn"),
   consumablesList: document.getElementById("consumablesList"),
@@ -774,9 +776,39 @@ function filteredItems() {
   });
 }
 
+function currentInventoryFilterTags() {
+  const tags = [];
+  const group = String(state.mainFilters.group || "").trim();
+  const stock = String(state.mainFilters.stock || "").trim();
+  if (group) tags.push({ key: "group", label: `Группа: ${group}` });
+  if (stock === "low") tags.push({ key: "stock", label: "Низкий остаток" });
+  if (stock === "ok") tags.push({ key: "stock", label: "В норме" });
+  return tags;
+}
+
+function renderIosFilterChips() {
+  const tags = currentInventoryFilterTags();
+  if (refs.iosFiltersChipBtn) {
+    refs.iosFiltersChipBtn.classList.toggle("inventory-chip-primary", tags.length > 0);
+    const label = refs.iosFiltersChipBtn.querySelector("span:last-child");
+    if (label) label.textContent = tags.length ? `Фильтры (${tags.length})` : "Фильтры";
+  }
+  if (!refs.iosFilterParams) return;
+  refs.iosFilterParams.innerHTML = "";
+  tags.forEach((tag) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "inventory-chip";
+    chip.dataset.filterKey = tag.key;
+    chip.textContent = tag.label;
+    refs.iosFilterParams.appendChild(chip);
+  });
+}
+
 function renderMainByFilters() {
   applyMainFiltersFromInputs();
   state.pages.items = 1;
+  renderIosFilterChips();
   renderTable(filteredItems());
 }
 
@@ -787,6 +819,7 @@ function resetMainFilters() {
   refs.mainStockFilter.value = "";
   state.mainFilters = { search: "", group: "", stock: "" };
   state.pages.items = 1;
+  renderIosFilterChips();
   renderTable(state.items);
 }
 
@@ -1175,6 +1208,10 @@ async function printLabels(items) {
 
 function renderTable(list = state.items) {
   applyPrintAccess();
+  const hasItems = list.length > 0;
+  const page = hasItems ? paginateList(list, "items") : null;
+  const itemsForView = page ? page.items : [];
+
   if (refs.consumablesList) {
     refs.consumablesList.innerHTML = "";
     if (state.itemsLoading) {
@@ -1191,8 +1228,12 @@ function renderTable(list = state.items) {
           <p>Нет расходников</p>
         </article>
       `;
+      if (refs.iosItemsPager) {
+        refs.iosItemsPager.hidden = true;
+        refs.iosItemsPager.innerHTML = "";
+      }
     } else {
-      for (const item of list) {
+      for (const item of itemsForView) {
         const low = Number(item.qty) <= Number(item.threshold);
         const card = document.createElement("article");
         card.className = "consumable-card";
@@ -1211,12 +1252,13 @@ function renderTable(list = state.items) {
         `;
         refs.consumablesList.appendChild(card);
       }
+      renderPager(refs.iosItemsPager, "items", page, () => renderTable(list));
     }
   }
 
   refs.itemsTableBody.innerHTML = "";
 
-  if (!list.length) {
+  if (!hasItems) {
     const emptyMessage = state.token
       ? "Ничего не найдено. Добавьте новый расходник."
       : "Для загрузки каталога выполните вход в систему.";
@@ -1227,8 +1269,6 @@ function renderTable(list = state.items) {
     }
     return;
   }
-
-  const page = paginateList(list, "items");
 
   for (const item of page.items) {
     const groupLine = item.group_name
@@ -3308,9 +3348,20 @@ if (refs.iosSearchInput) refs.iosSearchInput.addEventListener("input", () => {
 });
 if (refs.iosFiltersChipBtn) refs.iosFiltersChipBtn.addEventListener("click", () => {
   if (refs.legacyMainLayout) {
-    refs.legacyMainLayout.classList.toggle("is-hidden");
+    refs.legacyMainLayout.classList.remove("is-hidden");
   }
+  refs.mainGroupFilter?.focus();
   hapticSelection();
+});
+if (refs.iosFilterParams) refs.iosFilterParams.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const chip = target.closest("button[data-filter-key]");
+  if (!(chip instanceof HTMLButtonElement)) return;
+  const key = String(chip.getAttribute("data-filter-key") || "");
+  if (key === "group") refs.mainGroupFilter.value = "";
+  if (key === "stock") refs.mainStockFilter.value = "";
+  handleSearch();
 });
 if (refs.mainBackBtn) refs.mainBackBtn.addEventListener("click", () => {
   setModuleView("home");

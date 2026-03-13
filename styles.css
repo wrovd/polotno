@@ -919,6 +919,11 @@ td .actions {
   scrollbar-width: none;
 }
 
+.inventory-chip-params {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .inventory-chip-row::-webkit-scrollbar {
   display: none;
 }
@@ -934,6 +939,7 @@ td .actions {
   align-items: center;
   gap: 8px;
   white-space: nowrap;
+  font-weight: 600;
 }
 
 .inventory-chip-primary {
@@ -1012,22 +1018,22 @@ td .actions {
 .consumable-stepper {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   border: 1px solid #e4e8f0;
   border-radius: 14px;
-  padding: 2px;
+  padding: 1px;
   background: #fff;
 }
 
 .consumable-step-btn {
-  min-height: 44px;
-  width: 44px;
-  height: 44px;
-  border-radius: 11px;
+  min-height: 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
   border: 1px solid #e9ebf0;
   background: #f5f6f8;
   color: #4b5261;
-  font-size: 28px;
+  font-size: 24px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
@@ -1035,9 +1041,9 @@ td .actions {
 }
 
 .consumable-qty {
-  min-width: 30px;
+  min-width: 24px;
   text-align: center;
-  font-size: 40px;
+  font-size: 20px;
   font-weight: 700;
   line-height: 1;
 }
@@ -1087,6 +1093,7 @@ td .actions {
 
 .inventory-ios-scan {
   margin-top: 4px;
+  margin-bottom: 74px;
 }
 
 .inventory-bottom-nav {
@@ -1134,7 +1141,7 @@ td .actions {
 }
 
 .inventory-ios .home-scan-btn {
-  width: min(430px, 100%);
+  width: min(300px, 92%);
   justify-self: center;
   min-height: 52px;
   border-radius: 18px;
@@ -1935,7 +1942,11 @@ button.is-loading::after {
   }
 
   .consumable-qty {
-    font-size: 34px;
+    font-size: 18px;
+  }
+
+  .inventory-ios-scan {
+    margin-bottom: 80px;
   }
 
   .auth-card,

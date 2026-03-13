@@ -216,12 +216,11 @@
             </label>
 
             <div class="inventory-chip-row">
-              <button class="inventory-chip inventory-chip-primary" id="iosFiltersChipBtn" type="button">
+              <button class="inventory-chip" id="iosFiltersChipBtn" type="button">
                 <span class="btn-icon" aria-hidden="true"><svg><use href="#i-filter"></use></svg></span>
-                <span>Фильтры (2)</span>
+                <span>Фильтры</span>
               </button>
-              <button class="inventory-chip" type="button">Коробки</button>
-              <button class="inventory-chip" type="button">Коробки для...</button>
+              <div class="inventory-chip-row inventory-chip-params" id="iosFilterParams"></div>
             </div>
 
             <section class="inventory-ios-list" id="consumablesList">
@@ -230,6 +229,7 @@
               <article class="consumable-skeleton"></article>
               <article class="consumable-skeleton"></article>
             </section>
+            <div class="pager inventory-ios-pager" id="iosItemsPager" hidden></div>
 
             <button class="home-scan-btn inventory-ios-scan" id="mainScanBtn" type="button">
               <span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span><span>Сканирование</span>
