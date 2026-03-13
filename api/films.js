@@ -118,10 +118,6 @@ module.exports = async function handler(req, res) {
           errors.push({ line, error: "Пустой штрихкод" });
           continue;
         }
-        if (!row.cell_no) {
-          errors.push({ line, error: "Пустой номер ячейки" });
-          continue;
-        }
 
         try {
           const existingRows = await findFilmsByBarcode(row.barcode);

@@ -40,6 +40,7 @@ const state = {
     barcode: "",
     cell: "",
   },
+  filmsGroup: "with",
   scanFilmMatches: [],
   quickFilm: {
     cellNo: "",
@@ -173,6 +174,8 @@ const refs = {
   filmsStartScanBtn: document.getElementById("filmsStartScanBtn"),
   filmsTableBody: document.getElementById("filmsTableBody"),
   filmsPager: document.getElementById("filmsPager"),
+  filmsGroupWithBtn: document.getElementById("filmsGroupWithBtn"),
+  filmsGroupWithoutBtn: document.getElementById("filmsGroupWithoutBtn"),
   toToolsBtn: document.getElementById("toToolsBtn"),
   stockManagePanel: document.getElementById("stockManagePanel"),
   adjustPanel: document.getElementById("adjustPanel"),
@@ -1191,12 +1194,17 @@ function groupedFilms(source = state.films) {
         barcode,
         cells: [],
         count: 0,
+        unassignedCount: 0,
       });
     }
     const group = map.get(barcode);
     group.count += 1;
     const cell = String(film.cell_no || "").trim();
-    if (cell && !group.cells.includes(cell)) group.cells.push(cell);
+    if (cell) {
+      if (!group.cells.includes(cell)) group.cells.push(cell);
+    } else {
+      group.unassignedCount += 1;
+    }
   });
 
   return [...map.values()]
@@ -1209,7 +1217,7 @@ function groupedFilms(source = state.films) {
 
 function filteredFilms() {
   const { search, barcode, cell } = state.filmsFilters;
-  return groupedFilms(state.films).filter((film) => {
+  const grouped = groupedFilms(state.films).filter((film) => {
     const cellsText = film.cells.join(" ").toLowerCase();
     if (search) {
       const matchSearch =
@@ -1222,15 +1230,25 @@ function filteredFilms() {
     if (cell && !cellsText.includes(cell)) return false;
     return true;
   });
+  if (state.filmsGroup === "without") {
+    return grouped.filter((film) => film.cells.length === 0);
+  }
+  return grouped.filter((film) => film.cells.length > 0);
 }
 
 function renderFilmsTable(list = filteredFilms()) {
   if (!refs.filmsTableBody) return;
+  if (refs.filmsGroupWithBtn && refs.filmsGroupWithoutBtn) {
+    refs.filmsGroupWithBtn.classList.toggle("active", state.filmsGroup === "with");
+    refs.filmsGroupWithoutBtn.classList.toggle("active", state.filmsGroup === "without");
+  }
   refs.filmsTableBody.innerHTML = "";
 
   if (!list.length) {
     const emptyMessage = state.token
-      ? "Пленки не найдены. Добавьте вручную или через Excel."
+      ? state.filmsGroup === "without"
+        ? "Пленок без ячеек нет."
+        : "Пленки с ячейками не найдены."
       : "Для загрузки склада пленок выполните вход в систему.";
     refs.filmsTableBody.innerHTML = `<tr><td colspan="4" class="muted">${emptyMessage}</td></tr>`;
     if (refs.filmsPager) {
@@ -1255,11 +1273,15 @@ function renderFilmsTable(list = filteredFilms()) {
         </div>
       </td>
       <td data-label="Штрихкод">${film.barcode}</td>
-      <td data-label="Ячейки">${film.cells.map((c) => `<span class="badge badge-ok">${c}</span>`).join(" ")}</td>
+      <td data-label="Ячейки">${
+        film.cells.length
+          ? film.cells.map((c) => `<span class="badge badge-ok">${c}</span>`).join(" ")
+          : '<span class="badge badge-low">Без ячейки</span>'
+      }</td>
       <td data-label="Действия">
         <div class="actions compact-actions">
           <button title="Добавить такую же пленку" class="secondary-btn btn-with-icon action-btn" data-film-action="clone" data-film-barcode="${film.barcode}" type="button">${iconSpan("plus")}<span class="action-text">Добавить</span></button>
-          <button title="Удалить из ячейки" class="glass-btn btn-with-icon action-btn danger" data-film-action="delete" data-film-barcode="${film.barcode}" type="button">${iconSpan("trash")}<span class="action-text">Удалить</span></button>
+          <button title="Удалить из ячейки" class="glass-btn btn-with-icon action-btn danger ${film.cells.length ? "" : "is-hidden"}" data-film-action="delete" data-film-barcode="${film.barcode}" type="button">${iconSpan("trash")}<span class="action-text">Удалить</span></button>
         </div>
       </td>
     `;
@@ -1728,10 +1750,6 @@ async function importFilmsExcel(file) {
     }
     if (!row.barcode) {
       validationErrors.push(`Строка ${line}: пустой штрихкод`);
-      return;
-    }
-    if (!row.cellNo) {
-      validationErrors.push(`Строка ${line}: пустой номер ячейки`);
       return;
     }
     validRows.push(row);
@@ -3189,6 +3207,18 @@ if (refs.filmsBarcodeFilter) refs.filmsBarcodeFilter.addEventListener("change", 
 if (refs.filmsCellFilter) refs.filmsCellFilter.addEventListener("change", handleFilmsSearch);
 if (refs.applyFilmsFiltersBtn) refs.applyFilmsFiltersBtn.addEventListener("click", handleFilmsSearch);
 if (refs.resetFilmsFiltersBtn) refs.resetFilmsFiltersBtn.addEventListener("click", resetFilmsFilters);
+if (refs.filmsGroupWithBtn) refs.filmsGroupWithBtn.addEventListener("click", () => {
+  state.filmsGroup = "with";
+  state.pages.films = 1;
+  renderFilmsTable(filteredFilms());
+  hapticSelection();
+});
+if (refs.filmsGroupWithoutBtn) refs.filmsGroupWithoutBtn.addEventListener("click", () => {
+  state.filmsGroup = "without";
+  state.pages.films = 1;
+  renderFilmsTable(filteredFilms());
+  hapticSelection();
+});
 if (refs.downloadFilmsTemplateBtn) refs.downloadFilmsTemplateBtn.addEventListener("click", async () => {
   try {
     await downloadFilmsTemplate();
