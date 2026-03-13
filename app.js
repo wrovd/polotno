@@ -577,7 +577,6 @@ function setInventoryTab(tab) {
   refs.mainTabBtn.classList.toggle("is-hidden", isFilms);
   refs.toolsTabBtn.classList.toggle("is-hidden", isFilms);
   if (refs.toToolsBtn) refs.toToolsBtn.classList.toggle("is-hidden", isFilms);
-  if (refs.inventoryView) refs.inventoryView.classList.toggle("is-main-ios-mode", isMain);
   if (refs.mainBottomMainBtn) refs.mainBottomMainBtn.classList.toggle("is-active", isMain);
   if (refs.mainBottomToolsBtn) refs.mainBottomToolsBtn.classList.toggle("is-active", isTools);
   if (refs.mainBottomHistoryBtn) refs.mainBottomHistoryBtn.classList.toggle("is-active", isHistory);
