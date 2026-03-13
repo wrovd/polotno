@@ -1,6 +1,13 @@
 const { requireAuth } = require("../lib/auth");
 const { send, methodNotAllowed, parseJsonBody } = require("../lib/http");
-const { listFilms, upsertFilm, deleteFilmByBarcodeCell, findFilmsByBarcode, appendMovement } = require("../lib/sheets");
+const {
+  listFilms,
+  upsertFilm,
+  deleteFilmByBarcodeCell,
+  findFilmsByBarcode,
+  appendMovement,
+  getFilmDeleteStats,
+} = require("../lib/sheets");
 
 function actionFromReq(req) {
   return String(req.query?.action || "").trim().toLowerCase();
@@ -49,6 +56,19 @@ module.exports = async function handler(req, res) {
       return send(res, 200, { films });
     } catch (error) {
       return send(res, 500, { error: error.message || "Failed to find film" });
+    }
+  }
+
+  if (method === "GET" && action === "delete-stats") {
+    try {
+      const stats = await getFilmDeleteStats({
+        dateFrom: req.query?.date_from || "",
+        dateTo: req.query?.date_to || "",
+        granularity: req.query?.granularity || "day",
+      });
+      return send(res, 200, stats);
+    } catch (error) {
+      return send(res, 500, { error: error.message || "Failed to load film delete stats" });
     }
   }
 

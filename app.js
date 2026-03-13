@@ -59,6 +59,14 @@ const state = {
     adminUsers: 1,
     adminHistory: 1,
   },
+  stats: {
+    dateFrom: "",
+    dateTo: "",
+    granularity: "day",
+    series: [],
+    users: [],
+    totalDeleted: 0,
+  },
 };
 
 const ONBOARDING_KEY = "polotno_onboarding_seen_v1";
@@ -93,10 +101,12 @@ const refs = {
   filmsTabBtn: document.getElementById("filmsTabBtn"),
   toolsTabBtn: document.getElementById("toolsTabBtn"),
   historyTabBtn: document.getElementById("historyTabBtn"),
+  statsTabBtn: document.getElementById("statsTabBtn"),
   mainTab: document.getElementById("mainTab"),
   filmsTab: document.getElementById("filmsTab"),
   toolsTab: document.getElementById("toolsTab"),
   historyTab: document.getElementById("historyTab"),
+  statsTab: document.getElementById("statsTab"),
   historyList: document.getElementById("historyList"),
   historyPager: document.getElementById("historyPager"),
   settingsBackBtn: document.getElementById("settingsBackBtn"),
@@ -140,6 +150,16 @@ const refs = {
   historyApplyBtn: document.getElementById("historyApplyBtn"),
   historyResetBtn: document.getElementById("historyResetBtn"),
   historyExportBtn: document.getElementById("historyExportBtn"),
+  statsFiltersForm: document.getElementById("statsFiltersForm"),
+  statsDateFrom: document.getElementById("statsDateFrom"),
+  statsDateTo: document.getElementById("statsDateTo"),
+  statsGranularity: document.getElementById("statsGranularity"),
+  statsApplyBtn: document.getElementById("statsApplyBtn"),
+  statsTotalDeleted: document.getElementById("statsTotalDeleted"),
+  statsActiveUsers: document.getElementById("statsActiveUsers"),
+  statsPeakLabel: document.getElementById("statsPeakLabel"),
+  statsChart: document.getElementById("statsChart"),
+  statsUsersList: document.getElementById("statsUsersList"),
   mainGroupFilter: document.getElementById("mainGroupFilter"),
   mainStockFilter: document.getElementById("mainStockFilter"),
   applyMainFiltersBtn: document.getElementById("applyMainFiltersBtn"),
@@ -525,15 +545,18 @@ function setInventoryTab(tab) {
   const isFilms = tab === "films";
   const isTools = tab === "tools";
   const isHistory = tab === "history";
+  const isStats = tab === "stats";
 
   refs.mainTabBtn.classList.toggle("active", isMain);
   refs.filmsTabBtn.classList.toggle("active", isFilms);
   refs.toolsTabBtn.classList.toggle("active", isTools);
   refs.historyTabBtn.classList.toggle("active", isHistory);
+  refs.statsTabBtn.classList.toggle("active", isStats);
   refs.mainTab.classList.toggle("active", isMain);
   refs.filmsTab.classList.toggle("active", isFilms);
   refs.toolsTab.classList.toggle("active", isTools);
   refs.historyTab.classList.toggle("active", isHistory);
+  refs.statsTab.classList.toggle("active", isStats);
   refs.mainTabBtn.classList.toggle("is-hidden", isFilms);
   refs.toolsTabBtn.classList.toggle("is-hidden", isFilms);
   if (refs.toToolsBtn) refs.toToolsBtn.classList.toggle("is-hidden", isFilms);
@@ -548,6 +571,10 @@ function setInventoryTab(tab) {
   if (isHistory) {
     stopScanner();
     loadHistory();
+  }
+  if (isStats) {
+    stopScanner();
+    loadFilmDeleteStats();
   }
   updateMobileScanFab();
   hapticSelection();
@@ -1524,6 +1551,128 @@ function renderHistory(list = state.historyFiltered) {
   renderPager(refs.historyPager, "history", page, () => renderHistory(list));
 }
 
+function shortBucketLabel(bucket, granularity) {
+  if (!bucket) return "-";
+  if (granularity === "month") {
+    const [y, m] = String(bucket).split("-");
+    return `${m}.${String(y).slice(-2)}`;
+  }
+  const [y, m, d] = String(bucket).split("-");
+  return `${d}.${m}`;
+}
+
+function renderFilmDeleteStats() {
+  const stats = state.stats || {};
+  const series = Array.isArray(stats.series) ? stats.series : [];
+  const users = Array.isArray(stats.users) ? stats.users : [];
+  const totalDeleted = Number(stats.totalDeleted || 0);
+  const peak = series.reduce((best, row) => (Number(row.total || 0) > Number(best.total || 0) ? row : best), {
+    bucket: "",
+    total: 0,
+  });
+
+  if (refs.statsTotalDeleted) refs.statsTotalDeleted.textContent = String(totalDeleted);
+  if (refs.statsActiveUsers) refs.statsActiveUsers.textContent = String(users.length);
+  if (refs.statsPeakLabel) {
+    refs.statsPeakLabel.textContent = peak.total
+      ? `${shortBucketLabel(peak.bucket, stats.granularity)} • ${peak.total}`
+      : "-";
+  }
+
+  if (refs.statsChart) {
+    refs.statsChart.innerHTML = "";
+    if (!series.length) {
+      refs.statsChart.innerHTML = '<p class="muted">Нет данных по удалению пленок за выбранный период.</p>';
+    } else {
+      const seriesForChart = series.length > 120 ? series.slice(-120) : series;
+      const maxValue = Math.max(1, ...seriesForChart.map((row) => Number(row.total || 0)));
+      if (series.length > 120) {
+        const note = document.createElement("p");
+        note.className = "muted";
+        note.textContent = "Показаны последние 120 периодов для удобства графика.";
+        refs.statsChart.appendChild(note);
+      }
+      seriesForChart.forEach((row) => {
+        const total = Number(row.total || 0);
+        const bar = document.createElement("article");
+        bar.className = "stats-bar";
+        const h = Math.max(6, Math.round((total / maxValue) * 180));
+        bar.innerHTML = `
+          <div class="stats-bar-value">${total}</div>
+          <div class="stats-bar-col" style="height:${h}px"></div>
+          <div class="stats-bar-label">${shortBucketLabel(row.bucket, stats.granularity)}</div>
+        `;
+        refs.statsChart.appendChild(bar);
+      });
+    }
+  }
+
+  if (refs.statsUsersList) {
+    refs.statsUsersList.innerHTML = "";
+    if (!users.length) {
+      refs.statsUsersList.innerHTML = '<p class="muted">За выбранный период удалений пленок не было.</p>';
+    } else {
+      users.forEach((row, idx) => {
+        const card = document.createElement("article");
+        card.className = "history-item";
+        card.innerHTML = `
+          <div><strong>#${idx + 1} ${row.user_email || "Неизвестный пользователь"}</strong></div>
+          <div class="history-meta">Удалил пленок: ${Number(row.total || 0)}</div>
+        `;
+        refs.statsUsersList.appendChild(card);
+      });
+    }
+  }
+}
+
+async function loadFilmDeleteStats() {
+  if (!state.token) {
+    state.stats = {
+      dateFrom: "",
+      dateTo: "",
+      granularity: "day",
+      series: [],
+      users: [],
+      totalDeleted: 0,
+    };
+    renderFilmDeleteStats();
+    return;
+  }
+
+  const params = new URLSearchParams();
+  params.set("action", "delete-stats");
+  if (state.stats.dateFrom) params.set("date_from", state.stats.dateFrom);
+  if (state.stats.dateTo) params.set("date_to", state.stats.dateTo);
+  params.set("granularity", state.stats.granularity || "day");
+
+  const data = await apiRequest(`/api/films?${params.toString()}`);
+  state.stats = {
+    ...state.stats,
+    granularity: String(data.granularity || state.stats.granularity || "day"),
+    totalDeleted: Number(data.totalDeleted || 0),
+    series: Array.isArray(data.series) ? data.series : [],
+    users: Array.isArray(data.users) ? data.users : [],
+  };
+  if (refs.statsDateFrom) refs.statsDateFrom.value = state.stats.dateFrom || "";
+  if (refs.statsDateTo) refs.statsDateTo.value = state.stats.dateTo || "";
+  if (refs.statsGranularity) refs.statsGranularity.value = state.stats.granularity || "day";
+  renderFilmDeleteStats();
+}
+
+function initStatsFilters() {
+  const now = new Date();
+  const from = new Date(now);
+  from.setDate(now.getDate() - 29);
+  const toDate = now.toISOString().slice(0, 10);
+  const fromDate = from.toISOString().slice(0, 10);
+  state.stats.dateFrom = fromDate;
+  state.stats.dateTo = toDate;
+  state.stats.granularity = "day";
+  if (refs.statsDateFrom) refs.statsDateFrom.value = fromDate;
+  if (refs.statsDateTo) refs.statsDateTo.value = toDate;
+  if (refs.statsGranularity) refs.statsGranularity.value = "day";
+}
+
 function csvEscape(value) {
   const text = String(value ?? "");
   if (text.includes(",") || text.includes("\"") || text.includes("\n")) {
@@ -2367,8 +2516,15 @@ async function processFilmScanValue(rawValue) {
 
   setScanStatus("Ищем пленку на складе...", { busy: true });
   const data = await apiRequest(`/api/films?action=find-by-barcode&barcode=${encodeURIComponent(barcode)}`);
-  const films = data.films || [];
+  const filmsAll = data.films || [];
+  const films = filmsAll.filter((row) => String(row.cell_no || "").trim() !== "");
   if (!films.length) {
+    if (filmsAll.length) {
+      setScanStatus("Пленка есть в базе, но без ячейки.");
+      showToast("Пленка найдена в базе, но ячейка не назначена");
+      hapticWarning();
+      return false;
+    }
     return false;
   }
 
@@ -2716,6 +2872,7 @@ refs.mainTabBtn.addEventListener("click", () => setInventoryTab("main"));
 if (refs.filmsTabBtn) refs.filmsTabBtn.addEventListener("click", () => setInventoryTab("films"));
 refs.toolsTabBtn.addEventListener("click", () => setInventoryTab("tools"));
 refs.historyTabBtn.addEventListener("click", () => setInventoryTab("history"));
+if (refs.statsTabBtn) refs.statsTabBtn.addEventListener("click", () => setInventoryTab("stats"));
 refs.toToolsBtn.addEventListener("click", () => setInventoryTab("tools"));
 refs.closeOnboardingBtn.addEventListener("click", closeOnboarding);
 refs.openSettingsBtn.addEventListener("click", async () => {
@@ -3450,6 +3607,23 @@ refs.historyExportBtn.addEventListener("click", exportHistoryCsv);
   });
 });
 
+if (refs.statsFiltersForm) refs.statsFiltersForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  state.stats.dateFrom = String(refs.statsDateFrom?.value || "");
+  state.stats.dateTo = String(refs.statsDateTo?.value || "");
+  state.stats.granularity = String(refs.statsGranularity?.value || "day");
+  try {
+    await runDbAction(() => loadFilmDeleteStats(), {
+      button: event.submitter instanceof HTMLButtonElement ? event.submitter : refs.statsApplyBtn,
+      message: "Строим статистику...",
+    });
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+
 refs.startScannerBtn.addEventListener("click", startScanner);
 refs.stopScannerBtn.addEventListener("click", () => {
   stopScanner();
@@ -3575,6 +3749,7 @@ applyPrintAccess();
 initCollapsiblePanels();
 fillDisplayPrefsForm();
 renderHomeProcessCards();
+initStatsFilters();
 renderQuickFilmBatch();
 loadItems();
 loadHistory();
