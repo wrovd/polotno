@@ -33,6 +33,7 @@ module.exports = async function handler(req, res) {
         barcode: req.query?.barcode || "",
         cellNo: req.query?.cell_no || req.query?.cellNo || "",
         limit: Number(req.query?.limit || 500),
+        offset: Number(req.query?.offset || 0),
       });
       return send(res, 200, { films });
     } catch (error) {

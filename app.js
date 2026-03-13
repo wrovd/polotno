@@ -1960,11 +1960,25 @@ async function loadFilms() {
   }
 
   try {
-    const params = new URLSearchParams();
-    params.set("action", "list");
-    params.set("limit", String(Math.max(300, state.displayPrefs.all * 8)));
-    const data = await apiRequest(`/api/films?${params.toString()}`);
-    state.films = data.films || [];
+    const PAGE_SIZE = 1000;
+    const MAX_ROWS = 50000;
+    let offset = 0;
+    let all = [];
+
+    while (offset < MAX_ROWS) {
+      const params = new URLSearchParams();
+      params.set("action", "list");
+      params.set("limit", String(PAGE_SIZE));
+      params.set("offset", String(offset));
+      const data = await apiRequest(`/api/films?${params.toString()}`);
+      const chunk = data.films || [];
+      if (!chunk.length) break;
+      all = all.concat(chunk);
+      if (chunk.length < PAGE_SIZE) break;
+      offset += PAGE_SIZE;
+    }
+
+    state.films = all;
   } catch (error) {
     state.films = [];
     showToast(error.message || "Не удалось загрузить склад пленок");
