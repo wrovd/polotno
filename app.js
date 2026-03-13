@@ -48,6 +48,7 @@ const state = {
     manualNames: {},
   },
   homeProfilePhotoChatId: "",
+  itemsLoading: false,
   displayPrefs: {
     all: 10,
   },
@@ -203,6 +204,17 @@ const refs = {
   adjustItemId: document.getElementById("adjustItemId"),
   adjustDelta: document.getElementById("adjustDelta"),
   searchInput: document.getElementById("searchInput"),
+  iosSearchInput: document.getElementById("iosSearchInput"),
+  iosFiltersChipBtn: document.getElementById("iosFiltersChipBtn"),
+  mainBackBtn: document.getElementById("mainBackBtn"),
+  mainScanBtn: document.getElementById("mainScanBtn"),
+  consumablesList: document.getElementById("consumablesList"),
+  legacyMainLayout: document.getElementById("legacyMainLayout"),
+  mainBottomAddBtn: document.getElementById("mainBottomAddBtn"),
+  mainBottomMainBtn: document.getElementById("mainBottomMainBtn"),
+  mainBottomToolsBtn: document.getElementById("mainBottomToolsBtn"),
+  mainBottomHistoryBtn: document.getElementById("mainBottomHistoryBtn"),
+  mainBottomSettingsBtn: document.getElementById("mainBottomSettingsBtn"),
   searchBtn: document.getElementById("searchBtn"),
   stockForm: document.getElementById("stockForm"),
   groupForm: document.getElementById("groupForm"),
@@ -530,6 +542,9 @@ function setModuleView(view) {
   refs.homeView.classList.toggle("active", showHome);
   refs.inventoryView.classList.toggle("active", showInventory);
   refs.settingsView.classList.toggle("active", showSettings);
+  if (refs.mainBottomSettingsBtn) {
+    refs.mainBottomSettingsBtn.classList.toggle("is-active", showSettings);
+  }
   if (!showInventory) {
     stopScanner();
     state.scanContext = "inventory";
@@ -560,6 +575,11 @@ function setInventoryTab(tab) {
   refs.mainTabBtn.classList.toggle("is-hidden", isFilms);
   refs.toolsTabBtn.classList.toggle("is-hidden", isFilms);
   if (refs.toToolsBtn) refs.toToolsBtn.classList.toggle("is-hidden", isFilms);
+  if (refs.inventoryView) refs.inventoryView.classList.toggle("is-main-ios-mode", isMain);
+  if (refs.mainBottomMainBtn) refs.mainBottomMainBtn.classList.toggle("is-active", isMain);
+  if (refs.mainBottomToolsBtn) refs.mainBottomToolsBtn.classList.toggle("is-active", isTools);
+  if (refs.mainBottomHistoryBtn) refs.mainBottomHistoryBtn.classList.toggle("is-active", isHistory);
+  if (refs.mainBottomSettingsBtn) refs.mainBottomSettingsBtn.classList.toggle("is-active", state.moduleView === "settings");
   state.scanContext = isFilms ? "films" : "inventory";
   if (isMain) {
     stopScanner();
@@ -737,6 +757,7 @@ function filteredItems() {
     if (search) {
       const matchSearch =
         item.name.toLowerCase().includes(search) ||
+        String(item.group_name || "").toLowerCase().includes(search) ||
         String(item.id || "").toLowerCase().includes(search) ||
         String(item.notes || "").toLowerCase().includes(search);
       if (!matchSearch) return false;
@@ -761,6 +782,7 @@ function renderMainByFilters() {
 
 function resetMainFilters() {
   refs.searchInput.value = "";
+  if (refs.iosSearchInput) refs.iosSearchInput.value = "";
   refs.mainGroupFilter.value = "";
   refs.mainStockFilter.value = "";
   state.mainFilters = { search: "", group: "", stock: "" };
@@ -1153,6 +1175,45 @@ async function printLabels(items) {
 
 function renderTable(list = state.items) {
   applyPrintAccess();
+  if (refs.consumablesList) {
+    refs.consumablesList.innerHTML = "";
+    if (state.itemsLoading) {
+      refs.consumablesList.innerHTML = `
+        <article class="consumable-skeleton"></article>
+        <article class="consumable-skeleton"></article>
+        <article class="consumable-skeleton"></article>
+        <article class="consumable-skeleton"></article>
+      `;
+    } else if (!list.length) {
+      refs.consumablesList.innerHTML = `
+        <article class="consumable-empty">
+          <span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span>
+          <p>Нет расходников</p>
+        </article>
+      `;
+    } else {
+      for (const item of list) {
+        const low = Number(item.qty) <= Number(item.threshold);
+        const card = document.createElement("article");
+        card.className = "consumable-card";
+        card.innerHTML = `
+          <span class="consumable-icon">${initialFromName(item.name)}</span>
+          <div class="consumable-info">
+            <p class="consumable-category">${item.group_name || "Без категории"}</p>
+            <p class="consumable-name">${item.name}</p>
+            <span class="consumable-badge ${low ? "is-low" : "is-ok"}">${low ? "Мало" : "В норме"}</span>
+          </div>
+          <div class="consumable-stepper">
+            <button class="consumable-step-btn" data-action="consume" data-id="${item.id}" type="button">−</button>
+            <span class="consumable-qty ${low ? "is-low" : "is-ok"}">${item.qty}</span>
+            <button class="consumable-step-btn ${canAdmin() ? "" : "is-hidden"}" data-action="plus-one" data-id="${item.id}" type="button">+</button>
+          </div>
+        `;
+        refs.consumablesList.appendChild(card);
+      }
+    }
+  }
+
   refs.itemsTableBody.innerHTML = "";
 
   if (!list.length) {
@@ -2065,6 +2126,7 @@ async function loadItems() {
   if (!state.token) {
     state.items = [];
     state.groups = [];
+    state.itemsLoading = false;
     state.pages.items = 1;
     state.pages.alerts = 1;
     renderTable();
@@ -2074,6 +2136,8 @@ async function loadItems() {
     return;
   }
 
+  state.itemsLoading = true;
+  renderTable(filteredItems());
   try {
     const [itemsResult, groupsResult] = await Promise.allSettled([
       apiRequest("/api/inventory/list"),
@@ -2089,6 +2153,7 @@ async function loadItems() {
     state.groups = [];
     showToast("Не удалось загрузить расходники");
   }
+  state.itemsLoading = false;
 
   state.pages.items = 1;
   state.pages.alerts = 1;
@@ -3119,6 +3184,53 @@ refs.stockForm.addEventListener("submit", async (event) => {
   }
 });
 
+async function handleItemActionClick(action, id, button) {
+  if (!action || !id) return;
+
+  if (action === "consume") {
+    await runDbAction(() => consumeOne(id), { button, message: "Списываем расходник..." });
+    return;
+  }
+
+  if (action === "plus-one") {
+    await runDbAction(() => adjustItem(id, 1), { button, message: "Обновляем количество..." });
+    showToast("Добавлено +1");
+    hapticSuccess();
+    return;
+  }
+
+  if (action === "print") {
+    const item = state.items.find((it) => it.id === id);
+    if (item) await printLabels([item]);
+  }
+
+  if (action === "edit") {
+    if (!canAdmin()) {
+      showToast("Только для администратора");
+      hapticWarning();
+      return;
+    }
+    const item = state.items.find((it) => it.id === id);
+    if (item) {
+      openEditModal(item);
+      hapticSelection();
+    }
+  }
+
+  if (action === "delete") {
+    if (!canAdmin()) {
+      showToast("Только для администратора");
+      hapticWarning();
+      return;
+    }
+    const ok = window.confirm(`Удалить расходник ${id}?`);
+    if (!ok) return;
+    await runDbAction(() => deleteItem(id), { button, message: "Удаляем расходник..." });
+    showToast("Расходник удален");
+    hapticSuccess();
+  }
+}
+
 refs.itemsTableBody.addEventListener("click", async (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
@@ -3130,48 +3242,23 @@ refs.itemsTableBody.addEventListener("click", async (event) => {
   if (!action || !id) return;
 
   try {
-    if (action === "consume") {
-      await runDbAction(() => consumeOne(id), { button, message: "Списываем расходник..." });
-      return;
-    }
+    await handleItemActionClick(action, id, button);
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
 
-    if (action === "plus-one") {
-      await runDbAction(() => adjustItem(id, 1), { button, message: "Обновляем количество..." });
-      showToast("Добавлено +1");
-      hapticSuccess();
-      return;
-    }
-
-    if (action === "print") {
-      const item = state.items.find((it) => it.id === id);
-      if (item) await printLabels([item]);
-    }
-
-    if (action === "edit") {
-      if (!canAdmin()) {
-        showToast("Только для администратора");
-        hapticWarning();
-        return;
-      }
-      const item = state.items.find((it) => it.id === id);
-      if (item) {
-        openEditModal(item);
-        hapticSelection();
-      }
-    }
-
-    if (action === "delete") {
-      if (!canAdmin()) {
-        showToast("Только для администратора");
-        hapticWarning();
-        return;
-      }
-      const ok = window.confirm(`Удалить расходник ${id}?`);
-      if (!ok) return;
-      await runDbAction(() => deleteItem(id), { button, message: "Удаляем расходник..." });
-      showToast("Расходник удален");
-      hapticSuccess();
-    }
+if (refs.consumablesList) refs.consumablesList.addEventListener("click", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const button = target.closest("button[data-action][data-id]");
+  if (!(button instanceof HTMLButtonElement)) return;
+  const action = button.getAttribute("data-action");
+  const id = button.getAttribute("data-id");
+  if (!action || !id) return;
+  try {
+    await handleItemActionClick(action, id, button);
   } catch (error) {
     showToast(error.message);
     hapticWarning();
@@ -3213,6 +3300,46 @@ refs.searchInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
     handleSearch();
+  }
+});
+if (refs.iosSearchInput) refs.iosSearchInput.addEventListener("input", () => {
+  refs.searchInput.value = refs.iosSearchInput.value;
+  handleSearch();
+});
+if (refs.iosFiltersChipBtn) refs.iosFiltersChipBtn.addEventListener("click", () => {
+  if (refs.legacyMainLayout) {
+    refs.legacyMainLayout.classList.toggle("is-hidden");
+  }
+  hapticSelection();
+});
+if (refs.mainBackBtn) refs.mainBackBtn.addEventListener("click", () => {
+  setModuleView("home");
+});
+if (refs.mainScanBtn) refs.mainScanBtn.addEventListener("click", async () => {
+  state.scanContext = "inventory";
+  openScanModal();
+  await startScanner();
+});
+if (refs.mainBottomAddBtn) refs.mainBottomAddBtn.addEventListener("click", () => {
+  if (refs.legacyMainLayout) refs.legacyMainLayout.classList.remove("is-hidden");
+  refs.itemName?.focus();
+  hapticSelection();
+});
+if (refs.mainBottomMainBtn) refs.mainBottomMainBtn.addEventListener("click", () => {
+  setInventoryTab("main");
+});
+if (refs.mainBottomToolsBtn) refs.mainBottomToolsBtn.addEventListener("click", () => {
+  setInventoryTab("tools");
+});
+if (refs.mainBottomHistoryBtn) refs.mainBottomHistoryBtn.addEventListener("click", () => {
+  setInventoryTab("history");
+});
+if (refs.mainBottomSettingsBtn) refs.mainBottomSettingsBtn.addEventListener("click", async () => {
+  try {
+    await openSettingsView();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
   }
 });
 refs.applyMainFiltersBtn.addEventListener("click", handleSearch);

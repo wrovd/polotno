@@ -93,6 +93,13 @@
       <symbol id="i-trash" viewBox="0 0 24 24">
         <path d="M5 7h14M9 7V5h6v2M8 7l1 12h6l1-12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
       </symbol>
+      <symbol id="i-filter" viewBox="0 0 24 24">
+        <path d="M4 6h16l-6 7v5l-4 2v-7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24">
+        <path d="M12 8.5A3.5 3.5 0 1 0 12 15.5A3.5 3.5 0 1 0 12 8.5Z" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a1.2 1.2 0 0 1 0 1.7l-1.6 1.6a1.2 1.2 0 0 1-1.7 0l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a1.2 1.2 0 0 1-1.2 1.2h-2.2A1.2 1.2 0 0 1 10 20v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a1.2 1.2 0 0 1-1.7 0l-1.6-1.6a1.2 1.2 0 0 1 0-1.7l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a1.2 1.2 0 0 1-1.2-1.2v-2.2A1.2 1.2 0 0 1 4 9.8h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a1.2 1.2 0 0 1 0-1.7l1.6-1.6a1.2 1.2 0 0 1 1.7 0l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a1.2 1.2 0 0 1 1.2-1.2h2.2A1.2 1.2 0 0 1 14.4 4v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a1.2 1.2 0 0 1 1.7 0l1.6 1.6a1.2 1.2 0 0 1 0 1.7l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6h.2A1.2 1.2 0 0 1 21.2 11v2.2A1.2 1.2 0 0 1 20 14.4h-.2a1 1 0 0 0-.9.6z" fill="none" stroke="currentColor" stroke-width="1.2" />
+      </symbol>
       <symbol id="i-warehouse" viewBox="0 0 24 24">
         <path d="M3.5 10.2L12 4l8.5 6.2V20h-17z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
         <path d="M8 20v-6h8v6M9 9h.01M12 9h.01M15 9h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
@@ -193,6 +200,66 @@
         <section class="panel role-hint is-hidden" id="roleHint"></section>
 
         <section id="mainTab" class="tab-panel active">
+          <section class="inventory-ios" id="inventoryIosLayout">
+            <header class="inventory-ios-head">
+              <button class="ios-back-btn" id="mainBackBtn" type="button" aria-label="Назад">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+                  <path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+              <h2 class="inventory-ios-title">Учет расходников</h2>
+            </header>
+
+            <label class="home-search inventory-ios-search" aria-label="Поиск расходников">
+              <span class="home-search-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span>
+              <input id="iosSearchInput" type="search" placeholder="Поиск" autocomplete="off" />
+            </label>
+
+            <div class="inventory-chip-row">
+              <button class="inventory-chip inventory-chip-primary" id="iosFiltersChipBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-filter"></use></svg></span>
+                <span>Фильтры (2)</span>
+              </button>
+              <button class="inventory-chip" type="button">Коробки</button>
+              <button class="inventory-chip" type="button">Коробки для...</button>
+            </div>
+
+            <section class="inventory-ios-list" id="consumablesList">
+              <article class="consumable-skeleton"></article>
+              <article class="consumable-skeleton"></article>
+              <article class="consumable-skeleton"></article>
+              <article class="consumable-skeleton"></article>
+            </section>
+
+            <button class="home-scan-btn inventory-ios-scan" id="mainScanBtn" type="button">
+              <span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span><span>Сканирование</span>
+            </button>
+
+            <nav class="inventory-bottom-nav" aria-label="Навигация раздела расходников">
+              <button class="inventory-bottom-nav-item" id="mainBottomAddBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span>
+                <span>Добавить</span>
+              </button>
+              <button class="inventory-bottom-nav-item is-active" id="mainBottomMainBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span>
+                <span>Основное</span>
+              </button>
+              <button class="inventory-bottom-nav-item" id="mainBottomToolsBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-toolbox"></use></svg></span>
+                <span>Инструменты</span>
+              </button>
+              <button class="inventory-bottom-nav-item" id="mainBottomHistoryBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-history"></use></svg></span>
+                <span>История</span>
+              </button>
+              <button class="inventory-bottom-nav-item" id="mainBottomSettingsBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-settings"></use></svg></span>
+                <span>Настройки</span>
+              </button>
+            </nav>
+          </section>
+
+          <div class="legacy-main-layout is-hidden" id="legacyMainLayout">
           <section class="panel search-panel">
             <label for="searchInput">Поиск расходников</label>
             <div class="search-row">
@@ -289,6 +356,7 @@
             </div>
             <div class="pager" id="itemsPager" hidden></div>
           </section>
+          </div>
         </section>
 
         <section id="toolsTab" class="tab-panel">
