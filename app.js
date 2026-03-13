@@ -1759,20 +1759,40 @@ async function importFilmsExcel(file) {
   const importErrors = [...validationErrors];
 
   if (validRows.length) {
-    const payloadRows = validRows.map((row) => ({
+    const payloadRows = validRows.map((row, idx) => ({
       name: row.name,
       barcode: row.barcode,
       cellNo: row.cellNo,
+      _line: idx + 2,
     }));
-    const data = await apiRequest("/api/films?action=bulk-upsert", {
-      method: "POST",
-      body: { rows: payloadRows },
-    });
-    success = Number(data?.report?.success || 0);
-    const apiErrors = Array.isArray(data?.report?.errors) ? data.report.errors : [];
-    apiErrors.forEach((err) => {
-      importErrors.push(`Строка ${err.line}: ${err.error}`);
-    });
+
+    const CHUNK_SIZE = 60;
+    for (let start = 0; start < payloadRows.length; start += CHUNK_SIZE) {
+      const chunk = payloadRows.slice(start, start + CHUNK_SIZE);
+      try {
+        const data = await apiRequest("/api/films?action=bulk-upsert", {
+          method: "POST",
+          body: {
+            rows: chunk.map((row) => ({
+              name: row.name,
+              barcode: row.barcode,
+              cellNo: row.cellNo,
+            })),
+          },
+        });
+        success += Number(data?.report?.success || 0);
+        const apiErrors = Array.isArray(data?.report?.errors) ? data.report.errors : [];
+        apiErrors.forEach((err) => {
+          const chunkRow = chunk[Math.max(0, Number(err.line || 2) - 2)];
+          const originalLine = Number(chunkRow?._line || err.line || 0);
+          importErrors.push(`Строка ${originalLine}: ${err.error}`);
+        });
+      } catch (error) {
+        const failedFrom = chunk[0]?._line || start + 2;
+        const failedTo = chunk[chunk.length - 1]?._line || failedFrom;
+        importErrors.push(`Пакет строк ${failedFrom}-${failedTo}: ${error.message || "Ошибка импорта"}`);
+      }
+    }
   }
 
   await loadFilms();
