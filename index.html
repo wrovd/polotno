@@ -355,6 +355,37 @@
           </section>
 
           <section class="layout-grid">
+            <section class="panel panel-collapsible admin-only is-hidden" id="quickFilmIngestPanel">
+              <div class="section-head">
+                <h3>Быстрое занесение пленок</h3>
+                <p>Для поставки: выберите ячейку, сканируйте штрихкоды подряд и сохраните массово.</p>
+              </div>
+              <form class="stock-form" id="quickFilmCellForm" novalidate>
+                <label>
+                  Номер ячейки
+                  <input type="text" id="quickFilmCellNo" placeholder="Например, C-08" required />
+                </label>
+                <label>
+                  Штрихкод (потоковый ввод)
+                  <input type="text" id="quickFilmBarcodeInput" placeholder="Сканируйте и нажмите Enter" autocomplete="off" />
+                </label>
+                <div class="hero-actions">
+                  <button class="secondary-btn btn-with-icon" id="quickFilmAddBarcodeBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Добавить штрихкод</span></button>
+                  <button class="glass-btn btn-with-icon" id="quickFilmClearBatchBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-reset"></use></svg></span><span>Очистить список</span></button>
+                </div>
+                <div class="history-list" id="quickFilmBatchList">
+                  <p class="muted">Список пуст. Начните сканировать.</p>
+                </div>
+                <div class="history-list" id="quickFilmMissingNames">
+                  <p class="muted">Все штрихкоды с известными названиями будут подставлены автоматически.</p>
+                </div>
+                <div class="hero-actions">
+                  <button class="primary-btn full btn-with-icon" id="quickFilmSaveBatchBtn" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Добавить массово</span></button>
+                  <button class="secondary-btn full btn-with-icon" id="quickFilmNextCellBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span><span>Следующая ячейка</span></button>
+                </div>
+              </form>
+            </section>
+
             <section class="panel panel-collapsible">
               <div class="section-head">
                 <h3>Добавить пленку</h3>
@@ -426,6 +457,9 @@
                 <option value="consume">Списание</option>
                 <option value="adjust">Корректировка</option>
                 <option value="delete">Удаление</option>
+                <option value="film_create">Пленки: добавление</option>
+                <option value="film_update">Пленки: обновление</option>
+                <option value="film_delete">Пленки: удаление</option>
               </select>
               <input type="date" id="historyDateFrom" />
               <input type="date" id="historyDateTo" />

@@ -1,6 +1,6 @@
 const { requireAuth } = require("../lib/auth");
 const { send, methodNotAllowed, parseJsonBody } = require("../lib/http");
-const { listFilms, upsertFilm, deleteFilmByBarcodeCell, findFilmsByBarcode } = require("../lib/sheets");
+const { listFilms, upsertFilm, deleteFilmByBarcodeCell, findFilmsByBarcode, appendMovement } = require("../lib/sheets");
 
 function actionFromReq(req) {
   return String(req.query?.action || "").trim().toLowerCase();
@@ -13,6 +13,10 @@ function normalizeFilmInput(raw = {}) {
     cell_no: String(raw.cellNo || raw.cell_no || "").trim(),
     updated_by: String(raw.updatedBy || raw.updated_by || "").trim(),
   };
+}
+
+function filmMovementId({ barcode, cellNo }) {
+  return `FILM:${String(barcode || "").trim()}@${String(cellNo || "").trim()}`;
 }
 
 module.exports = async function handler(req, res) {
@@ -50,9 +54,19 @@ module.exports = async function handler(req, res) {
   if (method === "POST" && (action === "upsert" || !action)) {
     try {
       const body = parseJsonBody(req);
+      const normalized = normalizeFilmInput(body);
+      const existingRows = await findFilmsByBarcode(normalized.barcode);
+      const existed = existingRows.some((row) => String(row.cell_no || "").trim() === normalized.cell_no);
       const saved = await upsertFilm({
-        ...normalizeFilmInput(body),
+        ...normalized,
         updated_by: auth.user.email,
+      });
+      await appendMovement({
+        item_id: filmMovementId({ barcode: normalized.barcode, cellNo: normalized.cell_no }),
+        delta: 0,
+        reason: existed ? "film_update" : "film_create",
+        user_email: auth.user.email,
+        created_at: new Date().toISOString(),
       });
       return send(res, 200, { ok: true, film: saved });
     } catch (error) {
@@ -69,6 +83,15 @@ module.exports = async function handler(req, res) {
         return send(res, 400, { error: "barcode and cellNo are required" });
       }
       const removed = await deleteFilmByBarcodeCell(barcode, cellNo);
+      if (removed) {
+        await appendMovement({
+          item_id: filmMovementId({ barcode, cellNo }),
+          delta: 0,
+          reason: "film_delete",
+          user_email: auth.user.email,
+          created_at: new Date().toISOString(),
+        });
+      }
       return send(res, 200, { ok: true, removed });
     } catch (error) {
       return send(res, 500, { error: error.message || "Failed to delete film" });
@@ -101,9 +124,18 @@ module.exports = async function handler(req, res) {
         }
 
         try {
+          const existingRows = await findFilmsByBarcode(row.barcode);
+          const existed = existingRows.some((x) => String(x.cell_no || "").trim() === row.cell_no);
           await upsertFilm({
             ...row,
             updated_by: auth.user.email,
+          });
+          await appendMovement({
+            item_id: filmMovementId({ barcode: row.barcode, cellNo: row.cell_no }),
+            delta: 0,
+            reason: existed ? "film_update" : "film_create",
+            user_email: auth.user.email,
+            created_at: new Date().toISOString(),
           });
           success += 1;
         } catch (error) {

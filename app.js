@@ -41,6 +41,11 @@ const state = {
     cell: "",
   },
   scanFilmMatches: [],
+  quickFilm: {
+    cellNo: "",
+    scannedBarcodes: [],
+    manualNames: {},
+  },
   homeProfilePhotoChatId: "",
   displayPrefs: {
     all: 10,
@@ -155,6 +160,16 @@ const refs = {
   filmName: document.getElementById("filmName"),
   filmBarcode: document.getElementById("filmBarcode"),
   filmCellNo: document.getElementById("filmCellNo"),
+  quickFilmIngestPanel: document.getElementById("quickFilmIngestPanel"),
+  quickFilmCellForm: document.getElementById("quickFilmCellForm"),
+  quickFilmCellNo: document.getElementById("quickFilmCellNo"),
+  quickFilmBarcodeInput: document.getElementById("quickFilmBarcodeInput"),
+  quickFilmAddBarcodeBtn: document.getElementById("quickFilmAddBarcodeBtn"),
+  quickFilmClearBatchBtn: document.getElementById("quickFilmClearBatchBtn"),
+  quickFilmSaveBatchBtn: document.getElementById("quickFilmSaveBatchBtn"),
+  quickFilmNextCellBtn: document.getElementById("quickFilmNextCellBtn"),
+  quickFilmBatchList: document.getElementById("quickFilmBatchList"),
+  quickFilmMissingNames: document.getElementById("quickFilmMissingNames"),
   filmsStartScanBtn: document.getElementById("filmsStartScanBtn"),
   filmsTableBody: document.getElementById("filmsTableBody"),
   filmsPager: document.getElementById("filmsPager"),
@@ -915,6 +930,9 @@ function applyRoleAccess() {
   if (refs.adminPanel) {
     refs.adminPanel.classList.toggle("is-hidden", !canManageUsers);
   }
+  if (refs.quickFilmIngestPanel) {
+    refs.quickFilmIngestPanel.classList.toggle("is-hidden", !canManageUsers);
+  }
 
   refs.stockManagePanel.classList.toggle("is-hidden", !canManageUsers);
   refs.itemName.disabled = !canManageUsers;
@@ -1301,6 +1319,9 @@ function reasonLabel(reason) {
   if (reason === "consume") return "Списание";
   if (reason === "adjust") return "Корректировка";
   if (reason === "delete") return "Удаление";
+  if (reason === "film_create") return "Пленки: добавление";
+  if (reason === "film_update") return "Пленки: обновление";
+  if (reason === "film_delete") return "Пленки: удаление";
   return reason || "Изменение";
 }
 
@@ -1913,6 +1934,7 @@ async function loadFilms() {
 
   state.pages.films = 1;
   renderFilmsTable(filteredFilms());
+  renderQuickFilmBatch();
 }
 
 function handleFilmsSearch() {
@@ -1928,6 +1950,89 @@ function resetFilmsFilters() {
   state.filmsFilters = { search: "", barcode: "", cell: "" };
   state.pages.films = 1;
   renderFilmsTable(groupedFilms(state.films));
+}
+
+function knownFilmNameByBarcode(barcode) {
+  const needle = String(barcode || "").trim();
+  if (!needle) return "";
+  const found = state.films.find((film) => String(film.barcode || "").trim() === needle);
+  return String(found?.name || "").trim();
+}
+
+function quickFilmGroupedBatch() {
+  const map = new Map();
+  state.quickFilm.scannedBarcodes.forEach((raw) => {
+    const barcode = String(raw || "").trim();
+    if (!barcode) return;
+    if (!map.has(barcode)) {
+      map.set(barcode, { barcode, scannedCount: 0 });
+    }
+    map.get(barcode).scannedCount += 1;
+  });
+  return [...map.values()];
+}
+
+function renderQuickFilmBatch() {
+  if (!refs.quickFilmBatchList || !refs.quickFilmMissingNames) return;
+  const grouped = quickFilmGroupedBatch();
+
+  refs.quickFilmBatchList.innerHTML = "";
+  if (!grouped.length) {
+    refs.quickFilmBatchList.innerHTML = '<p class="muted">Список пуст. Начните сканировать.</p>';
+  } else {
+    grouped.forEach((row) => {
+      const known = knownFilmNameByBarcode(row.barcode);
+      const article = document.createElement("article");
+      article.className = "history-item";
+      article.innerHTML = `
+        <div><strong>${row.barcode}</strong></div>
+        <div class="history-meta">${known || "Нужно название"} • Сканов: ${row.scannedCount}</div>
+      `;
+      refs.quickFilmBatchList.appendChild(article);
+    });
+  }
+
+  refs.quickFilmMissingNames.innerHTML = "";
+  const unknown = grouped.filter((row) => !knownFilmNameByBarcode(row.barcode));
+  if (!unknown.length) {
+    refs.quickFilmMissingNames.innerHTML =
+      '<p class="muted">Все штрихкоды с известными названиями будут подставлены автоматически.</p>';
+    return;
+  }
+
+  unknown.forEach((row) => {
+    const wrap = document.createElement("label");
+    wrap.className = "reminder-item";
+    const value = String(state.quickFilm.manualNames[row.barcode] || "");
+    wrap.innerHTML = `
+      <span><strong>${row.barcode}</strong> <span class="muted">— укажите наименование</span></span>
+      <input type="text" data-quick-film-name="${row.barcode}" value="${value}" placeholder="Наименование пленки" />
+    `;
+    refs.quickFilmMissingNames.appendChild(wrap);
+  });
+}
+
+function addQuickFilmBarcode(rawBarcode) {
+  const cellNo = String(refs.quickFilmCellNo?.value || "").trim();
+  if (!cellNo) {
+    showToast("Сначала укажите номер ячейки");
+    refs.quickFilmCellNo?.focus();
+    return false;
+  }
+  const barcode = String(rawBarcode || "").trim();
+  if (!barcode) return false;
+  state.quickFilm.cellNo = cellNo;
+  state.quickFilm.scannedBarcodes.push(barcode);
+  renderQuickFilmBatch();
+  return true;
+}
+
+function resetQuickFilmBatch(keepCell = true) {
+  if (!keepCell && refs.quickFilmCellNo) refs.quickFilmCellNo.value = "";
+  state.quickFilm.scannedBarcodes = [];
+  state.quickFilm.manualNames = {};
+  state.quickFilm.cellNo = String(refs.quickFilmCellNo?.value || "").trim();
+  renderQuickFilmBatch();
 }
 
 async function saveFilm(film) {
@@ -2964,6 +3069,116 @@ if (refs.filmForm) refs.filmForm.addEventListener("submit", async (event) => {
   }
 });
 
+if (refs.quickFilmCellNo) refs.quickFilmCellNo.addEventListener("input", () => {
+  state.quickFilm.cellNo = String(refs.quickFilmCellNo.value || "").trim();
+});
+
+if (refs.quickFilmBarcodeInput) refs.quickFilmBarcodeInput.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  const ok = addQuickFilmBarcode(refs.quickFilmBarcodeInput.value);
+  if (ok) {
+    refs.quickFilmBarcodeInput.value = "";
+    hapticSelection();
+  }
+});
+
+if (refs.quickFilmAddBarcodeBtn) refs.quickFilmAddBarcodeBtn.addEventListener("click", () => {
+  const ok = addQuickFilmBarcode(refs.quickFilmBarcodeInput?.value || "");
+  if (ok && refs.quickFilmBarcodeInput) {
+    refs.quickFilmBarcodeInput.value = "";
+    refs.quickFilmBarcodeInput.focus();
+    hapticSelection();
+  }
+});
+
+if (refs.quickFilmClearBatchBtn) refs.quickFilmClearBatchBtn.addEventListener("click", () => {
+  resetQuickFilmBatch(true);
+  refs.quickFilmBarcodeInput?.focus();
+  showToast("Список сканов очищен");
+});
+
+if (refs.quickFilmMissingNames) refs.quickFilmMissingNames.addEventListener("input", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  const barcode = String(target.getAttribute("data-quick-film-name") || "").trim();
+  if (!barcode) return;
+  state.quickFilm.manualNames[barcode] = target.value.trim();
+});
+
+if (refs.quickFilmCellForm) refs.quickFilmCellForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!canAdmin()) {
+    showToast("Только для администратора");
+    hapticWarning();
+    return;
+  }
+  const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
+  const cellNo = String(refs.quickFilmCellNo?.value || "").trim();
+  if (!cellNo) {
+    showToast("Укажите номер ячейки");
+    refs.quickFilmCellNo?.focus();
+    return;
+  }
+
+  const grouped = quickFilmGroupedBatch();
+  if (!grouped.length) {
+    showToast("Список штрихкодов пуст");
+    refs.quickFilmBarcodeInput?.focus();
+    return;
+  }
+
+  const rows = [];
+  for (const entry of grouped) {
+    const barcode = String(entry.barcode || "").trim();
+    const knownName = knownFilmNameByBarcode(barcode);
+    const manualName = String(state.quickFilm.manualNames[barcode] || "").trim();
+    const name = knownName || manualName;
+    if (!name) {
+      showToast(`Заполните название для ${barcode}`);
+      const field = refs.quickFilmMissingNames?.querySelector(`input[data-quick-film-name="${barcode}"]`);
+      if (field instanceof HTMLInputElement) field.focus();
+      return;
+    }
+    rows.push({ name, barcode, cellNo });
+  }
+
+  try {
+    const reportData = await runDbAction(
+      () =>
+        apiRequest("/api/films?action=bulk-upsert", {
+          method: "POST",
+          body: { rows },
+        }),
+      { button: submitBtn, message: "Массово сохраняем пленки..." }
+    );
+    await loadFilms();
+    const duplicatesIgnored = state.quickFilm.scannedBarcodes.length - rows.length;
+    resetQuickFilmBatch(true);
+    refs.quickFilmBarcodeInput?.focus();
+    const saved = Number(reportData?.report?.success || 0);
+    showToast(
+      duplicatesIgnored > 0
+        ? `Сохранено ${saved}. Повторы в той же ячейке: ${duplicatesIgnored} (объединены)`
+        : `Сохранено ${saved}`
+    );
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+
+if (refs.quickFilmNextCellBtn) refs.quickFilmNextCellBtn.addEventListener("click", () => {
+  resetQuickFilmBatch(false);
+  if (refs.quickFilmCellNo) {
+    refs.quickFilmCellNo.value = "";
+    refs.quickFilmCellNo.focus();
+  }
+  showToast("Готово. Укажите следующую ячейку");
+  hapticSelection();
+});
+
 if (refs.filmsSearchBtn) refs.filmsSearchBtn.addEventListener("click", handleFilmsSearch);
 if (refs.filmsSearchInput) refs.filmsSearchInput.addEventListener("keydown", (event) => {
   if (event.key !== "Enter") return;
@@ -3296,6 +3511,7 @@ applyPrintAccess();
 initCollapsiblePanels();
 fillDisplayPrefsForm();
 renderHomeProcessCards();
+renderQuickFilmBatch();
 loadItems();
 loadHistory();
 loadFilms();
