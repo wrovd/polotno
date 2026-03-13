@@ -25,6 +25,7 @@ const state = {
   scanTimer: null,
   scanRaf: null,
   scanBusy: false,
+  zxingReader: null,
   lastScanValue: "",
   lastScanAt: 0,
   editingItemId: "",
@@ -2290,6 +2291,62 @@ async function openPreferredCameraStream() {
   });
 }
 
+function zxingSupported() {
+  return Boolean(window.ZXing?.BrowserMultiFormatReader);
+}
+
+function zxingFormats() {
+  const ZX = window.ZXing;
+  if (!ZX?.BarcodeFormat) return [];
+  return [
+    ZX.BarcodeFormat.QR_CODE,
+    ZX.BarcodeFormat.CODE_128,
+    ZX.BarcodeFormat.CODE_39,
+    ZX.BarcodeFormat.CODE_93,
+    ZX.BarcodeFormat.CODABAR,
+    ZX.BarcodeFormat.EAN_13,
+    ZX.BarcodeFormat.EAN_8,
+    ZX.BarcodeFormat.UPC_A,
+    ZX.BarcodeFormat.UPC_E,
+    ZX.BarcodeFormat.ITF,
+    ZX.BarcodeFormat.DATA_MATRIX,
+    ZX.BarcodeFormat.AZTEC,
+    ZX.BarcodeFormat.PDF_417,
+  ].filter(Boolean);
+}
+
+async function startScannerWithZXing(active) {
+  const ZX = window.ZXing;
+  const hints = new Map();
+  const formats = zxingFormats();
+  if (formats.length && ZX?.DecodeHintType?.POSSIBLE_FORMATS) {
+    hints.set(ZX.DecodeHintType.POSSIBLE_FORMATS, formats);
+  }
+
+  const reader = new ZX.BrowserMultiFormatReader(hints, 320);
+  state.zxingReader = reader;
+  await reader.decodeFromConstraints(
+    {
+      video: {
+        facingMode: { ideal: "environment" },
+      },
+      audio: false,
+    },
+    active.video,
+    async (result) => {
+      if (!result) return;
+      if (state.scanBusy) return;
+      state.scanBusy = true;
+      try {
+        const value = typeof result.getText === "function" ? result.getText() : String(result.text || "");
+        await processScanValue(value);
+      } finally {
+        state.scanBusy = false;
+      }
+    }
+  );
+}
+
 async function startScanner() {
   const active = getActiveScannerRefs();
   if (!navigator.mediaDevices?.getUserMedia) {
@@ -2300,6 +2357,13 @@ async function startScanner() {
 
   try {
     setScanStatus(scannerIdleHint(), { refsOverride: active });
+    if (zxingSupported()) {
+      setScanStatus("Сканирование запущено (ZXing)...", { refsOverride: active });
+      await startScannerWithZXing(active);
+      updateMobileScanFab();
+      return;
+    }
+
     const stream = await openPreferredCameraStream();
 
     state.stream = stream;
@@ -2379,6 +2443,14 @@ async function startScanner() {
     state.scanRaf = requestAnimationFrame(scanFrame);
     updateMobileScanFab();
   } catch {
+    if (state.zxingReader) {
+      try {
+        state.zxingReader.reset();
+      } catch {
+        // ignore
+      }
+      state.zxingReader = null;
+    }
     setScanStatus("Нет доступа к камере.", { refsOverride: active });
     updateMobileScanFab();
     hapticWarning();
@@ -2392,6 +2464,15 @@ function stopScanner() {
     refs.modalScanStatus.classList.remove("is-busy");
   }
   stopScanLoops();
+
+  if (state.zxingReader) {
+    try {
+      state.zxingReader.reset();
+    } catch {
+      // ignore
+    }
+    state.zxingReader = null;
+  }
 
   if (state.stream) {
     state.stream.getTracks().forEach((track) => track.stop());
