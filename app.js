@@ -515,6 +515,9 @@ function setInventoryTab(tab) {
   refs.filmsTab.classList.toggle("active", isFilms);
   refs.toolsTab.classList.toggle("active", isTools);
   refs.historyTab.classList.toggle("active", isHistory);
+  refs.mainTabBtn.classList.toggle("is-hidden", isFilms);
+  refs.toolsTabBtn.classList.toggle("is-hidden", isFilms);
+  if (refs.toToolsBtn) refs.toToolsBtn.classList.toggle("is-hidden", isFilms);
   state.scanContext = isFilms ? "films" : "inventory";
   if (isMain) {
     stopScanner();
@@ -876,7 +879,7 @@ function setScanStatus(text, options = {}) {
 function scannerIdleHint() {
   return state.scanContext === "films"
     ? "Наведите камеру на штрихкод пленки."
-    : "Наведите камеру на QR-код расходника.";
+    : "Наведите камеру на QR или штрихкод.";
 }
 
 function openScanModal() {
@@ -2172,17 +2175,14 @@ async function processFilmScanValue(rawValue) {
   if (!barcode) {
     setScanStatus("Штрихкод не распознан.");
     hapticWarning();
-    return;
+    return false;
   }
 
   setScanStatus("Ищем пленку на складе...", { busy: true });
   const data = await apiRequest(`/api/films?action=find-by-barcode&barcode=${encodeURIComponent(barcode)}`);
   const films = data.films || [];
   if (!films.length) {
-    setScanStatus("Пленка не найдена на складе.");
-    showToast(`Штрихкод ${barcode}: не найден`);
-    hapticWarning();
-    return;
+    return false;
   }
 
   setScanStatus(`Найдено ячеек: ${films.length}`);
@@ -2190,6 +2190,22 @@ async function processFilmScanValue(rawValue) {
   openFilmFoundModal(films);
   showToast(`Найдено: ${films[0].name}`);
   hapticSuccess();
+  return true;
+}
+
+async function processInventoryScanValue(rawValue) {
+  const id = extractItemIdFromScan(rawValue);
+  const item = state.items.find((it) => String(it.id).toUpperCase() === id);
+  if (!item) {
+    return false;
+  }
+
+  setScanStatus("QR найден. Обрабатываем списание...", { busy: true });
+  await consumeOne(item.id);
+  setScanStatus(`Списано 1 шт: ${item.name}`, { busy: false });
+  showToast(`Сканировано: ${item.name} (-1)`);
+  hapticSuccess();
+  return true;
 }
 
 async function processScanValue(rawValue) {
@@ -2201,23 +2217,25 @@ async function processScanValue(rawValue) {
   state.lastScanAt = now;
 
   if (state.scanContext === "films") {
-    await processFilmScanValue(rawValue);
-    return;
-  }
-
-  const id = extractItemIdFromScan(rawValue);
-  const item = state.items.find((it) => String(it.id).toUpperCase() === id);
-  if (!item) {
-    setScanStatus("QR считан, но расходник не найден.");
+    const handledFilm = await processFilmScanValue(rawValue);
+    if (handledFilm) return;
+    const handledInventory = await processInventoryScanValue(rawValue);
+    if (handledInventory) return;
+    setScanStatus("Код считан, но не найден ни в пленках, ни в расходниках.");
+    showToast("Код не найден в системе");
     hapticWarning();
     return;
   }
 
-  setScanStatus("QR найден. Обрабатываем списание...", { busy: true });
-  await consumeOne(item.id);
-  setScanStatus(`Списано 1 шт: ${item.name}`, { busy: false });
-  showToast(`Сканировано: ${item.name} (-1)`);
-  hapticSuccess();
+  const handledInventory = await processInventoryScanValue(rawValue);
+  if (handledInventory) return;
+
+  const handledFilm = await processFilmScanValue(rawValue);
+  if (handledFilm) return;
+
+  setScanStatus("Код считан, но товар не найден.");
+  showToast("Код не найден в системе");
+  hapticWarning();
 }
 
 function stopScanLoops() {
