@@ -1161,18 +1161,47 @@ function applyFilmsFiltersFromInputs() {
   state.filmsFilters.cell = String(refs.filmsCellFilter?.value || "").trim().toLowerCase();
 }
 
+function groupedFilms(source = state.films) {
+  const map = new Map();
+  source.forEach((film) => {
+    const barcode = String(film.barcode || "").trim();
+    if (!barcode) return;
+    if (!map.has(barcode)) {
+      map.set(barcode, {
+        id: String(film.id || ""),
+        name: String(film.name || "").trim(),
+        barcode,
+        cells: [],
+        count: 0,
+      });
+    }
+    const group = map.get(barcode);
+    group.count += 1;
+    const cell = String(film.cell_no || "").trim();
+    if (cell && !group.cells.includes(cell)) group.cells.push(cell);
+  });
+
+  return [...map.values()]
+    .map((group) => ({
+      ...group,
+      cells: [...group.cells].sort((a, b) => a.localeCompare(b, "ru")),
+    }))
+    .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "ru"));
+}
+
 function filteredFilms() {
   const { search, barcode, cell } = state.filmsFilters;
-  return state.films.filter((film) => {
+  return groupedFilms(state.films).filter((film) => {
+    const cellsText = film.cells.join(" ").toLowerCase();
     if (search) {
       const matchSearch =
         String(film.name || "").toLowerCase().includes(search) ||
         String(film.barcode || "").toLowerCase().includes(search) ||
-        String(film.cell_no || "").toLowerCase().includes(search);
+        cellsText.includes(search);
       if (!matchSearch) return false;
     }
     if (barcode && !String(film.barcode || "").toLowerCase().includes(barcode)) return false;
-    if (cell && !String(film.cell_no || "").toLowerCase().includes(cell)) return false;
+    if (cell && !cellsText.includes(cell)) return false;
     return true;
   });
 }
@@ -1203,16 +1232,16 @@ function renderFilmsTable(list = filteredFilms()) {
           <span class="item-avatar">${avatar}</span>
           <div class="item-copy">
             <strong>${film.name}</strong><br />
-            <span class="muted">ID записи: ${film.id}</span>
+            <span class="muted">Ячеек: ${film.cells.length} • Ед.: ${film.count}</span>
           </div>
         </div>
       </td>
       <td data-label="Штрихкод">${film.barcode}</td>
-      <td data-label="Ячейка"><span class="badge badge-ok">${film.cell_no}</span></td>
+      <td data-label="Ячейки">${film.cells.map((c) => `<span class="badge badge-ok">${c}</span>`).join(" ")}</td>
       <td data-label="Действия">
         <div class="actions compact-actions">
           <button title="Добавить такую же пленку" class="secondary-btn btn-with-icon action-btn" data-film-action="clone" data-film-barcode="${film.barcode}" type="button">${iconSpan("plus")}<span class="action-text">Добавить</span></button>
-          <button title="Удалить из ячейки" class="glass-btn btn-with-icon action-btn danger" data-film-action="delete" data-film-barcode="${film.barcode}" data-film-cell="${film.cell_no}" type="button">${iconSpan("trash")}<span class="action-text">Удалить</span></button>
+          <button title="Удалить из ячейки" class="glass-btn btn-with-icon action-btn danger" data-film-action="delete" data-film-barcode="${film.barcode}" type="button">${iconSpan("trash")}<span class="action-text">Удалить</span></button>
         </div>
       </td>
     `;
@@ -1898,7 +1927,7 @@ function resetFilmsFilters() {
   if (refs.filmsCellFilter) refs.filmsCellFilter.value = "";
   state.filmsFilters = { search: "", barcode: "", cell: "" };
   state.pages.films = 1;
-  renderFilmsTable(state.films);
+  renderFilmsTable(groupedFilms(state.films));
 }
 
 async function saveFilm(film) {
@@ -2984,7 +3013,6 @@ if (refs.filmsTableBody) refs.filmsTableBody.addEventListener("click", async (ev
   if (!(button instanceof HTMLButtonElement)) return;
   const action = String(button.getAttribute("data-film-action") || "");
   const barcode = String(button.getAttribute("data-film-barcode") || "").trim();
-  const cell = String(button.getAttribute("data-film-cell") || "").trim();
 
   try {
     if (action === "clone") {
@@ -2995,14 +3023,11 @@ if (refs.filmsTableBody) refs.filmsTableBody.addEventListener("click", async (ev
       return;
     }
     if (action === "delete") {
-      const ok = window.confirm(`Удалить пленку ${barcode} из ячейки ${cell}?`);
-      if (!ok) return;
-      await runDbAction(() => deleteFilm(barcode, cell), {
-        button,
-        message: "Удаляем пленку...",
-      });
-      showToast("Пленка удалена");
-      hapticSuccess();
+      const films = state.films.filter((x) => String(x.barcode) === barcode);
+      if (!films.length) return;
+      state.scanFilmMatches = films;
+      openFilmDeleteModalFromScan();
+      hapticSelection();
     }
   } catch (error) {
     showToast(error.message);
