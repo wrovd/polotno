@@ -360,6 +360,16 @@ h1 {
   background: linear-gradient(165deg, #e1b24c 0%, #c9942a 100%);
 }
 
+.home-process-card-neutral {
+  color: #30405d;
+  border: 1px dashed #c4cfdf;
+  background: linear-gradient(165deg, #f7f9fd 0%, #eef2f8 100%);
+}
+
+.home-process-card-neutral .home-process-icon {
+  color: #4f6388;
+}
+
 .home-process-head {
   display: flex;
   justify-content: space-between;
@@ -393,6 +403,19 @@ h1 {
   letter-spacing: 0.02em;
   border: 0;
   color: #fff;
+}
+
+.home-process-tag {
+  min-height: 26px;
+  border-radius: 999px;
+  border: 1px solid #d8dfea;
+  background: rgba(255, 255, 255, 0.72);
+  color: #5c6b85;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .home-process-name {
@@ -521,6 +544,11 @@ h1 {
 
 .segmented-six {
   grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.segmented.context-tabs-consumables,
+.segmented.context-tabs-films {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 button {

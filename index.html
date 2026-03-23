@@ -159,7 +159,7 @@
         <section class="home-process-wrap">
           <div class="home-process-headline">
             <h3>Доступные процессы</h3>
-            <span class="home-process-counter">2 процесса</span>
+            <span class="home-process-counter">3 процесса</span>
           </div>
           <section class="home-process-grid" id="homeProcessGrid">
             <button class="home-process-card home-process-card-blue" id="openInventoryTile" type="button" data-process-title="Учет расходников">
@@ -187,6 +187,18 @@
               </div>
               <span class="home-process-name">Готовые пленки</span>
             </button>
+            <button class="home-process-card home-process-card-neutral" id="openProductsSearchTile" type="button" data-process-title="Поиск товаров">
+              <div class="home-process-head">
+                <span class="home-process-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
+                    <circle cx="11" cy="11" r="5.5" stroke="currentColor" stroke-width="1.8" />
+                    <path d="M15.5 15.5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <span class="home-process-tag">В разработке</span>
+              </div>
+              <span class="home-process-name">Поиск товаров</span>
+            </button>
           </section>
         </section>
 
@@ -197,7 +209,7 @@
 
       <section id="inventoryView" class="view">
         <section class="panel nav-panel">
-          <div class="segmented segmented-six">
+          <div class="segmented segmented-six" id="inventoryTabsRow">
             <button class="seg-btn btn-with-icon" id="homeBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-home"></use></svg></span><span>Главная</span></button>
             <button class="seg-btn btn-with-icon active" id="mainTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span><span>Основное</span></button>
             <button class="seg-btn btn-with-icon" id="filmsTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-warehouse"></use></svg></span><span>Склад пленок</span></button>

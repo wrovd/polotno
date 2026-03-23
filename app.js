@@ -2,6 +2,7 @@ const state = {
   authTab: "login",
   moduleView: "home",
   inventoryTab: "main",
+  inventoryContext: "consumables",
   scanContext: "inventory",
   profileLoaded: false,
   token: localStorage.getItem("sf_token") || "",
@@ -91,6 +92,7 @@ const refs = {
   settingsView: document.getElementById("settingsView"),
   openInventoryTile: document.getElementById("openInventoryTile"),
   openFilmsTile: document.getElementById("openFilmsTile"),
+  openProductsSearchTile: document.getElementById("openProductsSearchTile"),
   homeProfileBtn: document.getElementById("homeProfileBtn"),
   homeAuthCaption: document.getElementById("homeAuthCaption"),
   homeAuthEmail: document.getElementById("homeAuthEmail"),
@@ -98,6 +100,7 @@ const refs = {
   homeProcessGrid: document.getElementById("homeProcessGrid"),
   homeScanBtn: document.getElementById("homeScanBtn"),
   homeBtn: document.getElementById("homeBtn"),
+  inventoryTabsRow: document.getElementById("inventoryTabsRow"),
   mainTabBtn: document.getElementById("mainTabBtn"),
   filmsTabBtn: document.getElementById("filmsTabBtn"),
   toolsTabBtn: document.getElementById("toolsTabBtn"),
@@ -563,6 +566,9 @@ function setInventoryTab(tab) {
   const isTools = tab === "tools";
   const isHistory = tab === "history";
   const isStats = tab === "stats";
+  if (isMain || isTools) state.inventoryContext = "consumables";
+  if (isFilms || isStats) state.inventoryContext = "films";
+  const isFilmsContext = state.inventoryContext === "films";
 
   refs.mainTabBtn.classList.toggle("active", isMain);
   refs.filmsTabBtn.classList.toggle("active", isFilms);
@@ -574,9 +580,15 @@ function setInventoryTab(tab) {
   refs.toolsTab.classList.toggle("active", isTools);
   refs.historyTab.classList.toggle("active", isHistory);
   refs.statsTab.classList.toggle("active", isStats);
-  refs.mainTabBtn.classList.toggle("is-hidden", isFilms);
-  refs.toolsTabBtn.classList.toggle("is-hidden", isFilms);
-  if (refs.toToolsBtn) refs.toToolsBtn.classList.toggle("is-hidden", isFilms);
+  refs.mainTabBtn.classList.toggle("is-hidden", isFilmsContext);
+  refs.toolsTabBtn.classList.toggle("is-hidden", isFilmsContext);
+  refs.filmsTabBtn.classList.toggle("is-hidden", !isFilmsContext);
+  refs.statsTabBtn.classList.toggle("is-hidden", !isFilmsContext);
+  if (refs.toToolsBtn) refs.toToolsBtn.classList.toggle("is-hidden", isFilmsContext);
+  if (refs.inventoryTabsRow) {
+    refs.inventoryTabsRow.classList.toggle("context-tabs-consumables", !isFilmsContext);
+    refs.inventoryTabsRow.classList.toggle("context-tabs-films", isFilmsContext);
+  }
   if (refs.inventoryView) refs.inventoryView.classList.remove("is-main-ios-mode");
   if (refs.mainBottomMainBtn) refs.mainBottomMainBtn.classList.toggle("is-active", isMain);
   if (refs.mainBottomToolsBtn) refs.mainBottomToolsBtn.classList.toggle("is-active", isTools);
@@ -2966,6 +2978,10 @@ if (refs.openFilmsTile) refs.openFilmsTile.addEventListener("click", () => {
   setModuleView("inventory");
   setInventoryTab("films");
   setTimeout(() => refs.filmsSearchInput?.focus(), 120);
+});
+if (refs.openProductsSearchTile) refs.openProductsSearchTile.addEventListener("click", () => {
+  showToast("Поиск товаров — в разработке");
+  hapticSelection();
 });
 if (refs.homeScanBtn) refs.homeScanBtn.addEventListener("click", async () => {
   openScanModal();
