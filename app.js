@@ -131,6 +131,7 @@ const refs = {
   statsTab: document.getElementById("statsTab"),
   historyList: document.getElementById("historyList"),
   historyPager: document.getElementById("historyPager"),
+  settingsQrConfirmBtn: document.getElementById("settingsQrConfirmBtn"),
   settingsBackBtn: document.getElementById("settingsBackBtn"),
   settingsForm: document.getElementById("settingsForm"),
   settingsFirstName: document.getElementById("settingsFirstName"),
@@ -3805,6 +3806,14 @@ refs.openSettingsBtn.addEventListener("click", async () => {
   closeAccountMenu();
   try {
     await openSettingsView();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.settingsQrConfirmBtn) refs.settingsQrConfirmBtn.addEventListener("click", async () => {
+  try {
+    await startQrMobileConfirm();
   } catch (error) {
     showToast(error.message);
     hapticWarning();
