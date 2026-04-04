@@ -78,6 +78,11 @@ const state = {
     users: [],
     totalDeleted: 0,
   },
+  qrLogin: {
+    pollTimer: null,
+    pollKey: "",
+    expiresAt: "",
+  },
 };
 
 const ONBOARDING_KEY = "polotno_onboarding_seen_v1";
@@ -91,6 +96,8 @@ const refs = {
   authModal: document.getElementById("authModal"),
   authBackdrop: document.getElementById("authBackdrop"),
   closeAuthBtn: document.getElementById("closeAuthBtn"),
+  openQrDesktopLoginBtn: document.getElementById("openQrDesktopLoginBtn"),
+  openQrMobileConfirmBtn: document.getElementById("openQrMobileConfirmBtn"),
   authTabs: document.getElementById("authTabs"),
   loginTab: document.getElementById("loginTab"),
   registerTab: document.getElementById("registerTab"),
@@ -146,6 +153,11 @@ const refs = {
   displaySettingsModal: document.getElementById("displaySettingsModal"),
   displaySettingsBackdrop: document.getElementById("displaySettingsBackdrop"),
   closeDisplaySettingsBtn: document.getElementById("closeDisplaySettingsBtn"),
+  qrLoginModal: document.getElementById("qrLoginModal"),
+  qrLoginBackdrop: document.getElementById("qrLoginBackdrop"),
+  closeQrLoginModalBtn: document.getElementById("closeQrLoginModalBtn"),
+  qrLoginImage: document.getElementById("qrLoginImage"),
+  qrLoginStatus: document.getElementById("qrLoginStatus"),
   adminPanel: document.getElementById("adminPanel"),
   adminUsersList: document.getElementById("adminUsersList"),
   adminUsersPager: document.getElementById("adminUsersPager"),
@@ -519,6 +531,25 @@ function openAuthModal() {
 
 function closeAuthModal() {
   refs.authModal.hidden = true;
+  closeQrLoginModal();
+  document.body.style.overflow = "";
+}
+
+function clearQrLoginPolling() {
+  if (state.qrLogin.pollTimer) {
+    clearInterval(state.qrLogin.pollTimer);
+    state.qrLogin.pollTimer = null;
+  }
+  state.qrLogin.pollKey = "";
+  state.qrLogin.expiresAt = "";
+}
+
+function closeQrLoginModal() {
+  if (!refs.qrLoginModal) return;
+  refs.qrLoginModal.hidden = true;
+  if (refs.qrLoginImage) refs.qrLoginImage.removeAttribute("src");
+  if (refs.qrLoginStatus) refs.qrLoginStatus.textContent = "Готовим QR-код...";
+  clearQrLoginPolling();
   document.body.style.overflow = "";
 }
 
@@ -951,6 +982,7 @@ function clearSession() {
   localStorage.removeItem("sf_user");
   state.token = "";
   state.user = null;
+  clearQrLoginPolling();
   state.homeProfilePhotoChatId = "";
   state.profileLoaded = false;
   updateAuthButton();
@@ -1046,6 +1078,9 @@ function setScanStatus(text, options = {}) {
 }
 
 function scannerIdleHint() {
+  if (state.scanContext === "auth-qr-confirm") {
+    return "Наведите камеру на QR-код входа с ПК.";
+  }
   if (state.scanContext === "box-search") {
     return "Наведите камеру на штрихкод товара для поиска коробки.";
   }
@@ -1067,6 +1102,7 @@ function closeScanModal() {
   stopScanner();
   refs.scanModal.hidden = true;
   document.body.style.overflow = "";
+  if (state.scanContext === "auth-qr-confirm") state.scanContext = "inventory";
   updateMobileScanFab();
 }
 
@@ -3193,6 +3229,52 @@ function extractBarcodeFromScan(rawValue) {
   return text;
 }
 
+function extractQrLoginCode(rawValue) {
+  const text = String(rawValue || "").trim();
+  if (!text) return "";
+  try {
+    const payload = JSON.parse(text);
+    if (payload && String(payload.type || "") === "polotno_qr_login" && typeof payload.code === "string") {
+      return payload.code.trim();
+    }
+  } catch {
+    // keep parsing as plain text
+  }
+
+  const queryMatch = text.match(/[?&]code=([A-Za-z0-9_-]+)/i);
+  if (queryMatch) return String(queryMatch[1] || "").trim();
+
+  const tokenMatch = text.match(/\b[A-Za-z0-9_-]{20,}\b/);
+  if (tokenMatch) return String(tokenMatch[0] || "").trim();
+
+  return "";
+}
+
+async function processAuthQrConfirmScanValue(rawValue) {
+  if (!state.token || !state.user?.email) {
+    setScanStatus("Сначала войдите в аккаунт на телефоне.");
+    hapticWarning();
+    return false;
+  }
+
+  const code = extractQrLoginCode(rawValue);
+  if (!code) {
+    setScanStatus("Это не QR-код входа Polotno.");
+    hapticWarning();
+    return false;
+  }
+
+  setScanStatus("Подтверждаем вход на ПК...", { busy: true });
+  await apiRequest("/api/auth?action=qr-confirm", {
+    method: "POST",
+    body: { code },
+  });
+  closeScanModal();
+  showToast("Вход подтвержден. Вернитесь на ПК");
+  hapticSuccess();
+  return true;
+}
+
 async function processFilmScanValue(rawValue) {
   const barcode = extractBarcodeFromScan(rawValue);
   if (!barcode) {
@@ -3270,6 +3352,11 @@ async function processScanValue(rawValue) {
   state.lastScanValue = rawValue;
   state.lastScanAt = now;
 
+  if (state.scanContext === "auth-qr-confirm") {
+    await processAuthQrConfirmScanValue(rawValue);
+    return;
+  }
+
   if (state.scanContext === "films") {
     const handledFilm = await processFilmScanValue(rawValue);
     if (handledFilm) return;
@@ -3302,6 +3389,96 @@ async function processScanValue(rawValue) {
   setScanStatus("Код считан, но товар не найден.");
   showToast("Код не найден в системе");
   hapticWarning();
+}
+
+async function pollQrLoginStatus() {
+  if (!state.qrLogin.pollKey) return;
+  const data = await apiRequest(`/api/auth?action=qr-status&pollKey=${encodeURIComponent(state.qrLogin.pollKey)}`, {
+    auth: false,
+  });
+  const status = String(data.status || "pending");
+
+  if (status === "pending") {
+    if (refs.qrLoginStatus) refs.qrLoginStatus.textContent = "Ожидаем подтверждение на телефоне...";
+    return;
+  }
+
+  if (status === "confirmed" && data.token && data.user) {
+    clearQrLoginPolling();
+    applyUserFromServer(data.user, data.token);
+    state.profileLoaded = false;
+    closeQrLoginModal();
+    closeAuthModal();
+    await runDbAction(
+      async () => {
+        await loadItems();
+        await loadHistory();
+        await loadFilms();
+      },
+      { message: "Загружаем данные аккаунта..." }
+    );
+    showToast("Вход по QR выполнен");
+    hapticSuccess();
+    return;
+  }
+
+  clearQrLoginPolling();
+  if (!refs.qrLoginStatus) return;
+  if (status === "expired") {
+    refs.qrLoginStatus.textContent = "QR-код истек. Нажмите «Войти по QR (ПК)» снова.";
+    return;
+  }
+  if (status === "consumed") {
+    refs.qrLoginStatus.textContent = "Этот QR уже использован. Сгенерируйте новый.";
+    return;
+  }
+  refs.qrLoginStatus.textContent = "Сессия входа неактивна. Создайте новый QR.";
+}
+
+async function startQrDesktopLogin(button = null) {
+  if (!refs.qrLoginModal || !refs.qrLoginImage || !refs.qrLoginStatus) return;
+  closeScanModal();
+  clearQrLoginPolling();
+  refs.qrLoginModal.hidden = false;
+  document.body.style.overflow = "hidden";
+  refs.qrLoginStatus.textContent = "Готовим QR-код...";
+  refs.qrLoginImage.removeAttribute("src");
+
+  const data = await runDbAction(
+    () =>
+      apiRequest("/api/auth?action=qr-start", {
+        method: "POST",
+        auth: false,
+      }),
+    { button, message: "Создаем QR-сессию..." }
+  );
+
+  const pollKey = String(data.pollKey || "").trim();
+  const qrPayload = String(data.qrPayload || "").trim();
+  if (!pollKey || !qrPayload) throw new Error("Не удалось получить QR-код входа");
+
+  refs.qrLoginImage.src = await qrImageSrc(qrPayload, 260);
+  refs.qrLoginStatus.textContent = "Отсканируйте QR в Polotno на телефоне и подтвердите вход.";
+  state.qrLogin.pollKey = pollKey;
+  state.qrLogin.expiresAt = String(data.expiresAt || "");
+  state.qrLogin.pollTimer = setInterval(() => {
+    pollQrLoginStatus().catch((error) => {
+      if (refs.qrLoginStatus) refs.qrLoginStatus.textContent = `Ошибка проверки QR: ${error.message}`;
+    });
+  }, 2000);
+}
+
+async function startQrMobileConfirm() {
+  if (!state.token || !state.user?.email) {
+    setAuthTab("login");
+    showToast("Сначала войдите в аккаунт на телефоне");
+    hapticWarning();
+    return;
+  }
+  closeAuthModal();
+  state.scanContext = "auth-qr-confirm";
+  openScanModal();
+  await startScanner();
 }
 
 function stopScanLoops() {
@@ -3572,6 +3749,26 @@ if (refs.homeProfileBtn) refs.homeProfileBtn.addEventListener("click", () => {
 
 refs.closeAuthBtn.addEventListener("click", closeAuthModal);
 refs.authBackdrop.addEventListener("click", closeAuthModal);
+if (refs.openQrDesktopLoginBtn) refs.openQrDesktopLoginBtn.addEventListener("click", async (event) => {
+  const button = event.currentTarget instanceof HTMLButtonElement ? event.currentTarget : null;
+  try {
+    await startQrDesktopLogin(button);
+  } catch (error) {
+    closeQrLoginModal();
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.openQrMobileConfirmBtn) refs.openQrMobileConfirmBtn.addEventListener("click", async () => {
+  try {
+    await startQrMobileConfirm();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.closeQrLoginModalBtn) refs.closeQrLoginModalBtn.addEventListener("click", closeQrLoginModal);
+if (refs.qrLoginBackdrop) refs.qrLoginBackdrop.addEventListener("click", closeQrLoginModal);
 refs.loginTab.addEventListener("click", () => setAuthTab("login"));
 refs.registerTab.addEventListener("click", () => setAuthTab("register"));
 
@@ -4767,6 +4964,7 @@ document.addEventListener("keydown", (event) => {
     closeLogoutModal();
     closeSimpleModal(refs.remindersSettingsModal);
     closeSimpleModal(refs.displaySettingsModal);
+    closeQrLoginModal();
     closeFilmFoundModal();
     closeBoxFoundModal();
     closeFilmAddModal();

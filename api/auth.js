@@ -1,4 +1,15 @@
-const { createUser, findUserByEmail, listUsers, updateUserByEmail } = require("../lib/sheets");
+const crypto = require("node:crypto");
+const {
+  createUser,
+  findUserByEmail,
+  listUsers,
+  updateUserByEmail,
+  createQrLoginSession,
+  findQrLoginSessionByPollKey,
+  findQrLoginSessionByCode,
+  confirmQrLoginSession,
+  consumeQrLoginSessionByPollKey,
+} = require("../lib/sheets");
 const { getBearerToken, hashPassword, signToken, verifyPassword, verifyToken } = require("../lib/security");
 const { send, methodNotAllowed, parseJsonBody } = require("../lib/http");
 const { getTelegramProfilePhotoDataUrl } = require("../lib/telegram");
@@ -59,6 +70,18 @@ function tokenForUser(user) {
     low_stock_notifications: normalizeToggle(user.low_stock_notifications, "1"),
     reminder_item_ids: String(user.reminder_item_ids || ""),
     reminder_interval_minutes: normalizeReminderInterval(user.reminder_interval_minutes, "0"),
+  });
+}
+
+function randomToken(size = 24) {
+  return crypto.randomBytes(size).toString("base64url");
+}
+
+function qrPayloadByCode(code) {
+  return JSON.stringify({
+    type: "polotno_qr_login",
+    v: 1,
+    code,
   });
 }
 
@@ -228,11 +251,106 @@ async function handleProfilePhoto(req, res) {
   }
 }
 
+async function handleQrStart(req, res) {
+  if (req.method !== "POST") return methodNotAllowed(req, res, ["POST"]);
+  try {
+    const sessionId = randomToken(16);
+    const loginCode = randomToken(20);
+    const pollKey = randomToken(28);
+    const ttlMs = 2 * 60 * 1000;
+    const expiresAt = new Date(Date.now() + ttlMs).toISOString();
+
+    await createQrLoginSession({
+      id: sessionId,
+      login_code: loginCode,
+      poll_key: pollKey,
+      status: "pending",
+      user_email: "",
+      expires_at: expiresAt,
+      created_at: new Date().toISOString(),
+    });
+
+    return send(res, 200, {
+      ok: true,
+      pollKey,
+      expiresAt,
+      qrPayload: qrPayloadByCode(loginCode),
+    });
+  } catch (error) {
+    return send(res, 500, { error: error.message || "Failed to create QR login session" });
+  }
+}
+
+async function handleQrStatus(req, res) {
+  if (req.method !== "GET") return methodNotAllowed(req, res, ["GET"]);
+  try {
+    const pollKey = String(req.query?.pollKey || req.query?.poll_key || "").trim();
+    if (!pollKey) return send(res, 400, { error: "pollKey is required" });
+
+    const session = await findQrLoginSessionByPollKey(pollKey);
+    if (!session) return send(res, 404, { error: "QR session not found" });
+    const expired = new Date(session.expires_at).getTime() <= Date.now();
+    if (expired) return send(res, 200, { ok: true, status: "expired" });
+
+    if (session.status !== "confirmed") {
+      return send(res, 200, { ok: true, status: session.status || "pending" });
+    }
+
+    const user = await findUserByEmail(session.user_email);
+    if (!user) return send(res, 200, { ok: true, status: "pending" });
+
+    const consumed = await consumeQrLoginSessionByPollKey(pollKey);
+    if (!consumed) {
+      return send(res, 200, { ok: true, status: "consumed" });
+    }
+
+    return send(res, 200, {
+      ok: true,
+      status: "confirmed",
+      token: tokenForUser(user),
+      user: publicUser(user),
+    });
+  } catch (error) {
+    return send(res, 500, { error: error.message || "Failed to check QR login status" });
+  }
+}
+
+async function handleQrConfirm(req, res) {
+  if (req.method !== "POST") return methodNotAllowed(req, res, ["POST"]);
+  const token = getBearerToken(req);
+  const auth = verifyToken(token);
+  if (!auth?.email) return send(res, 401, { error: "Unauthorized" });
+
+  try {
+    const body = parseJsonBody(req);
+    const loginCode = String(body.code || body.loginCode || "").trim();
+    if (!loginCode) return send(res, 400, { error: "code is required" });
+
+    const existing = await findQrLoginSessionByCode(loginCode);
+    if (!existing) return send(res, 404, { error: "QR session not found" });
+
+    const expired = new Date(existing.expires_at).getTime() <= Date.now();
+    if (expired) return send(res, 400, { error: "QR code expired" });
+    if (existing.status !== "pending") {
+      return send(res, 400, { error: "QR code already used" });
+    }
+
+    const confirmed = await confirmQrLoginSession(loginCode, auth.email);
+    if (!confirmed) return send(res, 400, { error: "Unable to confirm QR login" });
+    return send(res, 200, { ok: true });
+  } catch (error) {
+    return send(res, 500, { error: error.message || "Failed to confirm QR login" });
+  }
+}
+
 module.exports = async function handler(req, res) {
   const action = actionFromReq(req);
   if (action === "login") return handleLogin(req, res);
   if (action === "create-user") return handleCreateUser(req, res);
   if (action === "profile") return handleProfile(req, res);
   if (action === "profile-photo") return handleProfilePhoto(req, res);
+  if (action === "qr-start") return handleQrStart(req, res);
+  if (action === "qr-status") return handleQrStatus(req, res);
+  if (action === "qr-confirm") return handleQrConfirm(req, res);
   return send(res, 404, { error: "Unknown auth action" });
 };

@@ -935,6 +935,10 @@
             <input type="password" name="password" placeholder="••••••••" required minlength="6" />
           </label>
           <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-login"></use></svg></span><span>Войти</span></button>
+          <div class="hero-actions auth-qr-actions">
+            <button class="glass-btn full btn-with-icon" id="openQrDesktopLoginBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-login"></use></svg></span><span>Войти по QR (ПК)</span></button>
+            <button class="glass-btn full btn-with-icon" id="openQrMobileConfirmBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span><span>Подтвердить QR (телефон)</span></button>
+          </div>
         </form>
 
         <form class="auth-form" id="registerForm" novalidate>
@@ -1030,6 +1034,19 @@
             <span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить</span>
           </button>
         </form>
+      </section>
+    </div>
+
+    <div class="auth-modal" id="qrLoginModal" hidden>
+      <div class="auth-backdrop" id="qrLoginBackdrop"></div>
+      <section class="auth-card" role="dialog" aria-modal="true" aria-label="Вход по QR">
+        <button class="close-btn" id="closeQrLoginModalBtn" type="button" aria-label="Закрыть">×</button>
+        <h3>Вход по QR</h3>
+        <p class="helper">Откройте Polotno на телефоне, нажмите «Подтвердить QR (телефон)», отсканируйте код и подтвердите вход.</p>
+        <figure class="auth-qr-box">
+          <img id="qrLoginImage" alt="QR для входа" />
+        </figure>
+        <p class="muted" id="qrLoginStatus">Готовим QR-код...</p>
       </section>
     </div>
 
