@@ -36,6 +36,14 @@ const state = {
   adminUsers: [],
   adminHistory: [],
   films: [],
+  boxCatalog: [],
+  boxTrackingEntries: [],
+  boxSearchResult: [],
+  boxDraftItems: [],
+  boxFilters: {
+    search: "",
+    location: "",
+  },
   filmsFilters: {
     search: "",
     barcode: "",
@@ -60,6 +68,7 @@ const state = {
     films: 1,
     adminUsers: 1,
     adminHistory: 1,
+    boxTracked: 1,
   },
   stats: {
     dateFrom: "",
@@ -103,11 +112,13 @@ const refs = {
   inventoryTabsRow: document.getElementById("inventoryTabsRow"),
   mainTabBtn: document.getElementById("mainTabBtn"),
   filmsTabBtn: document.getElementById("filmsTabBtn"),
+  boxSearchTabBtn: document.getElementById("boxSearchTabBtn"),
   toolsTabBtn: document.getElementById("toolsTabBtn"),
   historyTabBtn: document.getElementById("historyTabBtn"),
   statsTabBtn: document.getElementById("statsTabBtn"),
   mainTab: document.getElementById("mainTab"),
   filmsTab: document.getElementById("filmsTab"),
+  boxSearchTab: document.getElementById("boxSearchTab"),
   toolsTab: document.getElementById("toolsTab"),
   historyTab: document.getElementById("historyTab"),
   statsTab: document.getElementById("statsTab"),
@@ -200,6 +211,33 @@ const refs = {
   filmsPager: document.getElementById("filmsPager"),
   filmsGroupWithBtn: document.getElementById("filmsGroupWithBtn"),
   filmsGroupWithoutBtn: document.getElementById("filmsGroupWithoutBtn"),
+  boxSearchInput: document.getElementById("boxSearchInput"),
+  boxSearchBtn: document.getElementById("boxSearchBtn"),
+  boxLocationFilter: document.getElementById("boxLocationFilter"),
+  boxApplyFiltersBtn: document.getElementById("boxApplyFiltersBtn"),
+  boxResetFiltersBtn: document.getElementById("boxResetFiltersBtn"),
+  downloadBoxCatalogTemplateBtn: document.getElementById("downloadBoxCatalogTemplateBtn"),
+  importBoxCatalogBtn: document.getElementById("importBoxCatalogBtn"),
+  importBoxCatalogFile: document.getElementById("importBoxCatalogFile"),
+  boxScanBarcodeBtn: document.getElementById("boxScanBarcodeBtn"),
+  boxScanResultList: document.getElementById("boxScanResultList"),
+  boxCreateForm: document.getElementById("boxCreateForm"),
+  boxCodeInput: document.getElementById("boxCodeInput"),
+  boxLocationInput: document.getElementById("boxLocationInput"),
+  boxItemBarcodeInput: document.getElementById("boxItemBarcodeInput"),
+  boxItemNameInput: document.getElementById("boxItemNameInput"),
+  boxAddItemBtn: document.getElementById("boxAddItemBtn"),
+  boxItemsTextarea: document.getElementById("boxItemsTextarea"),
+  boxDraftItemsList: document.getElementById("boxDraftItemsList"),
+  boxClearDraftBtn: document.getElementById("boxClearDraftBtn"),
+  boxCreateSubmitBtn: document.getElementById("boxCreateSubmitBtn"),
+  boxTrackedList: document.getElementById("boxTrackedList"),
+  boxTrackedPager: document.getElementById("boxTrackedPager"),
+  boxFoundModal: document.getElementById("boxFoundModal"),
+  boxFoundBackdrop: document.getElementById("boxFoundBackdrop"),
+  closeBoxFoundBtn: document.getElementById("closeBoxFoundBtn"),
+  boxFoundSummary: document.getElementById("boxFoundSummary"),
+  boxFoundList: document.getElementById("boxFoundList"),
   toToolsBtn: document.getElementById("toToolsBtn"),
   stockManagePanel: document.getElementById("stockManagePanel"),
   adjustPanel: document.getElementById("adjustPanel"),
@@ -563,44 +601,56 @@ function setInventoryTab(tab) {
   state.inventoryTab = tab;
   const isMain = tab === "main";
   const isFilms = tab === "films";
+  const isBoxSearch = tab === "box-search";
   const isTools = tab === "tools";
   const isHistory = tab === "history";
   const isStats = tab === "stats";
   if (isMain || isTools) state.inventoryContext = "consumables";
   if (isFilms || isStats) state.inventoryContext = "films";
+  if (isBoxSearch) state.inventoryContext = "boxes";
   const isFilmsContext = state.inventoryContext === "films";
+  const isBoxesContext = state.inventoryContext === "boxes";
 
   refs.mainTabBtn.classList.toggle("active", isMain);
   refs.filmsTabBtn.classList.toggle("active", isFilms);
+  if (refs.boxSearchTabBtn) refs.boxSearchTabBtn.classList.toggle("active", isBoxSearch);
   refs.toolsTabBtn.classList.toggle("active", isTools);
   refs.historyTabBtn.classList.toggle("active", isHistory);
   refs.statsTabBtn.classList.toggle("active", isStats);
   refs.mainTab.classList.toggle("active", isMain);
   refs.filmsTab.classList.toggle("active", isFilms);
+  if (refs.boxSearchTab) refs.boxSearchTab.classList.toggle("active", isBoxSearch);
   refs.toolsTab.classList.toggle("active", isTools);
   refs.historyTab.classList.toggle("active", isHistory);
   refs.statsTab.classList.toggle("active", isStats);
-  refs.mainTabBtn.classList.toggle("is-hidden", isFilmsContext);
-  refs.toolsTabBtn.classList.toggle("is-hidden", isFilmsContext);
+  const hideConsumablesTabs = isFilmsContext || isBoxesContext;
+  refs.mainTabBtn.classList.toggle("is-hidden", hideConsumablesTabs);
+  refs.toolsTabBtn.classList.toggle("is-hidden", hideConsumablesTabs);
   refs.filmsTabBtn.classList.toggle("is-hidden", !isFilmsContext);
   refs.statsTabBtn.classList.toggle("is-hidden", !isFilmsContext);
-  if (refs.toToolsBtn) refs.toToolsBtn.classList.toggle("is-hidden", isFilmsContext);
+  if (refs.boxSearchTabBtn) refs.boxSearchTabBtn.classList.toggle("is-hidden", !isBoxesContext);
+  if (refs.toToolsBtn) refs.toToolsBtn.classList.toggle("is-hidden", hideConsumablesTabs);
   if (refs.inventoryTabsRow) {
-    refs.inventoryTabsRow.classList.toggle("context-tabs-consumables", !isFilmsContext);
+    refs.inventoryTabsRow.classList.toggle("context-tabs-consumables", !isFilmsContext && !isBoxesContext);
     refs.inventoryTabsRow.classList.toggle("context-tabs-films", isFilmsContext);
+    refs.inventoryTabsRow.classList.toggle("context-tabs-boxes", isBoxesContext);
   }
   if (refs.inventoryView) refs.inventoryView.classList.remove("is-main-ios-mode");
   if (refs.mainBottomMainBtn) refs.mainBottomMainBtn.classList.toggle("is-active", isMain);
   if (refs.mainBottomToolsBtn) refs.mainBottomToolsBtn.classList.toggle("is-active", isTools);
   if (refs.mainBottomHistoryBtn) refs.mainBottomHistoryBtn.classList.toggle("is-active", isHistory);
   if (refs.mainBottomSettingsBtn) refs.mainBottomSettingsBtn.classList.toggle("is-active", state.moduleView === "settings");
-  state.scanContext = isFilms ? "films" : "inventory";
+  state.scanContext = isFilms ? "films" : isBoxSearch ? "box-search" : "inventory";
   if (isMain) {
     stopScanner();
   }
   if (isFilms) {
     stopScanner();
     loadFilms();
+  }
+  if (isBoxSearch) {
+    stopScanner();
+    loadBoxSearchData();
   }
   if (isHistory) {
     stopScanner();
@@ -886,6 +936,7 @@ function performLogout() {
   loadItems();
   loadHistory();
   loadFilms();
+  loadBoxSearchData();
   showToast("Вы вышли из аккаунта");
   hapticSuccess();
 }
@@ -990,6 +1041,9 @@ function setScanStatus(text, options = {}) {
 }
 
 function scannerIdleHint() {
+  if (state.scanContext === "box-search") {
+    return "Наведите камеру на штрихкод товара для поиска коробки.";
+  }
   return state.scanContext === "films"
     ? "Наведите камеру на штрихкод пленки."
     : "Наведите камеру на QR или штрихкод.";
@@ -1021,6 +1075,9 @@ function applyPrintAccess() {
 
 function applyRoleAccess() {
   const canManageUsers = canAdmin();
+  document.querySelectorAll(".admin-only").forEach((node) => {
+    node.classList.toggle("is-hidden", !canManageUsers);
+  });
   refs.registerTab.classList.toggle("is-hidden", !canManageUsers);
   refs.authTabs.classList.toggle("admin-disabled", !canManageUsers);
   refs.adjustPanel.classList.toggle("is-hidden", !canManageUsers);
@@ -1484,6 +1541,8 @@ function reasonLabel(reason) {
   if (reason === "film_create") return "Пленки: добавление";
   if (reason === "film_update") return "Пленки: обновление";
   if (reason === "film_delete") return "Пленки: удаление";
+  if (reason === "box_create") return "Коробки: добавление";
+  if (reason === "box_delete") return "Коробки: удаление";
   return reason || "Изменение";
 }
 
@@ -2255,6 +2314,388 @@ async function loadFilms() {
   renderQuickFilmBatch();
 }
 
+function boxCatalogColumns() {
+  return ["Наименование товара", "Штрихкод"];
+}
+
+function normalizeBoxCatalogImportRow(row = {}) {
+  return {
+    name: String(row["Наименование товара"] ?? row["наименование товара"] ?? row.name ?? "").trim(),
+    barcode: String(row["Штрихкод"] ?? row["штрихкод"] ?? row.barcode ?? "").trim(),
+  };
+}
+
+async function downloadBoxCatalogTemplate() {
+  const columns = boxCatalogColumns();
+  const sampleRows = [
+    { "Наименование товара": "Чехол iPhone 14 Black", "Штрихкод": "2200000000011" },
+    { "Наименование товара": "Чехол iPhone 15 Pro Clear", "Штрихкод": "2200000000012" },
+  ];
+
+  if (window.XLSX?.utils?.book_new) {
+    const ws = window.XLSX.utils.json_to_sheet(sampleRows, { header: columns });
+    ws["!cols"] = [{ wch: 38 }, { wch: 22 }];
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, "Catalog");
+    window.XLSX.writeFile(wb, "polotno-box-products-template.xlsx");
+    showToast("Шаблон импорта скачан");
+    return;
+  }
+
+  const csv = [columns.join(","), ...sampleRows.map((r) => columns.map((c) => csvEscape(r[c])).join(","))].join("\n");
+  const ok = await downloadCsvWithFallback("polotno-box-products-template.csv", csv);
+  if (ok) showToast("Шаблон CSV скачан");
+}
+
+async function parseBoxCatalogImportFile(file) {
+  if (!file) return [];
+  const lower = String(file.name || "").toLowerCase();
+  if ((lower.endsWith(".xlsx") || lower.endsWith(".xls")) && window.XLSX?.read) {
+    const buffer = await file.arrayBuffer();
+    const wb = window.XLSX.read(buffer, { type: "array" });
+    const firstSheet = wb.Sheets[wb.SheetNames[0]];
+    if (!firstSheet) return [];
+    const rows = window.XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+    return rows.map(normalizeBoxCatalogImportRow);
+  }
+  const text = await file.text();
+  const rows = parseCsv(text);
+  const objects = csvRowsToObjects(rows);
+  return objects.map(normalizeBoxCatalogImportRow);
+}
+
+async function importBoxCatalog(file) {
+  if (!file) return;
+  if (!canDesktopPrint()) throw new Error("Импорт доступен только на ПК");
+  if (!canAdmin()) throw new Error("Только для администратора");
+  if (!state.token) throw new Error("Требуется вход в систему");
+
+  const rows = await parseBoxCatalogImportFile(file);
+  if (!rows.length) throw new Error("Файл пустой или не содержит строк");
+  const payloadRows = rows.map((row) => ({ name: row.name, barcode: row.barcode }));
+  const CHUNK_SIZE = 120;
+  let success = 0;
+  const importErrors = [];
+
+  for (let start = 0; start < payloadRows.length; start += CHUNK_SIZE) {
+    const chunk = payloadRows.slice(start, start + CHUNK_SIZE);
+    try {
+      const data = await apiRequest("/api/box-search?action=catalog-bulk-upsert", {
+        method: "POST",
+        body: { rows: chunk },
+      });
+      success += Number(data?.report?.success || 0);
+      const errors = Array.isArray(data?.report?.errors) ? data.report.errors : [];
+      errors.forEach((err) => importErrors.push(`Строка ${Number(err.line || 0)}: ${err.error}`));
+    } catch (error) {
+      importErrors.push(`Пакет ${start + 1}-${start + chunk.length}: ${error.message || "Ошибка импорта"}`);
+    }
+  }
+
+  await loadBoxSearchData();
+  showToast(`Импорт каталога: успешно ${success}, ошибок ${importErrors.length}`);
+  if (importErrors.length) {
+    window.alert(`Отчет импорта:\nУспешно: ${success}\nОшибок: ${importErrors.length}\n\n${importErrors.slice(0, 8).join("\n")}${importErrors.length > 8 ? "\n..." : ""}`);
+  }
+}
+
+function applyBoxFiltersFromInputs() {
+  state.boxFilters.search = String(refs.boxSearchInput?.value || "").trim().toLowerCase();
+  state.boxFilters.location = String(refs.boxLocationFilter?.value || "").trim().toLowerCase();
+}
+
+function filteredBoxEntries() {
+  const { search, location } = state.boxFilters;
+  return state.boxTrackingEntries.filter((row) => {
+    if (search) {
+      const matched =
+        String(row.box_code || "").toLowerCase().includes(search) ||
+        String(row.location || "").toLowerCase().includes(search) ||
+        String(row.product_barcode || "").toLowerCase().includes(search) ||
+        String(row.product_name || "").toLowerCase().includes(search);
+      if (!matched) return false;
+    }
+    if (location && !String(row.location || "").toLowerCase().includes(location)) return false;
+    return true;
+  });
+}
+
+function groupedBoxEntries(entries = []) {
+  const map = new Map();
+  entries.forEach((row) => {
+    const boxCode = String(row.box_code || "").trim();
+    if (!boxCode) return;
+    if (!map.has(boxCode)) {
+      map.set(boxCode, {
+        box_code: boxCode,
+        location: String(row.location || "").trim(),
+        items: [],
+      });
+    }
+    const bucket = map.get(boxCode);
+    const barcode = String(row.product_barcode || "").trim();
+    if (!bucket.items.some((x) => x.barcode === barcode)) {
+      bucket.items.push({
+        barcode,
+        name: String(row.product_name || "").trim(),
+      });
+    }
+  });
+  return [...map.values()];
+}
+
+function findCatalogNameByBarcode(barcode) {
+  const needle = String(barcode || "").trim();
+  if (!needle) return "";
+  const found = state.boxCatalog.find((row) => String(row.barcode || "").trim() === needle);
+  return String(found?.name || "").trim();
+}
+
+function renderBoxDraftItems() {
+  if (!refs.boxDraftItemsList) return;
+  refs.boxDraftItemsList.innerHTML = "";
+  if (!state.boxDraftItems.length) {
+    refs.boxDraftItemsList.innerHTML = '<p class="muted">Список товаров для коробки пуст.</p>';
+    return;
+  }
+  state.boxDraftItems.forEach((item, idx) => {
+    const card = document.createElement("article");
+    card.className = "history-item";
+    card.innerHTML = `
+      <div><strong>${item.barcode}</strong></div>
+      <div class="history-meta">${item.name || "Название будет подтянуто из каталога"}</div>
+      <div class="hero-actions">
+        <button class="glass-btn btn-with-icon" type="button" data-box-draft-remove="${idx}">
+          ${iconSpan("trash")}<span>Удалить</span>
+        </button>
+      </div>
+    `;
+    refs.boxDraftItemsList.appendChild(card);
+  });
+}
+
+function addBoxDraftItem(rawBarcode, rawName = "") {
+  const barcode = String(rawBarcode || "").trim();
+  if (!barcode) return false;
+  const exists = state.boxDraftItems.some((x) => x.barcode === barcode);
+  if (exists) return false;
+  const fallbackName = findCatalogNameByBarcode(barcode);
+  const name = String(rawName || "").trim() || fallbackName;
+  state.boxDraftItems.push({ barcode, name });
+  renderBoxDraftItems();
+  return true;
+}
+
+function addBoxDraftItemsFromTextarea() {
+  const text = String(refs.boxItemsTextarea?.value || "").trim();
+  if (!text) return 0;
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  let added = 0;
+  lines.forEach((line) => {
+    const [barcodeRaw, nameRaw] = line.split(/[;,\t|]/);
+    const ok = addBoxDraftItem(barcodeRaw, nameRaw || "");
+    if (ok) added += 1;
+  });
+  return added;
+}
+
+function renderBoxTrackedList() {
+  if (!refs.boxTrackedList) return;
+  const groups = groupedBoxEntries(filteredBoxEntries());
+  refs.boxTrackedList.innerHTML = "";
+  if (!groups.length) {
+    refs.boxTrackedList.innerHTML = '<p class="muted">Нет коробок в отслеживании.</p>';
+    if (refs.boxTrackedPager) {
+      refs.boxTrackedPager.hidden = true;
+      refs.boxTrackedPager.innerHTML = "";
+    }
+    return;
+  }
+
+  const page = paginateList(groups, "boxTracked");
+  page.items.forEach((box) => {
+    const itemsPreview = box.items
+      .slice(0, 4)
+      .map((it) => `${it.name || "Без названия"} (${it.barcode})`)
+      .join("<br/>");
+    const more = box.items.length > 4 ? `<div class="history-meta">и еще ${box.items.length - 4} шт.</div>` : "";
+    const card = document.createElement("article");
+    card.className = "history-item";
+    card.innerHTML = `
+      <div><strong>Коробка ${box.box_code}</strong> <span class="history-reason">${box.location || "Место не указано"}</span></div>
+      <div class="history-meta">Товаров: ${box.items.length}</div>
+      <div class="history-meta">${itemsPreview || "Пусто"}</div>
+      ${more}
+      <div class="hero-actions">
+        <button class="glass-btn btn-with-icon danger" type="button" data-box-remove="${box.box_code}">
+          ${iconSpan("trash")}<span>Удалить из отслеживания</span>
+        </button>
+      </div>
+    `;
+    refs.boxTrackedList.appendChild(card);
+  });
+  renderPager(refs.boxTrackedPager, "boxTracked", page, () => renderBoxTrackedList());
+}
+
+function renderBoxScanResult(boxes = []) {
+  if (!refs.boxScanResultList) return;
+  refs.boxScanResultList.innerHTML = "";
+  if (!boxes.length) {
+    refs.boxScanResultList.innerHTML = '<p class="muted">Совпадений не найдено.</p>';
+    return;
+  }
+  boxes.forEach((box) => {
+    const card = document.createElement("article");
+    card.className = "history-item";
+    card.innerHTML = `
+      <div><strong>Коробка ${box.box_code}</strong> <span class="history-reason">${box.location || "Место не указано"}</span></div>
+      <div class="history-meta">Товаров в коробке: ${box.items.length}</div>
+      <div class="hero-actions">
+        <button class="glass-btn btn-with-icon danger" type="button" data-box-remove="${box.box_code}">
+          ${iconSpan("trash")}<span>Удалить из отслеживания</span>
+        </button>
+      </div>
+    `;
+    refs.boxScanResultList.appendChild(card);
+  });
+}
+
+function renderBoxFoundModal(boxes = [], barcode = "") {
+  if (!refs.boxFoundList || !refs.boxFoundSummary) return;
+  refs.boxFoundList.innerHTML = "";
+  if (!boxes.length) {
+    refs.boxFoundSummary.textContent = `Штрихкод ${barcode} не найден в коробках.`;
+    refs.boxFoundList.innerHTML = '<p class="muted">Совпадений нет.</p>';
+    return;
+  }
+  refs.boxFoundSummary.textContent = `Штрихкод ${barcode}. Найдено коробок: ${boxes.length}.`;
+  boxes.forEach((box) => {
+    const card = document.createElement("article");
+    card.className = "history-item";
+    card.innerHTML = `
+      <div><strong>Коробка ${box.box_code}</strong> <span class="history-reason">${box.location || "Место не указано"}</span></div>
+      <div class="history-meta">Товаров: ${box.items.length}</div>
+      <div class="hero-actions">
+        <button class="glass-btn btn-with-icon danger" type="button" data-box-remove="${box.box_code}">
+          ${iconSpan("trash")}<span>Удалить из отслеживания</span>
+        </button>
+      </div>
+    `;
+    refs.boxFoundList.appendChild(card);
+  });
+}
+
+function openBoxFoundModal(boxes = [], barcode = "") {
+  renderBoxFoundModal(boxes, barcode);
+  openSimpleModal(refs.boxFoundModal);
+}
+
+function closeBoxFoundModal() {
+  closeSimpleModal(refs.boxFoundModal);
+}
+
+async function removeBoxFromTracking(boxCode) {
+  if (!boxCode) return;
+  await apiRequest("/api/box-search?action=remove-box", {
+    method: "POST",
+    body: { boxCode },
+  });
+  await loadBoxSearchData();
+  showToast(`Коробка ${boxCode} удалена из отслеживания`);
+}
+
+async function findBoxByBarcode(barcode) {
+  const needle = String(barcode || "").trim();
+  if (!needle) return [];
+  const data = await apiRequest(`/api/box-search?action=find-by-barcode&barcode=${encodeURIComponent(needle)}`);
+  return Array.isArray(data.boxes) ? data.boxes : [];
+}
+
+async function loadBoxSearchData() {
+  if (!state.token) {
+    state.boxCatalog = [];
+    state.boxTrackingEntries = [];
+    state.boxSearchResult = [];
+    state.pages.boxTracked = 1;
+    renderBoxTrackedList();
+    renderBoxScanResult();
+    renderBoxDraftItems();
+    return;
+  }
+
+  const [catalogResult, boxesResult] = await Promise.allSettled([
+    apiRequest("/api/box-search?action=catalog&limit=5000"),
+    apiRequest("/api/box-search?action=boxes&limit=5000"),
+  ]);
+  state.boxCatalog = catalogResult.status === "fulfilled" ? catalogResult.value.items || [] : [];
+  state.boxTrackingEntries = boxesResult.status === "fulfilled" ? boxesResult.value.entries || [] : [];
+  state.pages.boxTracked = 1;
+  renderBoxTrackedList();
+  renderBoxScanResult(state.boxSearchResult);
+  renderBoxDraftItems();
+}
+
+async function createTrackedBox() {
+  if (!state.token) throw new Error("Требуется вход в систему");
+  if (!canAdmin()) throw new Error("Только для администратора");
+
+  const boxCode = String(refs.boxCodeInput?.value || "").trim();
+  const location = String(refs.boxLocationInput?.value || "").trim();
+  if (!boxCode) throw new Error("Укажите номер коробки");
+  if (!location) throw new Error("Укажите место нахождения");
+
+  addBoxDraftItemsFromTextarea();
+  const items = state.boxDraftItems.map((x) => ({ barcode: x.barcode, name: x.name || "" }));
+  if (!items.length) throw new Error("Добавьте хотя бы один товар в коробку");
+
+  const reportData = await apiRequest("/api/box-search?action=create-box", {
+    method: "POST",
+    body: {
+      boxCode,
+      location,
+      items,
+    },
+  });
+
+  const success = Number(reportData?.report?.success || 0);
+  const failed = Number(reportData?.report?.failed || 0);
+  if (!success) {
+    const err = reportData?.report?.errors?.[0] || "Не удалось сохранить коробку";
+    throw new Error(err);
+  }
+
+  refs.boxCreateForm?.reset();
+  state.boxDraftItems = [];
+  renderBoxDraftItems();
+  await loadBoxSearchData();
+  await loadHistory();
+  showToast(`Коробка сохранена: товаров ${success}${failed ? `, ошибок ${failed}` : ""}`);
+}
+
+async function searchBoxesByInput() {
+  applyBoxFiltersFromInputs();
+  state.pages.boxTracked = 1;
+  renderBoxTrackedList();
+  const barcode = String(refs.boxSearchInput?.value || "").trim();
+  if (!barcode) {
+    state.boxSearchResult = [];
+    renderBoxScanResult([]);
+    return;
+  }
+  const maybeBarcode = /\d{6,}/.test(barcode) ? barcode : "";
+  if (!maybeBarcode) return;
+  try {
+    const boxes = await findBoxByBarcode(maybeBarcode);
+    state.boxSearchResult = boxes;
+    renderBoxScanResult(boxes);
+  } catch {
+    // no-op for manual filters mode
+  }
+}
+
 function handleFilmsSearch() {
   applyFilmsFiltersFromInputs();
   state.pages.films = 1;
@@ -2653,6 +3094,30 @@ async function processFilmScanValue(rawValue) {
   return true;
 }
 
+async function processBoxSearchScanValue(rawValue) {
+  const barcode = extractBarcodeFromScan(rawValue);
+  if (!barcode) {
+    setScanStatus("Штрихкод не распознан.");
+    hapticWarning();
+    return false;
+  }
+
+  setScanStatus("Ищем товар в коробках...", { busy: true });
+  const boxes = await findBoxByBarcode(barcode);
+  if (!boxes.length) {
+    return false;
+  }
+
+  state.boxSearchResult = boxes;
+  renderBoxScanResult(boxes);
+  setScanStatus(`Найдено коробок: ${boxes.length}`);
+  closeScanModal();
+  openBoxFoundModal(boxes, barcode);
+  showToast(`Найдено коробок: ${boxes.length}`);
+  hapticSuccess();
+  return true;
+}
+
 async function processInventoryScanValue(rawValue) {
   const id = extractItemIdFromScan(rawValue);
   const item = state.items.find((it) => String(it.id).toUpperCase() === id);
@@ -2687,11 +3152,23 @@ async function processScanValue(rawValue) {
     return;
   }
 
+  if (state.scanContext === "box-search") {
+    const handledBox = await processBoxSearchScanValue(rawValue);
+    if (handledBox) return;
+    setScanStatus("Товар не найден в коробках.");
+    showToast("Товар не найден в коробках");
+    hapticWarning();
+    return;
+  }
+
   const handledInventory = await processInventoryScanValue(rawValue);
   if (handledInventory) return;
 
   const handledFilm = await processFilmScanValue(rawValue);
   if (handledFilm) return;
+
+  const handledBox = await processBoxSearchScanValue(rawValue);
+  if (handledBox) return;
 
   setScanStatus("Код считан, но товар не найден.");
   showToast("Код не найден в системе");
@@ -2980,8 +3457,9 @@ if (refs.openFilmsTile) refs.openFilmsTile.addEventListener("click", () => {
   setTimeout(() => refs.filmsSearchInput?.focus(), 120);
 });
 if (refs.openProductsSearchTile) refs.openProductsSearchTile.addEventListener("click", () => {
-  showToast("Поиск товаров — в разработке");
-  hapticSelection();
+  setModuleView("inventory");
+  setInventoryTab("box-search");
+  setTimeout(() => refs.boxSearchInput?.focus(), 120);
 });
 if (refs.homeScanBtn) refs.homeScanBtn.addEventListener("click", async () => {
   openScanModal();
@@ -2991,6 +3469,7 @@ if (refs.homeProcessSearch) refs.homeProcessSearch.addEventListener("input", ren
 refs.homeBtn.addEventListener("click", () => setModuleView("home"));
 refs.mainTabBtn.addEventListener("click", () => setInventoryTab("main"));
 if (refs.filmsTabBtn) refs.filmsTabBtn.addEventListener("click", () => setInventoryTab("films"));
+if (refs.boxSearchTabBtn) refs.boxSearchTabBtn.addEventListener("click", () => setInventoryTab("box-search"));
 refs.toolsTabBtn.addEventListener("click", () => setInventoryTab("tools"));
 refs.historyTabBtn.addEventListener("click", () => setInventoryTab("history"));
 if (refs.statsTabBtn) refs.statsTabBtn.addEventListener("click", () => setInventoryTab("stats"));
@@ -3665,6 +4144,179 @@ if (refs.filmsTableBody) refs.filmsTableBody.addEventListener("click", async (ev
   }
 });
 
+if (refs.boxSearchBtn) refs.boxSearchBtn.addEventListener("click", () => {
+  searchBoxesByInput().catch((error) => {
+    showToast(error.message);
+    hapticWarning();
+  });
+});
+if (refs.boxSearchInput) refs.boxSearchInput.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  searchBoxesByInput().catch((error) => {
+    showToast(error.message);
+    hapticWarning();
+  });
+});
+if (refs.boxApplyFiltersBtn) refs.boxApplyFiltersBtn.addEventListener("click", () => {
+  applyBoxFiltersFromInputs();
+  state.pages.boxTracked = 1;
+  renderBoxTrackedList();
+});
+if (refs.boxResetFiltersBtn) refs.boxResetFiltersBtn.addEventListener("click", () => {
+  if (refs.boxSearchInput) refs.boxSearchInput.value = "";
+  if (refs.boxLocationFilter) refs.boxLocationFilter.value = "";
+  state.boxFilters = { search: "", location: "" };
+  state.boxSearchResult = [];
+  state.pages.boxTracked = 1;
+  renderBoxTrackedList();
+  renderBoxScanResult([]);
+});
+if (refs.downloadBoxCatalogTemplateBtn) refs.downloadBoxCatalogTemplateBtn.addEventListener("click", async () => {
+  try {
+    await downloadBoxCatalogTemplate();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.importBoxCatalogBtn && refs.importBoxCatalogFile) refs.importBoxCatalogBtn.addEventListener("click", () => {
+  if (!canDesktopPrint()) {
+    showToast("Импорт доступен только на ПК");
+    return;
+  }
+  refs.importBoxCatalogFile.value = "";
+  refs.importBoxCatalogFile.click();
+});
+if (refs.importBoxCatalogFile) refs.importBoxCatalogFile.addEventListener("change", async () => {
+  const file = refs.importBoxCatalogFile.files?.[0];
+  if (!file) return;
+  try {
+    await runDbAction(() => importBoxCatalog(file), { message: "Импортируем каталог товаров..." });
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.boxAddItemBtn) refs.boxAddItemBtn.addEventListener("click", () => {
+  const barcode = String(refs.boxItemBarcodeInput?.value || "").trim();
+  const name = String(refs.boxItemNameInput?.value || "").trim();
+  const ok = addBoxDraftItem(barcode, name);
+  if (!ok) {
+    showToast("Штрихкод пустой или уже добавлен");
+    return;
+  }
+  if (refs.boxItemBarcodeInput) refs.boxItemBarcodeInput.value = "";
+  if (refs.boxItemNameInput) refs.boxItemNameInput.value = "";
+  refs.boxItemBarcodeInput?.focus();
+  hapticSelection();
+});
+if (refs.boxItemBarcodeInput) refs.boxItemBarcodeInput.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  refs.boxAddItemBtn?.click();
+});
+if (refs.boxClearDraftBtn) refs.boxClearDraftBtn.addEventListener("click", () => {
+  state.boxDraftItems = [];
+  if (refs.boxItemsTextarea) refs.boxItemsTextarea.value = "";
+  renderBoxDraftItems();
+  showToast("Черновик коробки очищен");
+});
+if (refs.boxCreateForm) refs.boxCreateForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!refs.boxCreateForm.reportValidity()) return;
+  const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
+  try {
+    await runDbAction(() => createTrackedBox(), {
+      button: submitBtn,
+      message: "Сохраняем коробку...",
+    });
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.boxScanBarcodeBtn) refs.boxScanBarcodeBtn.addEventListener("click", async () => {
+  state.scanContext = "box-search";
+  openScanModal();
+  await startScanner();
+});
+if (refs.boxTrackedList) refs.boxTrackedList.addEventListener("click", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const btn = target.closest("button[data-box-remove]");
+  if (!(btn instanceof HTMLButtonElement)) return;
+  const boxCode = String(btn.getAttribute("data-box-remove") || "").trim();
+  if (!boxCode) return;
+  const ok = window.confirm(`Удалить коробку ${boxCode} из отслеживания?`);
+  if (!ok) return;
+  try {
+    await runDbAction(() => removeBoxFromTracking(boxCode), {
+      button: btn,
+      message: "Удаляем коробку из отслеживания...",
+    });
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.boxDraftItemsList) refs.boxDraftItemsList.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const btn = target.closest("button[data-box-draft-remove]");
+  if (!(btn instanceof HTMLButtonElement)) return;
+  const idx = Number(btn.getAttribute("data-box-draft-remove") || -1);
+  if (!Number.isInteger(idx) || idx < 0 || idx >= state.boxDraftItems.length) return;
+  state.boxDraftItems.splice(idx, 1);
+  renderBoxDraftItems();
+});
+if (refs.boxScanResultList) refs.boxScanResultList.addEventListener("click", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const btn = target.closest("button[data-box-remove]");
+  if (!(btn instanceof HTMLButtonElement)) return;
+  const boxCode = String(btn.getAttribute("data-box-remove") || "").trim();
+  if (!boxCode) return;
+  const ok = window.confirm(`Удалить коробку ${boxCode} из отслеживания?`);
+  if (!ok) return;
+  try {
+    await runDbAction(() => removeBoxFromTracking(boxCode), {
+      button: btn,
+      message: "Удаляем коробку из отслеживания...",
+    });
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.closeBoxFoundBtn) refs.closeBoxFoundBtn.addEventListener("click", closeBoxFoundModal);
+if (refs.boxFoundBackdrop) refs.boxFoundBackdrop.addEventListener("click", closeBoxFoundModal);
+if (refs.boxFoundList) refs.boxFoundList.addEventListener("click", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const btn = target.closest("button[data-box-remove]");
+  if (!(btn instanceof HTMLButtonElement)) return;
+  const boxCode = String(btn.getAttribute("data-box-remove") || "").trim();
+  if (!boxCode) return;
+  const ok = window.confirm(`Удалить коробку ${boxCode} из отслеживания?`);
+  if (!ok) return;
+  try {
+    await runDbAction(() => removeBoxFromTracking(boxCode), {
+      button: btn,
+      message: "Удаляем коробку из отслеживания...",
+    });
+    closeBoxFoundModal();
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+
 refs.groupForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!canAdmin()) {
@@ -3919,6 +4571,7 @@ document.addEventListener("keydown", (event) => {
     closeSimpleModal(refs.remindersSettingsModal);
     closeSimpleModal(refs.displaySettingsModal);
     closeFilmFoundModal();
+    closeBoxFoundModal();
     closeFilmAddModal();
     closeFilmDeleteModal();
     closeAccountMenu();
@@ -3948,6 +4601,7 @@ renderQuickFilmBatch();
 loadItems();
 loadHistory();
 loadFilms();
+loadBoxSearchData();
 initTelegram();
 updateMobileScanFab();
 

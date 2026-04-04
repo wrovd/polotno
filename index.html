@@ -187,7 +187,7 @@
               </div>
               <span class="home-process-name">Готовые пленки</span>
             </button>
-            <button class="home-process-card home-process-card-neutral" id="openProductsSearchTile" type="button" data-process-title="Поиск товаров">
+            <button class="home-process-card home-process-card-neutral" id="openProductsSearchTile" type="button" data-process-title="Поиск товаров (по коробкам)">
               <div class="home-process-head">
                 <span class="home-process-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
@@ -195,9 +195,9 @@
                     <path d="M15.5 15.5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
                   </svg>
                 </span>
-                <span class="home-process-tag">В разработке</span>
+                <span class="home-process-dots" aria-hidden="true">•••</span>
               </div>
-              <span class="home-process-name">Поиск товаров</span>
+              <span class="home-process-name">Поиск товаров (по коробкам)</span>
             </button>
           </section>
         </section>
@@ -213,6 +213,7 @@
             <button class="seg-btn btn-with-icon" id="homeBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-home"></use></svg></span><span>Главная</span></button>
             <button class="seg-btn btn-with-icon active" id="mainTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span><span>Основное</span></button>
             <button class="seg-btn btn-with-icon" id="filmsTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-warehouse"></use></svg></span><span>Склад пленок</span></button>
+            <button class="seg-btn btn-with-icon" id="boxSearchTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Поиск по коробкам</span></button>
             <button class="seg-btn btn-with-icon" id="toolsTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-toolbox"></use></svg></span><span>Инструменты</span></button>
             <button class="seg-btn btn-with-icon" id="historyTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-history"></use></svg></span><span>История</span></button>
             <button class="seg-btn btn-with-icon" id="statsTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-chart"></use></svg></span><span>Статистика</span></button>
@@ -535,6 +536,83 @@
           </section>
         </section>
 
+        <section id="boxSearchTab" class="tab-panel">
+          <section class="panel search-panel">
+            <label for="boxSearchInput">Поиск по коробкам</label>
+            <div class="search-row">
+              <input id="boxSearchInput" type="search" placeholder="Штрихкод, товар, коробка, место" autocomplete="off" />
+              <button class="primary-btn btn-with-icon" id="boxSearchBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Найти</span></button>
+            </div>
+            <div class="history-filters main-filters">
+              <input id="boxLocationFilter" type="text" placeholder="Фильтр: место нахождения" />
+              <button class="secondary-btn btn-with-icon" id="boxApplyFiltersBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-check"></use></svg></span><span>Применить</span></button>
+              <button class="glass-btn btn-with-icon" id="boxResetFiltersBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-reset"></use></svg></span><span>Сбросить</span></button>
+              <button class="secondary-btn btn-with-icon desktop-only admin-only" id="downloadBoxCatalogTemplateBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-download"></use></svg></span><span>Шаблон импорта</span></button>
+              <button class="secondary-btn btn-with-icon desktop-only admin-only" id="importBoxCatalogBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Импорт чехлов и других товаров</span></button>
+            </div>
+            <input id="importBoxCatalogFile" type="file" accept=".xlsx,.xls,.csv" hidden />
+          </section>
+
+          <section class="layout-grid">
+            <section class="panel panel-collapsible admin-only">
+              <div class="section-head">
+                <h3>Быстрый поиск для сборщика</h3>
+                <p>Сканируйте штрихкод товара, чтобы сразу увидеть коробку и место ее нахождения.</p>
+              </div>
+              <div class="hero-actions">
+                <button class="primary-btn full btn-with-icon" id="boxScanBarcodeBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span><span>Сканировать штрихкод товара</span></button>
+              </div>
+              <div class="history-list" id="boxScanResultList">
+                <p class="muted">После сканирования здесь появится список коробок.</p>
+              </div>
+            </section>
+
+            <section class="panel panel-collapsible">
+              <div class="section-head">
+                <h3>Создать отслеживаемую коробку</h3>
+                <p>Заполните коробку через сканер или ручной ввод. После находки удалите ее из отслеживания.</p>
+              </div>
+              <form class="stock-form" id="boxCreateForm" novalidate>
+                <label>
+                  Номер коробки
+                  <input id="boxCodeInput" type="text" placeholder="Например, BOX-021" required />
+                </label>
+                <label>
+                  Место нахождения
+                  <input id="boxLocationInput" type="text" placeholder="Стеллаж 2, верхняя полка" required />
+                </label>
+                <div class="history-filters">
+                  <input id="boxItemBarcodeInput" type="text" placeholder="Штрихкод товара" />
+                  <input id="boxItemNameInput" type="text" placeholder="Наименование (если нет в базе)" />
+                  <button class="secondary-btn btn-with-icon" id="boxAddItemBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Добавить</span></button>
+                </div>
+                <label>
+                  Или вставьте позиции списком (по строкам: штрихкод;наименование)
+                  <textarea id="boxItemsTextarea" rows="4" placeholder="1234567890123;Чехол iPhone 14&#10;1234567890124"></textarea>
+                </label>
+                <div class="history-list" id="boxDraftItemsList">
+                  <p class="muted">Список товаров для коробки пуст.</p>
+                </div>
+                <div class="hero-actions">
+                  <button class="glass-btn full btn-with-icon" id="boxClearDraftBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-reset"></use></svg></span><span>Очистить</span></button>
+                  <button class="primary-btn full btn-with-icon" id="boxCreateSubmitBtn" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить коробку</span></button>
+                </div>
+              </form>
+            </section>
+          </section>
+
+          <section class="panel panel-collapsible">
+            <div class="section-head">
+              <h3>Коробки в отслеживании</h3>
+              <p>После того как коробка найдена и разобрана, нажмите «Удалить из отслеживания».</p>
+            </div>
+            <div class="history-list" id="boxTrackedList">
+              <p class="muted">Нет коробок в отслеживании.</p>
+            </div>
+            <div class="pager" id="boxTrackedPager" hidden></div>
+          </section>
+        </section>
+
         <section id="historyTab" class="tab-panel">
           <section class="panel panel-collapsible">
             <div class="section-head">
@@ -554,6 +632,8 @@
                 <option value="film_create">Пленки: добавление</option>
                 <option value="film_update">Пленки: обновление</option>
                 <option value="film_delete">Пленки: удаление</option>
+                <option value="box_create">Коробки: добавление</option>
+                <option value="box_delete">Коробки: удаление</option>
               </select>
               <input type="date" id="historyDateFrom" />
               <input type="date" id="historyDateTo" />
@@ -954,6 +1034,16 @@
           <button class="secondary-btn full btn-with-icon" id="filmFoundAddBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Добавить</span></button>
           <button class="glass-btn full btn-with-icon" id="filmFoundDeleteBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-trash"></use></svg></span><span>Удалить</span></button>
         </div>
+      </section>
+    </div>
+
+    <div class="auth-modal" id="boxFoundModal" hidden>
+      <div class="auth-backdrop" id="boxFoundBackdrop"></div>
+      <section class="auth-card" role="dialog" aria-modal="true" aria-label="Результат поиска по коробкам">
+        <button class="close-btn" id="closeBoxFoundBtn" type="button" aria-label="Закрыть">×</button>
+        <h3>Товар найден в коробках</h3>
+        <p class="helper" id="boxFoundSummary">Список коробок и местонахождения.</p>
+        <div class="history-list" id="boxFoundList"></div>
       </section>
     </div>
 

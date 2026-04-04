@@ -543,12 +543,16 @@ h1 {
 }
 
 .segmented-six {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
 .segmented.context-tabs-consumables,
 .segmented.context-tabs-films {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.segmented.context-tabs-boxes {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 button {
