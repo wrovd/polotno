@@ -577,18 +577,28 @@
                   Номер коробки
                   <input id="boxCodeInput" type="text" placeholder="Например, BOX-021" required />
                 </label>
+                <div class="hero-actions">
+                  <button class="secondary-btn btn-with-icon" id="boxGenerateCodeBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-reset"></use></svg></span><span>Сгенерировать название коробки</span></button>
+                  <button class="glass-btn btn-with-icon desktop-only" id="boxPrintCodeBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-print"></use></svg></span><span>Печать этикетки</span></button>
+                </div>
                 <label>
                   Место нахождения
                   <input id="boxLocationInput" type="text" placeholder="Стеллаж 2, верхняя полка" required />
                 </label>
+                <label>
+                  Поиск товара по названию
+                  <input id="boxCatalogSearchInput" type="text" placeholder="Начните вводить название..." list="boxCatalogOptions" autocomplete="off" />
+                  <datalist id="boxCatalogOptions"></datalist>
+                </label>
                 <div class="history-filters">
                   <input id="boxItemBarcodeInput" type="text" placeholder="Штрихкод товара" />
                   <input id="boxItemNameInput" type="text" placeholder="Наименование (если нет в базе)" />
+                  <input id="boxItemQtyInput" type="number" min="1" step="1" value="1" placeholder="Кол-во" />
                   <button class="secondary-btn btn-with-icon" id="boxAddItemBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Добавить</span></button>
                 </div>
                 <label>
-                  Или вставьте позиции списком (по строкам: штрихкод;наименование)
-                  <textarea id="boxItemsTextarea" rows="4" placeholder="1234567890123;Чехол iPhone 14&#10;1234567890124"></textarea>
+                  Или вставьте позиции списком (по строкам: штрихкод;наименование;кол-во)
+                  <textarea id="boxItemsTextarea" rows="4" placeholder="1234567890123;Чехол iPhone 14;5&#10;1234567890124;Чехол iPhone 15;2"></textarea>
                 </label>
                 <div class="history-list" id="boxDraftItemsList">
                   <p class="muted">Список товаров для коробки пуст.</p>

@@ -226,6 +226,11 @@ const refs = {
   boxLocationInput: document.getElementById("boxLocationInput"),
   boxItemBarcodeInput: document.getElementById("boxItemBarcodeInput"),
   boxItemNameInput: document.getElementById("boxItemNameInput"),
+  boxItemQtyInput: document.getElementById("boxItemQtyInput"),
+  boxCatalogSearchInput: document.getElementById("boxCatalogSearchInput"),
+  boxCatalogOptions: document.getElementById("boxCatalogOptions"),
+  boxGenerateCodeBtn: document.getElementById("boxGenerateCodeBtn"),
+  boxPrintCodeBtn: document.getElementById("boxPrintCodeBtn"),
   boxAddItemBtn: document.getElementById("boxAddItemBtn"),
   boxItemsTextarea: document.getElementById("boxItemsTextarea"),
   boxDraftItemsList: document.getElementById("boxDraftItemsList"),
@@ -2430,6 +2435,7 @@ function groupedBoxEntries(entries = []) {
         box_code: boxCode,
         location: String(row.location || "").trim(),
         items: [],
+        total_qty: 0,
       });
     }
     const bucket = map.get(boxCode);
@@ -2438,8 +2444,10 @@ function groupedBoxEntries(entries = []) {
       bucket.items.push({
         barcode,
         name: String(row.product_name || "").trim(),
+        qty: Math.max(1, Number(row.qty || 1)),
       });
     }
+    bucket.total_qty += Math.max(1, Number(row.qty || 1));
   });
   return [...map.values()];
 }
@@ -2463,7 +2471,7 @@ function renderBoxDraftItems() {
     card.className = "history-item";
     card.innerHTML = `
       <div><strong>${item.barcode}</strong></div>
-      <div class="history-meta">${item.name || "Название будет подтянуто из каталога"}</div>
+      <div class="history-meta">${item.name || "Название будет подтянуто из каталога"} • Кол-во: ${Math.max(1, Number(item.qty || 1))}</div>
       <div class="hero-actions">
         <button class="glass-btn btn-with-icon" type="button" data-box-draft-remove="${idx}">
           ${iconSpan("trash")}<span>Удалить</span>
@@ -2474,14 +2482,16 @@ function renderBoxDraftItems() {
   });
 }
 
-function addBoxDraftItem(rawBarcode, rawName = "") {
+function addBoxDraftItem(rawBarcode, rawName = "", rawQty = 1) {
   const barcode = String(rawBarcode || "").trim();
   if (!barcode) return false;
   const exists = state.boxDraftItems.some((x) => x.barcode === barcode);
   if (exists) return false;
   const fallbackName = findCatalogNameByBarcode(barcode);
   const name = String(rawName || "").trim() || fallbackName;
-  state.boxDraftItems.push({ barcode, name });
+  const qtyRaw = Number(rawQty || 1);
+  const qty = Number.isFinite(qtyRaw) ? Math.max(1, Math.round(qtyRaw)) : 1;
+  state.boxDraftItems.push({ barcode, name, qty });
   renderBoxDraftItems();
   return true;
 }
@@ -2495,11 +2505,36 @@ function addBoxDraftItemsFromTextarea() {
     .filter(Boolean);
   let added = 0;
   lines.forEach((line) => {
-    const [barcodeRaw, nameRaw] = line.split(/[;,\t|]/);
-    const ok = addBoxDraftItem(barcodeRaw, nameRaw || "");
+    const [barcodeRaw, nameRaw, qtyRaw] = line.split(/[;,\t|]/);
+    const ok = addBoxDraftItem(barcodeRaw, nameRaw || "", qtyRaw || 1);
     if (ok) added += 1;
   });
   return added;
+}
+
+function renderBoxCatalogSuggestions() {
+  if (!refs.boxCatalogOptions) return;
+  refs.boxCatalogOptions.innerHTML = "";
+  state.boxCatalog.slice(0, 1200).forEach((row) => {
+    const option = document.createElement("option");
+    option.value = String(row.name || "");
+    option.label = String(row.barcode || "");
+    option.dataset.barcode = String(row.barcode || "");
+    option.dataset.name = String(row.name || "");
+    refs.boxCatalogOptions.appendChild(option);
+  });
+}
+
+function applyCatalogSelectionFromSearch() {
+  const typed = String(refs.boxCatalogSearchInput?.value || "").trim().toLowerCase();
+  if (!typed) return false;
+  const found = state.boxCatalog.find((row) => String(row.name || "").trim().toLowerCase() === typed)
+    || state.boxCatalog.find((row) => String(row.name || "").toLowerCase().includes(typed));
+  if (!found) return false;
+  if (refs.boxItemNameInput) refs.boxItemNameInput.value = String(found.name || "");
+  if (refs.boxItemBarcodeInput) refs.boxItemBarcodeInput.value = String(found.barcode || "");
+  if (refs.boxItemQtyInput && !String(refs.boxItemQtyInput.value || "").trim()) refs.boxItemQtyInput.value = "1";
+  return true;
 }
 
 function renderBoxTrackedList() {
@@ -2519,17 +2554,20 @@ function renderBoxTrackedList() {
   page.items.forEach((box) => {
     const itemsPreview = box.items
       .slice(0, 4)
-      .map((it) => `${it.name || "Без названия"} (${it.barcode})`)
+      .map((it) => `${it.name || "Без названия"} (${it.barcode}) x${Math.max(1, Number(it.qty || 1))}`)
       .join("<br/>");
     const more = box.items.length > 4 ? `<div class="history-meta">и еще ${box.items.length - 4} шт.</div>` : "";
     const card = document.createElement("article");
     card.className = "history-item";
     card.innerHTML = `
       <div><strong>Коробка ${box.box_code}</strong> <span class="history-reason">${box.location || "Место не указано"}</span></div>
-      <div class="history-meta">Товаров: ${box.items.length}</div>
+      <div class="history-meta">Товаров: ${box.items.length} • Ед.: ${Math.max(0, Number(box.total_qty || 0))}</div>
       <div class="history-meta">${itemsPreview || "Пусто"}</div>
       ${more}
       <div class="hero-actions">
+        <button class="secondary-btn btn-with-icon desktop-only" type="button" data-box-print="${box.box_code}">
+          ${iconSpan("print")}<span>Печать этикетки</span>
+        </button>
         <button class="glass-btn btn-with-icon danger" type="button" data-box-remove="${box.box_code}">
           ${iconSpan("trash")}<span>Удалить из отслеживания</span>
         </button>
@@ -2552,8 +2590,11 @@ function renderBoxScanResult(boxes = []) {
     card.className = "history-item";
     card.innerHTML = `
       <div><strong>Коробка ${box.box_code}</strong> <span class="history-reason">${box.location || "Место не указано"}</span></div>
-      <div class="history-meta">Товаров в коробке: ${box.items.length}</div>
+      <div class="history-meta">Товаров в коробке: ${box.items.length} • Ед.: ${Math.max(0, Number(box.total_qty || 0))}</div>
       <div class="hero-actions">
+        <button class="secondary-btn btn-with-icon desktop-only" type="button" data-box-print="${box.box_code}">
+          ${iconSpan("print")}<span>Печать этикетки</span>
+        </button>
         <button class="glass-btn btn-with-icon danger" type="button" data-box-remove="${box.box_code}">
           ${iconSpan("trash")}<span>Удалить из отслеживания</span>
         </button>
@@ -2577,8 +2618,11 @@ function renderBoxFoundModal(boxes = [], barcode = "") {
     card.className = "history-item";
     card.innerHTML = `
       <div><strong>Коробка ${box.box_code}</strong> <span class="history-reason">${box.location || "Место не указано"}</span></div>
-      <div class="history-meta">Товаров: ${box.items.length}</div>
+      <div class="history-meta">Товаров: ${box.items.length} • Ед.: ${Math.max(0, Number(box.total_qty || 0))}</div>
       <div class="hero-actions">
+        <button class="secondary-btn btn-with-icon desktop-only" type="button" data-box-print="${box.box_code}">
+          ${iconSpan("print")}<span>Печать этикетки</span>
+        </button>
         <button class="glass-btn btn-with-icon danger" type="button" data-box-remove="${box.box_code}">
           ${iconSpan("trash")}<span>Удалить из отслеживания</span>
         </button>
@@ -2607,6 +2651,86 @@ async function removeBoxFromTracking(boxCode) {
   showToast(`Коробка ${boxCode} удалена из отслеживания`);
 }
 
+function boxLabelPayload(box) {
+  const items = (box.items || []).slice(0, 10).map((x) => ({
+    barcode: String(x.barcode || ""),
+    qty: Math.max(1, Number(x.qty || 1)),
+  }));
+  return JSON.stringify({
+    box_code: String(box.box_code || ""),
+    location: String(box.location || ""),
+    items,
+  });
+}
+
+async function printBoxLabel(box) {
+  if (!canDesktopPrint()) {
+    showToast("Печать этикеток доступна только на ПК");
+    return;
+  }
+  if (!box?.box_code) return;
+  const wnd = window.open("", "_blank", "width=900,height=700");
+  if (!wnd) {
+    showToast("Разрешите popup для печати этикетки");
+    return;
+  }
+  const qrSrc = await qrImageSrc(boxLabelPayload(box), 210);
+  const itemsText = (box.items || [])
+    .slice(0, 3)
+    .map((x) => `${String(x.name || x.barcode)} x${Math.max(1, Number(x.qty || 1))}`)
+    .join(" • ");
+  const more = (box.items || []).length > 3 ? ` +${(box.items || []).length - 3}` : "";
+  const html = `
+    <html>
+      <head>
+        <title>Этикетка коробки</title>
+        <style>
+          @page { size: 58mm 40mm; margin: 0; }
+          * { box-sizing: border-box; }
+          html, body { width: 58mm; height: 40mm; margin: 0; padding: 0; }
+          body { font-family: -apple-system, Segoe UI, sans-serif; color: #0f172a; background: #fff; }
+          .label {
+            width: 58mm; height: 40mm; border: 0.2mm solid #d5dceb; padding: 2mm;
+            display: grid; grid-template-columns: 21mm 1fr; gap: 2mm; align-items: center;
+          }
+          img { width: 20mm; height: 20mm; object-fit: contain; }
+          .title { font-size: 4mm; font-weight: 800; line-height: 1.05; }
+          .code { margin-top: 1mm; font-size: 3.1mm; color: #2f3b55; font-weight: 700; }
+          .loc { margin-top: 1mm; font-size: 2.7mm; color: #415270; line-height: 1.15; }
+          .meta { margin-top: 1mm; font-size: 2.4mm; color: #6b7890; line-height: 1.2; }
+          .hint { margin-top: 1mm; font-size: 2.3mm; color: #8994a8; }
+          @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+        </style>
+      </head>
+      <body>
+        <section class="label">
+          <img src="${qrSrc}" alt="${String(box.box_code)}" />
+          <div>
+            <div class="title">Коробка</div>
+            <div class="code">${String(box.box_code || "")}</div>
+            <div class="loc">${String(box.location || "")}</div>
+            <div class="meta">Позиций: ${Math.max(0, Number(box.items?.length || 0))} • Ед.: ${Math.max(0, Number(box.total_qty || 0))}</div>
+            <div class="hint">${itemsText}${more}</div>
+          </div>
+        </section>
+      </body>
+    </html>
+  `;
+  wnd.document.open();
+  wnd.document.write(html);
+  wnd.document.close();
+  wnd.focus();
+  wnd.print();
+}
+
+async function generateUniqueBoxCode() {
+  const data = await apiRequest("/api/box-search?action=suggest-box-code");
+  const code = String(data?.boxCode || "").trim();
+  if (!code) throw new Error("Не удалось сгенерировать код");
+  if (refs.boxCodeInput) refs.boxCodeInput.value = code;
+  return code;
+}
+
 async function findBoxByBarcode(barcode) {
   const needle = String(barcode || "").trim();
   if (!needle) return [];
@@ -2633,6 +2757,7 @@ async function loadBoxSearchData() {
   state.boxCatalog = catalogResult.status === "fulfilled" ? catalogResult.value.items || [] : [];
   state.boxTrackingEntries = boxesResult.status === "fulfilled" ? boxesResult.value.entries || [] : [];
   state.pages.boxTracked = 1;
+  renderBoxCatalogSuggestions();
   renderBoxTrackedList();
   renderBoxScanResult(state.boxSearchResult);
   renderBoxDraftItems();
@@ -2648,7 +2773,11 @@ async function createTrackedBox() {
   if (!location) throw new Error("Укажите место нахождения");
 
   addBoxDraftItemsFromTextarea();
-  const items = state.boxDraftItems.map((x) => ({ barcode: x.barcode, name: x.name || "" }));
+  const items = state.boxDraftItems.map((x) => ({
+    barcode: x.barcode,
+    name: x.name || "",
+    qty: Math.max(1, Number(x.qty || 1)),
+  }));
   if (!items.length) throw new Error("Добавьте хотя бы один товар в коробку");
 
   const reportData = await apiRequest("/api/box-search?action=create-box", {
@@ -4199,16 +4328,57 @@ if (refs.importBoxCatalogFile) refs.importBoxCatalogFile.addEventListener("chang
     hapticWarning();
   }
 });
+if (refs.boxGenerateCodeBtn) refs.boxGenerateCodeBtn.addEventListener("click", async () => {
+  try {
+    await runDbAction(() => generateUniqueBoxCode(), {
+      button: refs.boxGenerateCodeBtn,
+      message: "Генерируем код коробки...",
+    });
+    showToast("Код коробки сгенерирован");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.boxPrintCodeBtn) refs.boxPrintCodeBtn.addEventListener("click", async () => {
+  const boxCode = String(refs.boxCodeInput?.value || "").trim();
+  const location = String(refs.boxLocationInput?.value || "").trim();
+  if (!boxCode) {
+    showToast("Сначала укажите код коробки");
+    refs.boxCodeInput?.focus();
+    return;
+  }
+  const tempBox = {
+    box_code: boxCode,
+    location: location || "Место не указано",
+    items: state.boxDraftItems.length ? state.boxDraftItems : [],
+    total_qty: state.boxDraftItems.reduce((acc, x) => acc + Math.max(1, Number(x.qty || 1)), 0),
+  };
+  try {
+    await printBoxLabel(tempBox);
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.boxCatalogSearchInput) refs.boxCatalogSearchInput.addEventListener("input", () => {
+  applyCatalogSelectionFromSearch();
+});
 if (refs.boxAddItemBtn) refs.boxAddItemBtn.addEventListener("click", () => {
+  applyCatalogSelectionFromSearch();
   const barcode = String(refs.boxItemBarcodeInput?.value || "").trim();
   const name = String(refs.boxItemNameInput?.value || "").trim();
-  const ok = addBoxDraftItem(barcode, name);
+  const qty = Number(refs.boxItemQtyInput?.value || 1);
+  const ok = addBoxDraftItem(barcode, name, qty);
   if (!ok) {
     showToast("Штрихкод пустой или уже добавлен");
     return;
   }
   if (refs.boxItemBarcodeInput) refs.boxItemBarcodeInput.value = "";
   if (refs.boxItemNameInput) refs.boxItemNameInput.value = "";
+  if (refs.boxItemQtyInput) refs.boxItemQtyInput.value = "1";
+  if (refs.boxCatalogSearchInput) refs.boxCatalogSearchInput.value = "";
   refs.boxItemBarcodeInput?.focus();
   hapticSelection();
 });
@@ -4246,6 +4416,15 @@ if (refs.boxScanBarcodeBtn) refs.boxScanBarcodeBtn.addEventListener("click", asy
 if (refs.boxTrackedList) refs.boxTrackedList.addEventListener("click", async (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
+  const printBtn = target.closest("button[data-box-print]");
+  if (printBtn instanceof HTMLButtonElement) {
+    const boxCode = String(printBtn.getAttribute("data-box-print") || "").trim();
+    const box = groupedBoxEntries(filteredBoxEntries()).find((x) => x.box_code === boxCode);
+    if (box) {
+      await printBoxLabel(box);
+    }
+    return;
+  }
   const btn = target.closest("button[data-box-remove]");
   if (!(btn instanceof HTMLButtonElement)) return;
   const boxCode = String(btn.getAttribute("data-box-remove") || "").trim();
@@ -4276,6 +4455,15 @@ if (refs.boxDraftItemsList) refs.boxDraftItemsList.addEventListener("click", (ev
 if (refs.boxScanResultList) refs.boxScanResultList.addEventListener("click", async (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
+  const printBtn = target.closest("button[data-box-print]");
+  if (printBtn instanceof HTMLButtonElement) {
+    const boxCode = String(printBtn.getAttribute("data-box-print") || "").trim();
+    const box = (state.boxSearchResult || []).find((x) => String(x.box_code || "") === boxCode);
+    if (box) {
+      await printBoxLabel(box);
+    }
+    return;
+  }
   const btn = target.closest("button[data-box-remove]");
   if (!(btn instanceof HTMLButtonElement)) return;
   const boxCode = String(btn.getAttribute("data-box-remove") || "").trim();
@@ -4298,6 +4486,15 @@ if (refs.boxFoundBackdrop) refs.boxFoundBackdrop.addEventListener("click", close
 if (refs.boxFoundList) refs.boxFoundList.addEventListener("click", async (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
+  const printBtn = target.closest("button[data-box-print]");
+  if (printBtn instanceof HTMLButtonElement) {
+    const boxCode = String(printBtn.getAttribute("data-box-print") || "").trim();
+    const box = (state.boxSearchResult || []).find((x) => String(x.box_code || "") === boxCode);
+    if (box) {
+      await printBoxLabel(box);
+    }
+    return;
+  }
   const btn = target.closest("button[data-box-remove]");
   if (!(btn instanceof HTMLButtonElement)) return;
   const boxCode = String(btn.getAttribute("data-box-remove") || "").trim();

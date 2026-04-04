@@ -9,6 +9,7 @@ const {
   listBoxTrackingEntries,
   findBoxTrackingByBarcode,
   removeBoxTrackingByBoxCode,
+  boxCodeExists,
 } = require("../lib/sheets");
 
 function actionFromReq(req) {
@@ -23,9 +24,12 @@ function normalizeCatalogRow(raw = {}) {
 }
 
 function normalizeTrackedItem(raw = {}) {
+  const qtyRaw = Number(raw.qty ?? 1);
+  const qty = Number.isFinite(qtyRaw) ? Math.max(1, Math.round(qtyRaw)) : 1;
   return {
     barcode: String(raw.barcode || "").trim(),
     name: String(raw.name || "").trim(),
+    qty,
   };
 }
 
@@ -48,16 +52,20 @@ function groupedBoxes(entries = []) {
         box_code: boxCode,
         location: String(entry.location || "").trim(),
         items: [],
+        total_qty: 0,
       });
     }
     const bucket = map.get(key);
     const barcode = String(entry.product_barcode || "").trim();
+    const qty = Number(entry.qty || 1) > 0 ? Math.round(Number(entry.qty || 1)) : 1;
     if (!bucket.items.some((x) => x.barcode === barcode)) {
       bucket.items.push({
         barcode,
         name: String(entry.product_name || "").trim(),
+        qty,
       });
     }
+    bucket.total_qty += qty;
   });
   return [...map.values()];
 }
@@ -111,6 +119,20 @@ module.exports = async function handler(req, res) {
       });
     } catch (error) {
       return send(res, 500, { error: error.message || "Failed to find box by barcode" });
+    }
+  }
+
+  if (method === "GET" && action === "suggest-box-code") {
+    try {
+      const attempts = 60;
+      for (let i = 0; i < attempts; i += 1) {
+        const candidate = `BOX-${String(Math.floor(100000 + Math.random() * 900000))}`;
+        const used = await boxCodeExists(candidate);
+        if (!used) return send(res, 200, { boxCode: candidate });
+      }
+      return send(res, 500, { error: "Не удалось подобрать уникальный код коробки. Повторите попытку." });
+    } catch (error) {
+      return send(res, 500, { error: error.message || "Failed to generate box code" });
     }
   }
 
@@ -186,6 +208,7 @@ module.exports = async function handler(req, res) {
             location: box.location,
             product_barcode: item.barcode,
             product_name: name,
+            qty: item.qty,
             updated_by: auth.user.email,
           });
           saved += 1;
@@ -245,4 +268,3 @@ module.exports = async function handler(req, res) {
   }
   return send(res, 404, { error: "Unknown box-search action" });
 };
-
