@@ -702,6 +702,11 @@ function setInventoryTab(tab) {
 }
 
 function updateAuthButton() {
+  const canConfirmQr = Boolean(state.user?.email && state.token);
+  if (refs.settingsQrConfirmBtn) {
+    refs.settingsQrConfirmBtn.classList.toggle("is-hidden", !canConfirmQr);
+  }
+
   if (state.user?.email) {
     const role = String(state.user.role || "staff").toLowerCase();
     refs.openAuthBtn.innerHTML = `${iconSpan("user")}<span>${state.user.email} • ${role}</span>`;
