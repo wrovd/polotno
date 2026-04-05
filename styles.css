@@ -3622,12 +3622,13 @@ button.is-loading::after {
 
   #inventoryView.is-main-ios-mode #mainTab {
     width: 100%;
+    padding: 2px 0 24px;
   }
 
   #inventoryView.is-main-ios-mode .inventory-ios {
-    max-width: none;
-    margin: 0;
-    padding: 0;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 4px;
     gap: 12px;
   }
 
@@ -3641,17 +3642,33 @@ button.is-loading::after {
   }
 
   #inventoryView.is-main-ios-mode .inventory-ios-title {
-    font-size: 44px;
-    line-height: 1.04;
-    font-weight: 600;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 42px;
+    line-height: 1.06;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  #inventoryView.is-main-ios-mode .inventory-ios-add-btn {
+    min-height: 40px;
+    border-radius: 12px;
+    padding: 0 18px;
+    background: #1f2023;
+    border-color: #1f2023;
+    color: #fff;
   }
 
   #inventoryView.is-main-ios-mode .inventory-ios-search {
-    max-width: 832px;
+    max-width: none;
+    display: block !important;
   }
 
   #inventoryView.is-main-ios-mode .inventory-ios-search input {
-    height: 50px;
+    height: 44px;
+    border-radius: 12px;
+    border-color: #dcdfe5;
+    background: #f9f9fa;
+    font-size: 16px;
   }
 
   #inventoryView.is-main-ios-mode .inventory-chip-row {
@@ -3661,8 +3678,14 @@ button.is-loading::after {
   }
 
   #inventoryView.is-main-ios-mode .inventory-chip {
-    min-height: 37.5px;
+    min-height: 36px;
+    border-radius: 12px;
+    padding: 0 14px;
     font-size: 13px;
+    font-weight: 600;
+    color: #303744;
+    background: #f8f9fb;
+    border-color: #d9dde6;
   }
 
   #inventoryView.is-main-ios-mode .inventory-chip-params {
