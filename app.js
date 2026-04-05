@@ -918,7 +918,7 @@ function renderHomeProcessCards() {
     if (!isHidden) visible += 1;
   });
   if (refs.homeProcessCounter) {
-    refs.homeProcessCounter.textContent = `${visible} модулей`;
+    refs.homeProcessCounter.textContent = String(visible);
   }
 }
 
