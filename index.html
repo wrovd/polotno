@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -789,46 +790,71 @@
         </section>
 
         <section id="chatTab" class="tab-panel">
-          <section class="chat-page">
-            <header class="chat-page-head">
-              <div>
-                <h3>Чат</h3>
-                <p>Личные и командные сообщения в едином формате.</p>
+          <section class="chat-page-figma">
+            <aside class="chat-drawer is-hidden" id="chatDrawer">
+              <header class="chat-drawer-head">
+                <h4>Чаты</h4>
+                <button class="glass-btn chat-drawer-close" id="chatCloseListBtn" type="button" aria-label="Закрыть">×</button>
+              </header>
+              <div class="chat-search-wrap">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span>
+                <input type="search" id="chatSearchInput" placeholder="Поиск чатов..." autocomplete="off" />
               </div>
-            </header>
-            <div class="chat-shell">
-              <aside class="panel panel-collapsible chat-threads-panel">
-                <div class="chat-search-wrap">
-                  <span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span>
-                  <input type="search" id="chatSearchInput" placeholder="Поиск чатов..." autocomplete="off" />
-                </div>
-                <div class="chat-quick-actions">
-                  <button class="primary-btn btn-with-icon" id="chatCreateBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Новый</span></button>
-                  <button class="secondary-btn btn-with-icon" id="chatCreateGroupBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-user"></use></svg></span><span>Группа</span></button>
-                  <button class="glass-btn btn-with-icon" id="chatChannelsBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-message"></use></svg></span><span>Канал</span></button>
-                </div>
-                <div class="history-list chat-threads" id="chatList">
-                  <p class="muted">Чаты загружаются...</p>
-                </div>
-              </aside>
+              <div class="chat-quick-actions">
+                <button class="primary-btn btn-with-icon" id="chatCreateBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Новый</span></button>
+                <button class="secondary-btn btn-with-icon" id="chatCreateGroupBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-user"></use></svg></span><span>Группа</span></button>
+                <button class="glass-btn btn-with-icon" id="chatChannelsBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-message"></use></svg></span><span>Канал</span></button>
+              </div>
+              <div class="history-list chat-threads" id="chatList">
+                <p class="muted">Чаты загружаются...</p>
+              </div>
+            </aside>
 
-              <section class="panel panel-collapsible chat-thread-panel">
-                <header class="chat-thread-head">
-                  <div class="chat-thread-avatar" aria-hidden="true"><svg><use href="#i-user"></use></svg></div>
+            <section class="chat-main-figma">
+              <header class="chat-main-topbar">
+                <button class="chat-round-btn" id="chatBackBtn" type="button" aria-label="Назад">
+                  <svg><use href="#i-home"></use></svg>
+                </button>
+                <div class="chat-top-meta">
+                  <div class="chat-thread-chip" id="chatThreadAvatarLetter">C</div>
                   <div>
-                    <h4 id="chatThreadTitle">Выберите чат</h4>
-                    <p id="chatThreadMeta">Откройте чат слева, чтобы начать переписку</p>
+                    <h3 id="chatThreadTitle">Выберите чат</h3>
+                    <p id="chatThreadMeta">Откройте чат, чтобы начать переписку</p>
                   </div>
-                </header>
+                </div>
+                <div class="chat-top-actions">
+                  <button class="chat-round-btn" id="chatToggleListBtn" type="button" aria-label="Список чатов">
+                    <svg><use href="#i-search"></use></svg>
+                  </button>
+                  <button class="chat-round-btn" id="chatTopMenuBtn" type="button" aria-label="Меню">
+                    <svg><use href="#i-filter"></use></svg>
+                  </button>
+                </div>
+              </header>
+
+              <div class="chat-stage">
+                <div class="chat-day-pill">Сегодня</div>
                 <div class="history-list chat-messages" id="chatMessages">
                   <p class="muted">Сообщений пока нет.</p>
                 </div>
-                <form class="chat-composer" id="chatMessageForm" novalidate>
-                  <input type="text" id="chatMessageInput" placeholder="Написать сообщение..." autocomplete="off" required />
-                  <button class="primary-btn btn-with-icon" id="chatSendBtn" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-message"></use></svg></span><span>Отправить</span></button>
-                </form>
-              </section>
-            </div>
+              </div>
+
+              <div class="chat-dropzone" id="chatDropZone">
+                <div class="chat-drop-icon"><svg><use href="#i-download"></use></svg></div>
+                <p>Перетащите файлы сюда для отправки</p>
+              </div>
+              <div class="chat-file-previews" id="chatFilePreviewList"></div>
+
+              <form class="chat-composer-figma" id="chatMessageForm" novalidate>
+                <button class="chat-round-btn" id="chatAttachBtn" type="button" aria-label="Вложение">
+                  <svg><use href="#i-edit"></use></svg>
+                </button>
+                <input type="text" id="chatMessageInput" placeholder="Сообщение..." autocomplete="off" required />
+                <button class="chat-round-btn" id="chatSendBtn" type="submit" aria-label="Отправить">
+                  <svg><use href="#i-rocket"></use></svg>
+                </button>
+              </form>
+            </section>
           </section>
         </section>
 

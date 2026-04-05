@@ -307,6 +307,12 @@ const refs = {
   chatCreateBtn: document.getElementById("chatCreateBtn"),
   chatCreateGroupBtn: document.getElementById("chatCreateGroupBtn"),
   chatChannelsBtn: document.getElementById("chatChannelsBtn"),
+  chatDrawer: document.getElementById("chatDrawer"),
+  chatToggleListBtn: document.getElementById("chatToggleListBtn"),
+  chatCloseListBtn: document.getElementById("chatCloseListBtn"),
+  chatBackBtn: document.getElementById("chatBackBtn"),
+  chatTopMenuBtn: document.getElementById("chatTopMenuBtn"),
+  chatThreadAvatarLetter: document.getElementById("chatThreadAvatarLetter"),
   chatList: document.getElementById("chatList"),
   chatMessages: document.getElementById("chatMessages"),
   chatThreadTitle: document.getElementById("chatThreadTitle"),
@@ -1779,6 +1785,24 @@ function chatThreadById(threadId) {
   return state.chatThreads.find((row) => String(row.id) === String(threadId)) || null;
 }
 
+function setChatDrawerOpen(open) {
+  if (!refs.chatDrawer) return;
+  refs.chatDrawer.classList.toggle("is-hidden", !open);
+}
+
+function syncChatHeader(thread) {
+  const title = String(thread?.title || "Выберите чат");
+  const meta =
+    thread?.kind === "direct"
+      ? "Личный чат"
+      : thread?.kind === "group"
+        ? "Групповой чат"
+        : "Откройте чат, чтобы начать переписку";
+  if (refs.chatThreadTitle) refs.chatThreadTitle.textContent = title;
+  if (refs.chatThreadMeta) refs.chatThreadMeta.textContent = meta;
+  if (refs.chatThreadAvatarLetter) refs.chatThreadAvatarLetter.textContent = (title.trim().charAt(0) || "C").toUpperCase();
+}
+
 function filteredChatThreads() {
   const search = String(refs.chatSearchInput?.value || "").trim().toLowerCase();
   if (!search) return state.chatThreads;
@@ -1851,8 +1875,7 @@ async function openChatThread(threadId) {
   state.chatActiveThreadId = id;
   state.chatMessages = Array.isArray(data.messages) ? data.messages : [];
   const thread = chatThreadById(id);
-  if (refs.chatThreadTitle) refs.chatThreadTitle.textContent = thread?.title || "Чат";
-  if (refs.chatThreadMeta) refs.chatThreadMeta.textContent = thread?.kind === "direct" ? "Личный чат" : "Групповой чат";
+  syncChatHeader(thread);
   renderChatMessages();
   state.chatThreads = state.chatThreads.map((row) =>
     String(row.id) === id
@@ -1860,6 +1883,7 @@ async function openChatThread(threadId) {
       : row
   );
   renderChatThreads();
+  if (window.matchMedia("(max-width: 959px)").matches) setChatDrawerOpen(false);
 }
 
 async function loadChatData() {
@@ -1887,8 +1911,7 @@ async function loadChatData() {
   }
   state.chatMessages = [];
   state.chatActiveThreadId = "";
-  if (refs.chatThreadTitle) refs.chatThreadTitle.textContent = "Выберите чат";
-  if (refs.chatThreadMeta) refs.chatThreadMeta.textContent = "Откройте чат слева, чтобы начать переписку";
+  syncChatHeader(null);
   renderChatMessages();
 }
 
@@ -5299,6 +5322,37 @@ if (refs.filmsTableBody) refs.filmsTableBody.addEventListener("click", async (ev
 });
 if (refs.chatSearchInput) refs.chatSearchInput.addEventListener("input", () => {
   renderChatThreads();
+});
+if (refs.chatToggleListBtn) refs.chatToggleListBtn.addEventListener("click", () => {
+  const hidden = refs.chatDrawer?.classList.contains("is-hidden");
+  setChatDrawerOpen(Boolean(hidden));
+  if (hidden) refs.chatSearchInput?.focus();
+  hapticSelection();
+});
+if (refs.chatCloseListBtn) refs.chatCloseListBtn.addEventListener("click", () => {
+  setChatDrawerOpen(false);
+  hapticSelection();
+});
+if (refs.chatBackBtn) refs.chatBackBtn.addEventListener("click", () => {
+  setInventoryTab("main");
+  hapticSelection();
+});
+if (refs.chatTopMenuBtn) refs.chatTopMenuBtn.addEventListener("click", async () => {
+  try {
+    const thread = await runDbAction(() => createChat("group"), {
+      button: refs.chatTopMenuBtn,
+      message: "Создаем быстрый групповой чат...",
+    });
+    if (thread?.id) {
+      await loadChatData();
+      await openChatThread(thread.id);
+      showToast("Групповой чат создан");
+      hapticSuccess();
+    }
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
 });
 if (refs.chatList) refs.chatList.addEventListener("click", async (event) => {
   const target = event.target;
