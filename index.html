@@ -337,7 +337,7 @@
                   <path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </button>
-              <h2 class="inventory-ios-title">Учет расходников</h2>
+              <h2 class="inventory-ios-title">Расходники</h2>
               <button class="primary-btn btn-with-icon inventory-ios-add-btn" id="mainHeaderAddBtn" type="button">
                 <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Добавить</span>
               </button>
@@ -368,6 +368,55 @@
               <div class="inventory-chip-row inventory-chip-params" id="iosFilterParams"></div>
             </div>
 
+            <section class="inventory-inline-filters is-hidden" id="mainFiltersPanelTop">
+              <div class="history-filters main-filters">
+                <select id="mainGroupFilterTop">
+                  <option value="">Все группы</option>
+                </select>
+                <select id="mainStockFilterTop">
+                  <option value="">Все остатки</option>
+                  <option value="low">Низкий остаток</option>
+                  <option value="ok">В норме</option>
+                </select>
+                <button class="secondary-btn btn-with-icon" id="applyMainFiltersTopBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-check"></use></svg></span><span>Применить</span></button>
+                <button class="glass-btn btn-with-icon" id="resetMainFiltersTopBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-reset"></use></svg></span><span>Сбросить</span></button>
+              </div>
+            </section>
+
+            <section class="inventory-inline-add is-hidden" id="stockManagePanelTop">
+              <header class="films-inline-head">
+                <h3>Новый расходник</h3>
+                <button class="close-btn films-inline-close" id="closeMainAddPanelTopBtn" type="button" aria-label="Закрыть">×</button>
+              </header>
+              <form class="stock-form films-inline-form" id="stockFormTop" novalidate>
+                <label>
+                  Наименование
+                  <input type="text" name="name" id="itemNameTop" placeholder="Наименование" required />
+                </label>
+                <div class="inventory-two-cols">
+                  <label>
+                    Количество
+                    <input type="number" name="qty" id="itemQtyTop" min="0" step="1" required />
+                  </label>
+                  <label>
+                    Лимит оповещения
+                    <input type="number" name="threshold" id="itemThresholdTop" min="0" step="1" required />
+                  </label>
+                </div>
+                <label>
+                  Группа
+                  <select id="itemGroupTop">
+                    <option value="">Без группы</option>
+                  </select>
+                </label>
+                <label>
+                  Заметка
+                  <textarea name="notes" id="itemNotesTop" rows="3" placeholder="Поставщик, место хранения"></textarea>
+                </label>
+                <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить расходник</span></button>
+              </form>
+            </section>
+
             <section class="inventory-ios-list" id="consumablesList">
               <article class="consumable-skeleton"></article>
               <article class="consumable-skeleton"></article>
@@ -376,11 +425,11 @@
             </section>
             <div class="pager inventory-ios-pager" id="iosItemsPager" hidden></div>
 
-            <button class="home-scan-btn inventory-ios-scan" id="mainScanBtn" type="button">
+            <button class="home-scan-btn inventory-ios-scan is-hidden" id="mainScanBtn" type="button">
               <span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span><span>Сканирование</span>
             </button>
 
-            <nav class="inventory-bottom-nav" aria-label="Навигация раздела расходников">
+            <nav class="inventory-bottom-nav is-hidden" aria-label="Навигация раздела расходников">
               <button class="inventory-bottom-nav-item" id="mainBottomAddBtn" type="button">
                 <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span>
                 <span>Добавить</span>
@@ -404,7 +453,7 @@
             </nav>
           </section>
 
-          <div class="legacy-main-layout" id="legacyMainLayout">
+          <div class="legacy-main-layout is-hidden" id="legacyMainLayout">
           <section class="panel search-panel">
             <label for="searchInput">Поиск расходников</label>
             <div class="search-row">
@@ -556,7 +605,7 @@
               <h2>Склад пленок</h2>
               <div class="films-head-actions">
                 <button class="glass-btn btn-with-icon" id="filmsHeaderBulkBtn" type="button">
-                  <span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span><span>Массовое</span>
+                  <span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span><span>Массовое</span>
                 </button>
                 <button class="primary-btn btn-with-icon" id="filmsHeaderAddBtn" type="button">
                   <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Добавить</span>
@@ -592,54 +641,55 @@
               <button class="films-seg-btn" id="filmsGroupWithoutBtn" type="button">Без ячеек</button>
             </div>
 
-            <section class="films-cards-list" id="filmsCardsList"></section>
-            <div class="pager" id="filmsPager" hidden></div>
-
             <section class="films-hidden-tools admin-only is-hidden" id="quickFilmIngestPanel">
-              <form class="stock-form" id="quickFilmCellForm" novalidate>
-                <label>
-                  Номер ячейки
-                  <input type="text" id="quickFilmCellNo" placeholder="Например, C-08" required />
+              <header class="films-inline-head">
+                <h3>Быстрое занесение</h3>
+                <button class="close-btn films-inline-close" id="filmsCloseBulkPanelBtn" type="button" aria-label="Закрыть">×</button>
+              </header>
+              <p class="films-inline-note">Выберите ячейку, сканируйте штрихкоды подряд и сохраните массово.</p>
+              <form class="stock-form films-inline-form" id="quickFilmCellForm" novalidate>
+                <label>Номер ячейки
+                  <input type="text" id="quickFilmCellNo" placeholder="Номер ячейки, напр. C-08" required />
                 </label>
-                <label>
-                  Штрихкод (потоковый ввод)
+                <label>Штрихкод
                   <input type="text" id="quickFilmBarcodeInput" placeholder="Сканируйте и нажмите Enter" autocomplete="off" />
                 </label>
-                <div class="hero-actions">
+                <div class="hero-actions films-inline-actions">
                   <button class="secondary-btn btn-with-icon" id="quickFilmAddBarcodeBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Добавить штрихкод</span></button>
-                  <button class="glass-btn btn-with-icon" id="quickFilmClearBatchBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-reset"></use></svg></span><span>Очистить список</span></button>
+                  <button class="glass-btn btn-with-icon" id="quickFilmClearBatchBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-reset"></use></svg></span><span>Очистить</span></button>
                 </div>
-                <div class="history-list" id="quickFilmBatchList">
-                  <p class="muted">Список пуст. Начните сканировать.</p>
-                </div>
-                <div class="history-list" id="quickFilmMissingNames">
-                  <p class="muted">Все штрихкоды с известными названиями будут подставлены автоматически.</p>
-                </div>
-                <div class="hero-actions">
+                <div class="history-list" id="quickFilmBatchList"><p class="muted">Список пуст. Начните сканировать.</p></div>
+                <div class="history-list" id="quickFilmMissingNames"><p class="muted">Все штрихкоды с известными названиями будут подставлены автоматически.</p></div>
+                <div class="hero-actions films-inline-actions">
                   <button class="primary-btn full btn-with-icon" id="quickFilmSaveBatchBtn" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Добавить массово</span></button>
                   <button class="secondary-btn full btn-with-icon" id="quickFilmNextCellBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span><span>Следующая ячейка</span></button>
                 </div>
               </form>
             </section>
 
-            <section class="films-hidden-tools is-hidden">
-              <form class="stock-form" id="filmForm" novalidate>
-                <label>
-                  Наименование товара
-                  <input type="text" id="filmName" placeholder="Например, Матовая пленка A4" required />
+            <section class="films-hidden-tools is-hidden" id="filmSinglePanel">
+              <header class="films-inline-head">
+                <h3>Добавить пленку</h3>
+                <button class="close-btn films-inline-close" id="filmsCloseSinglePanelBtn" type="button" aria-label="Закрыть">×</button>
+              </header>
+              <p class="films-inline-note">Одинаковый штрихкод может храниться в нескольких ячейках.</p>
+              <form class="stock-form films-inline-form" id="filmForm" novalidate>
+                <label>Наименование товара
+                  <input type="text" id="filmName" placeholder="Наименование товара" required />
                 </label>
-                <label>
-                  Штрихкод товара
-                  <input type="text" id="filmBarcode" placeholder="Например, 1234567890123" required />
+                <label>Штрихкод товара
+                  <input type="text" id="filmBarcode" placeholder="Штрихкод товара" required />
                 </label>
-                <label>
-                  Номер ячейки
-                  <input type="text" id="filmCellNo" placeholder="Например, A-12" required />
+                <label>Номер ячейки
+                  <input type="text" id="filmCellNo" placeholder="Номер ячейки, напр. A-12" required />
                 </label>
                 <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить пленку</span></button>
               </form>
               <button class="secondary-btn full btn-with-icon" id="filmsStartScanBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span><span>Сканировать штрихкод</span></button>
             </section>
+
+            <section class="films-cards-list" id="filmsCardsList"></section>
+            <div class="pager" id="filmsPager" hidden></div>
 
             <div class="table-wrap is-hidden">
               <table>
@@ -650,57 +700,63 @@
         </section>
 
         <section id="boxSearchTab" class="tab-panel">
-          <section class="panel search-panel">
-            <label for="boxSearchInput">Поиск по коробкам</label>
-            <div class="search-row">
+          <section class="boxes-page">
+            <header class="films-head-row">
+              <h2>Коробки</h2>
+              <button class="primary-btn btn-with-icon" id="boxCreateToggleBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Создать</span>
+              </button>
+            </header>
+
+            <label class="films-search" for="boxSearchInput">
+              <span class="films-search-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span>
               <input id="boxSearchInput" type="search" placeholder="Штрихкод, товар, коробка, место" autocomplete="off" />
-              <button class="primary-btn btn-with-icon" id="boxSearchBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Найти</span></button>
-            </div>
-            <div class="history-filters main-filters">
-              <input id="boxLocationFilter" type="text" placeholder="Фильтр: место нахождения" />
-              <button class="secondary-btn btn-with-icon" id="boxApplyFiltersBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-check"></use></svg></span><span>Применить</span></button>
-              <button class="glass-btn btn-with-icon" id="boxResetFiltersBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-reset"></use></svg></span><span>Сбросить</span></button>
-              <button class="secondary-btn btn-with-icon desktop-only admin-only" id="downloadBoxCatalogTemplateBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-download"></use></svg></span><span>Шаблон импорта</span></button>
-              <button class="secondary-btn btn-with-icon desktop-only admin-only" id="importBoxCatalogBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Импорт чехлов и других товаров</span></button>
+              <button class="is-hidden" id="boxSearchBtn" type="button">Найти</button>
+            </label>
+
+            <div class="films-chip-row">
+              <button class="films-chip desktop-only admin-only" id="downloadBoxCatalogTemplateBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-download"></use></svg></span><span>Шаблон импорта</span>
+              </button>
+              <button class="films-chip desktop-only admin-only" id="importBoxCatalogBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Импорт товаров</span>
+              </button>
+              <button class="is-hidden" id="boxApplyFiltersBtn" type="button">Применить</button>
+              <button class="is-hidden" id="boxResetFiltersBtn" type="button">Сбросить</button>
+              <input id="boxLocationFilter" class="is-hidden" type="text" placeholder="Фильтр: место нахождения" />
             </div>
             <input id="importBoxCatalogFile" type="file" accept=".xlsx,.xls,.csv" hidden />
-          </section>
 
-          <section class="layout-grid">
-            <section class="panel panel-collapsible admin-only">
+            <section class="panel box-quick-scan">
               <div class="section-head">
-                <h3>Быстрый поиск для сборщика</h3>
-                <p>Сканируйте штрихкод товара, чтобы сразу увидеть коробку и место ее нахождения.</p>
+                <h3><span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span>Быстрый поиск для сборщика</h3>
+                <p>Сканируйте штрихкод товара, чтобы сразу увидеть коробку и место её нахождения.</p>
               </div>
-              <div class="hero-actions">
-                <button class="primary-btn full btn-with-icon" id="boxScanBarcodeBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span><span>Сканировать штрихкод товара</span></button>
-              </div>
+              <button class="primary-btn full btn-with-icon" id="boxScanBarcodeBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span><span>Сканировать штрихкод товара</span></button>
               <div class="history-list" id="boxScanResultList">
                 <p class="muted">После сканирования здесь появится список коробок.</p>
               </div>
             </section>
 
-            <section class="panel panel-collapsible">
-              <div class="section-head">
-                <h3>Создать отслеживаемую коробку</h3>
-                <p>Заполните коробку через сканер или ручной ввод. После находки удалите ее из отслеживания.</p>
-              </div>
-              <form class="stock-form" id="boxCreateForm" novalidate>
-                <label>
-                  Номер коробки
-                  <input id="boxCodeInput" type="text" placeholder="Например, BOX-021" required />
+            <section class="panel is-hidden" id="boxCreatePanel">
+              <header class="films-inline-head">
+                <h3>Создать коробку</h3>
+                <button class="close-btn films-inline-close" id="boxCreateCloseBtn" type="button" aria-label="Закрыть">×</button>
+              </header>
+              <p class="films-inline-note">Заполните коробку через сканер или ручной ввод.</p>
+              <form class="stock-form films-inline-form" id="boxCreateForm" novalidate>
+                <label>Номер коробки
+                  <input id="boxCodeInput" type="text" placeholder="Номер коробки, напр. BOX-021" required />
                 </label>
                 <div class="hero-actions">
-                  <button class="secondary-btn btn-with-icon" id="boxGenerateCodeBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-reset"></use></svg></span><span>Сгенерировать название коробки</span></button>
+                  <button class="secondary-btn btn-with-icon" id="boxGenerateCodeBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-reset"></use></svg></span><span>Сгенерировать</span></button>
                   <button class="glass-btn btn-with-icon desktop-only" id="boxPrintCodeBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-print"></use></svg></span><span>Печать этикетки</span></button>
                 </div>
-                <label>
-                  Место нахождения
+                <label>Место нахождения
                   <input id="boxLocationInput" type="text" placeholder="Стеллаж 2, верхняя полка" required />
                 </label>
-                <label>
-                  Поиск товара по названию
-                  <input id="boxCatalogSearchInput" type="text" placeholder="Начните вводить название..." list="boxCatalogOptions" autocomplete="off" />
+                <label>Поиск товара по названию
+                  <input id="boxCatalogSearchInput" type="text" placeholder="Поиск товара по названию..." list="boxCatalogOptions" autocomplete="off" />
                   <datalist id="boxCatalogOptions"></datalist>
                 </label>
                 <div class="history-filters">
@@ -709,60 +765,65 @@
                   <input id="boxItemQtyInput" type="number" min="1" step="1" value="1" placeholder="Кол-во" />
                   <button class="secondary-btn btn-with-icon" id="boxAddItemBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Добавить</span></button>
                 </div>
-                <label>
-                  Или вставьте позиции списком (по строкам: штрихкод;наименование;кол-во)
+                <label>Или вставьте позиции списком (по строкам: штрихкод;наименование;кол-во)
                   <textarea id="boxItemsTextarea" rows="4" placeholder="1234567890123;Чехол iPhone 14;5&#10;1234567890124;Чехол iPhone 15;2"></textarea>
                 </label>
-                <div class="history-list" id="boxDraftItemsList">
-                  <p class="muted">Список товаров для коробки пуст.</p>
-                </div>
+                <div class="history-list" id="boxDraftItemsList"><p class="muted">Список товаров для коробки пуст.</p></div>
                 <div class="hero-actions">
                   <button class="glass-btn full btn-with-icon" id="boxClearDraftBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-reset"></use></svg></span><span>Очистить</span></button>
                   <button class="primary-btn full btn-with-icon" id="boxCreateSubmitBtn" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить коробку</span></button>
                 </div>
               </form>
             </section>
-          </section>
 
-          <section class="panel panel-collapsible">
-            <div class="section-head">
-              <h3>Коробки в отслеживании</h3>
-              <p>После того как коробка найдена и разобрана, нажмите «Удалить из отслеживания».</p>
-            </div>
-            <div class="history-list" id="boxTrackedList">
-              <p class="muted">Нет коробок в отслеживании.</p>
-            </div>
-            <div class="pager" id="boxTrackedPager" hidden></div>
+            <section class="panel panel-collapsible">
+              <div class="section-head">
+                <h3>Коробки в отслеживании</h3>
+              </div>
+              <div class="history-list" id="boxTrackedList">
+                <p class="muted">Нет коробок в отслеживании.</p>
+              </div>
+              <div class="pager" id="boxTrackedPager" hidden></div>
+            </section>
           </section>
         </section>
 
         <section id="chatTab" class="tab-panel">
-          <section class="panel panel-collapsible">
-            <div class="section-head">
-              <h3>Чат</h3>
-              <p>Командные и личные сообщения внутри системы.</p>
-            </div>
-            <div class="search-row">
-              <input type="search" id="chatSearchInput" placeholder="Поиск по чатам и сообщениям..." autocomplete="off" />
-              <button class="primary-btn btn-with-icon" id="chatCreateBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Новый чат</span></button>
-            </div>
-            <div class="hero-actions">
-              <button class="secondary-btn btn-with-icon" id="chatCreateGroupBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-user"></use></svg></span><span>Создать группу</span></button>
-              <button class="glass-btn btn-with-icon" id="chatChannelsBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-message"></use></svg></span><span>Каналы</span></button>
-            </div>
-            <div class="chat-shell">
-              <div class="history-list chat-threads" id="chatList">
-                <p class="muted">Чаты загружаются...</p>
+          <section class="chat-page">
+            <header class="chat-page-head">
+              <div>
+                <h3>Чат</h3>
+                <p>Личные и командные сообщения в едином формате.</p>
               </div>
-              <section class="panel chat-thread-panel">
-                <div class="section-head compact">
-                  <h3 id="chatThreadTitle">Выберите чат</h3>
-                  <p id="chatThreadMeta">Откройте чат слева, чтобы начать переписку</p>
+            </header>
+            <div class="chat-shell">
+              <aside class="panel panel-collapsible chat-threads-panel">
+                <div class="chat-search-wrap">
+                  <span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span>
+                  <input type="search" id="chatSearchInput" placeholder="Поиск чатов..." autocomplete="off" />
                 </div>
+                <div class="chat-quick-actions">
+                  <button class="primary-btn btn-with-icon" id="chatCreateBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Новый</span></button>
+                  <button class="secondary-btn btn-with-icon" id="chatCreateGroupBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-user"></use></svg></span><span>Группа</span></button>
+                  <button class="glass-btn btn-with-icon" id="chatChannelsBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-message"></use></svg></span><span>Канал</span></button>
+                </div>
+                <div class="history-list chat-threads" id="chatList">
+                  <p class="muted">Чаты загружаются...</p>
+                </div>
+              </aside>
+
+              <section class="panel panel-collapsible chat-thread-panel">
+                <header class="chat-thread-head">
+                  <div class="chat-thread-avatar" aria-hidden="true"><svg><use href="#i-user"></use></svg></div>
+                  <div>
+                    <h4 id="chatThreadTitle">Выберите чат</h4>
+                    <p id="chatThreadMeta">Откройте чат слева, чтобы начать переписку</p>
+                  </div>
+                </header>
                 <div class="history-list chat-messages" id="chatMessages">
                   <p class="muted">Сообщений пока нет.</p>
                 </div>
-                <form class="search-row chat-composer" id="chatMessageForm" novalidate>
+                <form class="chat-composer" id="chatMessageForm" novalidate>
                   <input type="text" id="chatMessageInput" placeholder="Написать сообщение..." autocomplete="off" required />
                   <button class="primary-btn btn-with-icon" id="chatSendBtn" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-message"></use></svg></span><span>Отправить</span></button>
                 </form>

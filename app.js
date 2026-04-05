@@ -238,6 +238,8 @@ const refs = {
   filmsSearchBtn: document.getElementById("filmsSearchBtn"),
   filmsHeaderBulkBtn: document.getElementById("filmsHeaderBulkBtn"),
   filmsHeaderAddBtn: document.getElementById("filmsHeaderAddBtn"),
+  filmsCloseBulkPanelBtn: document.getElementById("filmsCloseBulkPanelBtn"),
+  filmsCloseSinglePanelBtn: document.getElementById("filmsCloseSinglePanelBtn"),
   filmsBarcodeFilter: document.getElementById("filmsBarcodeFilter"),
   filmsCellFilter: document.getElementById("filmsCellFilter"),
   applyFilmsFiltersBtn: document.getElementById("applyFilmsFiltersBtn"),
@@ -246,6 +248,7 @@ const refs = {
   importFilmsExcelBtn: document.getElementById("importFilmsExcelBtn"),
   importFilmsFile: document.getElementById("importFilmsFile"),
   filmForm: document.getElementById("filmForm"),
+  filmSinglePanel: document.getElementById("filmSinglePanel"),
   filmName: document.getElementById("filmName"),
   filmBarcode: document.getElementById("filmBarcode"),
   filmCellNo: document.getElementById("filmCellNo"),
@@ -267,6 +270,9 @@ const refs = {
   filmsGroupWithoutBtn: document.getElementById("filmsGroupWithoutBtn"),
   boxSearchInput: document.getElementById("boxSearchInput"),
   boxSearchBtn: document.getElementById("boxSearchBtn"),
+  boxCreateToggleBtn: document.getElementById("boxCreateToggleBtn"),
+  boxCreatePanel: document.getElementById("boxCreatePanel"),
+  boxCreateCloseBtn: document.getElementById("boxCreateCloseBtn"),
   boxLocationFilter: document.getElementById("boxLocationFilter"),
   boxApplyFiltersBtn: document.getElementById("boxApplyFiltersBtn"),
   boxResetFiltersBtn: document.getElementById("boxResetFiltersBtn"),
@@ -331,6 +337,19 @@ const refs = {
   iosImportChipBtn: document.getElementById("iosImportChipBtn"),
   iosInventorySheetChipBtn: document.getElementById("iosInventorySheetChipBtn"),
   iosFilterParams: document.getElementById("iosFilterParams"),
+  mainFiltersPanelTop: document.getElementById("mainFiltersPanelTop"),
+  mainGroupFilterTop: document.getElementById("mainGroupFilterTop"),
+  mainStockFilterTop: document.getElementById("mainStockFilterTop"),
+  applyMainFiltersTopBtn: document.getElementById("applyMainFiltersTopBtn"),
+  resetMainFiltersTopBtn: document.getElementById("resetMainFiltersTopBtn"),
+  stockManagePanelTop: document.getElementById("stockManagePanelTop"),
+  closeMainAddPanelTopBtn: document.getElementById("closeMainAddPanelTopBtn"),
+  stockFormTop: document.getElementById("stockFormTop"),
+  itemNameTop: document.getElementById("itemNameTop"),
+  itemGroupTop: document.getElementById("itemGroupTop"),
+  itemQtyTop: document.getElementById("itemQtyTop"),
+  itemThresholdTop: document.getElementById("itemThresholdTop"),
+  itemNotesTop: document.getElementById("itemNotesTop"),
   iosItemsPager: document.getElementById("iosItemsPager"),
   mainBackBtn: document.getElementById("mainBackBtn"),
   mainHeaderAddBtn: document.getElementById("mainHeaderAddBtn"),
@@ -1012,9 +1031,12 @@ function renderReminderItems() {
 }
 
 function applyMainFiltersFromInputs() {
-  state.mainFilters.search = refs.searchInput.value.trim().toLowerCase();
-  state.mainFilters.group = String(refs.mainGroupFilter.value || "").trim().toLowerCase();
-  state.mainFilters.stock = String(refs.mainStockFilter.value || "").trim().toLowerCase();
+  const searchValue = String(refs.iosSearchInput?.value || refs.searchInput?.value || "").trim().toLowerCase();
+  const groupValue = String(refs.mainGroupFilterTop?.value || refs.mainGroupFilter?.value || "").trim().toLowerCase();
+  const stockValue = String(refs.mainStockFilterTop?.value || refs.mainStockFilter?.value || "").trim().toLowerCase();
+  state.mainFilters.search = searchValue;
+  state.mainFilters.group = groupValue;
+  state.mainFilters.stock = stockValue;
 }
 
 function filteredItems() {
@@ -1081,6 +1103,8 @@ function resetMainFilters() {
   if (refs.iosSearchInput) refs.iosSearchInput.value = "";
   refs.mainGroupFilter.value = "";
   refs.mainStockFilter.value = "";
+  if (refs.mainGroupFilterTop) refs.mainGroupFilterTop.value = "";
+  if (refs.mainStockFilterTop) refs.mainStockFilterTop.value = "";
   state.mainFilters = { search: "", group: "", stock: "" };
   state.pages.items = 1;
   renderIosFilterChips();
@@ -1777,17 +1801,17 @@ function renderChatThreads(list = filteredChatThreads()) {
   list.forEach((thread) => {
     const card = document.createElement("article");
     const active = String(state.chatActiveThreadId) === String(thread.id);
-    card.className = `history-item chat-thread-item${active ? " is-active" : ""}`;
+    card.className = `chat-thread-item${active ? " is-active" : ""}`;
     card.setAttribute("data-chat-open", String(thread.id));
     const unread = Number(thread.unread_count || 0);
     const preview = String(thread.last_message_preview || "").trim();
     card.innerHTML = `
-      <div>
+      <div class="chat-thread-title">
         <strong>${escapeText(thread.title || "Без названия")}</strong>
         ${unread > 0 ? `<span class="history-reason">${unread} новых</span>` : ""}
       </div>
-      <div class="history-meta">${escapeText(preview || "Нет сообщений")}</div>
-      <div class="history-meta">${thread.last_message_at ? formatHistoryDate(thread.last_message_at) : ""}</div>
+      <div class="chat-thread-meta">${escapeText(preview || "Нет сообщений")}</div>
+      <div class="chat-thread-time">${thread.last_message_at ? formatHistoryDate(thread.last_message_at) : ""}</div>
     `;
     refs.chatList.appendChild(card);
   });
@@ -1808,11 +1832,11 @@ function renderChatMessages() {
   state.chatMessages.forEach((message) => {
     const mine = String(message.author_email || "").toLowerCase() === String(state.user?.email || "").toLowerCase();
     const row = document.createElement("article");
-    row.className = `history-item chat-message${mine ? " is-mine" : ""}`;
+    row.className = `chat-message${mine ? " is-mine" : ""}`;
     row.innerHTML = `
-      <div><strong>${escapeText(mine ? "Вы" : message.author_email || "Пользователь")}</strong></div>
-      <div class="history-meta">${escapeText(message.body || "")}</div>
-      <div class="history-meta">${formatHistoryDate(message.created_at)}</div>
+      <div class="chat-message-author">${escapeText(mine ? "Вы" : message.author_email || "Пользователь")}</div>
+      <div class="chat-message-body">${escapeText(message.body || "")}</div>
+      <div class="chat-message-time">${formatHistoryDate(message.created_at)}</div>
     `;
     refs.chatMessages.appendChild(row);
   });
@@ -3626,8 +3650,10 @@ function renderGroupOptions() {
   };
 
   fill(refs.itemGroup, "Без группы");
+  fill(refs.itemGroupTop, "Без группы");
   fill(refs.editItemGroup, "Без группы");
   fill(refs.mainGroupFilter, "Все группы");
+  fill(refs.mainGroupFilterTop, "Все группы");
 }
 
 function refreshAdjustItemOptions() {
@@ -4730,6 +4756,34 @@ refs.stockForm.addEventListener("submit", async (event) => {
   }
 });
 
+if (refs.stockFormTop) refs.stockFormTop.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!refs.stockFormTop.reportValidity()) return;
+  const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
+
+  try {
+    await runDbAction(
+      () =>
+        saveItem({
+          name: refs.itemNameTop.value.trim(),
+          groupName: refs.itemGroupTop.value,
+          qty: Number(refs.itemQtyTop.value),
+          threshold: Number(refs.itemThresholdTop.value),
+          notes: refs.itemNotesTop.value.trim(),
+        }),
+      { button: submitBtn, message: "Сохраняем расходник..." }
+    );
+
+    refs.stockFormTop.reset();
+    refs.stockManagePanelTop?.classList.add("is-hidden");
+    showToast("Расходник сохранен");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+
 async function handleItemActionClick(action, id, button) {
   if (!action || !id) return;
 
@@ -4853,16 +4907,22 @@ if (refs.iosSearchInput) refs.iosSearchInput.addEventListener("input", () => {
   handleSearch();
 });
 if (refs.mainHeaderAddBtn) refs.mainHeaderAddBtn.addEventListener("click", () => {
-  if (refs.inventoryView) refs.inventoryView.classList.remove("is-main-ios-mode");
-  if (refs.legacyMainLayout) refs.legacyMainLayout.classList.remove("is-hidden");
-  refs.itemName?.focus();
+  if (refs.stockManagePanelTop) {
+    refs.stockManagePanelTop.classList.toggle("is-hidden");
+    if (!refs.stockManagePanelTop.classList.contains("is-hidden")) {
+      refs.stockManagePanelTop.scrollIntoView({ behavior: "smooth", block: "start" });
+      refs.itemNameTop?.focus();
+    }
+  }
   hapticSelection();
 });
 if (refs.iosFiltersChipBtn) refs.iosFiltersChipBtn.addEventListener("click", () => {
-  if (refs.legacyMainLayout) {
-    refs.legacyMainLayout.classList.remove("is-hidden");
+  if (refs.mainFiltersPanelTop) {
+    refs.mainFiltersPanelTop.classList.toggle("is-hidden");
+    if (!refs.mainFiltersPanelTop.classList.contains("is-hidden")) {
+      refs.mainGroupFilterTop?.focus();
+    }
   }
-  refs.mainGroupFilter?.focus();
   hapticSelection();
 });
 if (refs.iosExportChipBtn) refs.iosExportChipBtn.addEventListener("click", () => refs.exportInventoryBtn?.click());
@@ -4912,6 +4972,13 @@ refs.applyMainFiltersBtn.addEventListener("click", handleSearch);
 refs.resetMainFiltersBtn.addEventListener("click", resetMainFilters);
 refs.mainGroupFilter.addEventListener("change", handleSearch);
 refs.mainStockFilter.addEventListener("change", handleSearch);
+if (refs.applyMainFiltersTopBtn) refs.applyMainFiltersTopBtn.addEventListener("click", handleSearch);
+if (refs.resetMainFiltersTopBtn) refs.resetMainFiltersTopBtn.addEventListener("click", resetMainFilters);
+if (refs.mainGroupFilterTop) refs.mainGroupFilterTop.addEventListener("change", handleSearch);
+if (refs.mainStockFilterTop) refs.mainStockFilterTop.addEventListener("change", handleSearch);
+if (refs.closeMainAddPanelTopBtn) refs.closeMainAddPanelTopBtn.addEventListener("click", () => {
+  refs.stockManagePanelTop?.classList.add("is-hidden");
+});
 if (refs.exportInventoryBtn) refs.exportInventoryBtn.addEventListener("click", async () => {
   try {
     await exportInventoryCsv();
@@ -4963,6 +5030,7 @@ if (refs.filmForm) refs.filmForm.addEventListener("submit", async (event) => {
       { button: submitBtn, message: "Сохраняем пленку..." }
     );
     refs.filmForm.reset();
+    refs.filmSinglePanel?.classList.add("is-hidden");
     showToast("Пленка сохранена");
     hapticSuccess();
   } catch (error) {
@@ -5088,10 +5156,12 @@ if (refs.filmsHeaderAddBtn) refs.filmsHeaderAddBtn.addEventListener("click", () 
     hapticWarning();
     return;
   }
-  if (refs.filmAddName) refs.filmAddName.value = "";
-  if (refs.filmAddBarcode) refs.filmAddBarcode.value = "";
-  if (refs.filmAddCellNo) refs.filmAddCellNo.value = "";
-  openSimpleModal(refs.filmAddModal);
+  if (refs.quickFilmIngestPanel) refs.quickFilmIngestPanel.classList.add("is-hidden");
+  if (refs.filmSinglePanel) refs.filmSinglePanel.classList.toggle("is-hidden");
+  if (refs.filmSinglePanel && !refs.filmSinglePanel.classList.contains("is-hidden")) {
+    refs.filmSinglePanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    refs.filmName?.focus();
+  }
   hapticSelection();
 });
 if (refs.filmsHeaderBulkBtn) refs.filmsHeaderBulkBtn.addEventListener("click", () => {
@@ -5101,12 +5171,21 @@ if (refs.filmsHeaderBulkBtn) refs.filmsHeaderBulkBtn.addEventListener("click", (
     return;
   }
   if (refs.quickFilmIngestPanel) {
+    if (refs.filmSinglePanel) refs.filmSinglePanel.classList.add("is-hidden");
     refs.quickFilmIngestPanel.classList.toggle("is-hidden");
     if (!refs.quickFilmIngestPanel.classList.contains("is-hidden")) {
       refs.quickFilmIngestPanel.scrollIntoView({ behavior: "smooth", block: "start" });
       refs.quickFilmCellNo?.focus();
     }
   }
+  hapticSelection();
+});
+if (refs.filmsCloseSinglePanelBtn) refs.filmsCloseSinglePanelBtn.addEventListener("click", () => {
+  refs.filmSinglePanel?.classList.add("is-hidden");
+  hapticSelection();
+});
+if (refs.filmsCloseBulkPanelBtn) refs.filmsCloseBulkPanelBtn.addEventListener("click", () => {
+  refs.quickFilmIngestPanel?.classList.add("is-hidden");
   hapticSelection();
 });
 if (refs.filmsSearchInput) refs.filmsSearchInput.addEventListener("keydown", (event) => {
@@ -5388,6 +5467,18 @@ if (refs.boxSearchBtn) refs.boxSearchBtn.addEventListener("click", () => {
     hapticWarning();
   });
 });
+if (refs.boxCreateToggleBtn) refs.boxCreateToggleBtn.addEventListener("click", () => {
+  refs.boxCreatePanel?.classList.toggle("is-hidden");
+  if (refs.boxCreatePanel && !refs.boxCreatePanel.classList.contains("is-hidden")) {
+    refs.boxCreatePanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    refs.boxCodeInput?.focus();
+  }
+  hapticSelection();
+});
+if (refs.boxCreateCloseBtn) refs.boxCreateCloseBtn.addEventListener("click", () => {
+  refs.boxCreatePanel?.classList.add("is-hidden");
+  hapticSelection();
+});
 if (refs.boxSearchInput) refs.boxSearchInput.addEventListener("keydown", (event) => {
   if (event.key !== "Enter") return;
   event.preventDefault();
@@ -5511,6 +5602,7 @@ if (refs.boxCreateForm) refs.boxCreateForm.addEventListener("submit", async (eve
       button: submitBtn,
       message: "Сохраняем коробку...",
     });
+    refs.boxCreatePanel?.classList.add("is-hidden");
     hapticSuccess();
   } catch (error) {
     showToast(error.message);
