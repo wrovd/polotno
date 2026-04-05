@@ -1822,6 +1822,10 @@ td .actions {
   min-width: 0;
 }
 
+.inventory-chip-params:empty {
+  display: none;
+}
+
 .inventory-inline-filters,
 .inventory-inline-add {
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -3661,6 +3665,9 @@ button.is-loading::after {
   #inventoryView.is-main-ios-mode .inventory-ios-search {
     max-width: none;
     display: block !important;
+    grid-area: auto;
+    justify-self: stretch;
+    align-self: auto;
   }
 
   #inventoryView.is-main-ios-mode .inventory-ios-search input {
@@ -3672,9 +3679,11 @@ button.is-loading::after {
   }
 
   #inventoryView.is-main-ios-mode .inventory-chip-row {
-    overflow: visible;
-    flex-wrap: wrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
     gap: 8px;
+    justify-content: flex-start;
   }
 
   #inventoryView.is-main-ios-mode .inventory-chip {
