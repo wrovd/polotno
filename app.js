@@ -324,12 +324,40 @@ const refs = {
   taskCreateBtn: document.getElementById("taskCreateBtn"),
   tasksBoardBtn: document.getElementById("tasksBoardBtn"),
   tasksListBtn: document.getElementById("tasksListBtn"),
+  tasksFilterBtn: document.getElementById("tasksFilterBtn"),
+  tasksTotalCount: document.getElementById("tasksTotalCount"),
+  tasksTodoCount: document.getElementById("tasksTodoCount"),
+  tasksInProgressCount: document.getElementById("tasksInProgressCount"),
+  tasksReviewCount: document.getElementById("tasksReviewCount"),
+  tasksDoneCount: document.getElementById("tasksDoneCount"),
   tasksBoard: document.getElementById("tasksBoard"),
   tasksListContainer: document.getElementById("tasksListContainer"),
   tasksTodoList: document.getElementById("tasksTodoList"),
   tasksInProgressList: document.getElementById("tasksInProgressList"),
   tasksReviewList: document.getElementById("tasksReviewList"),
   tasksDoneList: document.getElementById("tasksDoneList"),
+  taskEditModal: document.getElementById("taskEditModal"),
+  taskEditBackdrop: document.getElementById("taskEditBackdrop"),
+  closeTaskEditBtn: document.getElementById("closeTaskEditBtn"),
+  cancelTaskEditBtn: document.getElementById("cancelTaskEditBtn"),
+  taskEditForm: document.getElementById("taskEditForm"),
+  taskModalTitle: document.getElementById("taskModalTitle"),
+  taskEditId: document.getElementById("taskEditId"),
+  taskEditTitle: document.getElementById("taskEditTitle"),
+  taskEditDescription: document.getElementById("taskEditDescription"),
+  taskEditPriority: document.getElementById("taskEditPriority"),
+  taskEditStatus: document.getElementById("taskEditStatus"),
+  taskEditAssignee: document.getElementById("taskEditAssignee"),
+  taskEditDueDate: document.getElementById("taskEditDueDate"),
+  taskDetailModal: document.getElementById("taskDetailModal"),
+  taskDetailBackdrop: document.getElementById("taskDetailBackdrop"),
+  closeTaskDetailBtn: document.getElementById("closeTaskDetailBtn"),
+  taskDetailTitle: document.getElementById("taskDetailTitle"),
+  taskDetailMeta: document.getElementById("taskDetailMeta"),
+  taskDetailDescription: document.getElementById("taskDetailDescription"),
+  taskCommentsList: document.getElementById("taskCommentsList"),
+  taskDetailEditBtn: document.getElementById("taskDetailEditBtn"),
+  taskDetailDeleteBtn: document.getElementById("taskDetailDeleteBtn"),
   toToolsBtn: document.getElementById("toToolsBtn"),
   stockManagePanel: document.getElementById("stockManagePanel"),
   adjustPanel: document.getElementById("adjustPanel"),
@@ -1993,19 +2021,76 @@ function filteredTasks() {
   });
 }
 
+function taskPriorityClass(priority) {
+  if (priority === "urgent") return "urgent";
+  if (priority === "high") return "high";
+  if (priority === "low") return "low";
+  return "medium";
+}
+
+function taskPriorityUiLabel(priority) {
+  if (priority === "urgent") return "Срочный";
+  if (priority === "high") return "Высокий";
+  if (priority === "low") return "Низкий";
+  return "Средний";
+}
+
+function taskCode(task) {
+  const id = String(task?.id || "").replace(/[^\d]/g, "");
+  const tail = id ? id.slice(-3).padStart(3, "0") : "000";
+  return `T-${tail}`;
+}
+
+function extractTaskTags(task) {
+  const title = String(task?.title || "").toLowerCase();
+  const tags = [];
+  if (title.includes("инвентар")) tags.push("Инвентаризация");
+  if (title.includes("упаков")) tags.push("Упаковка");
+  if (title.includes("отгруз")) tags.push("Отгрузка");
+  if (title.includes("расход")) tags.push("Расходники");
+  if (title.includes("пленк")) tags.push("Склад");
+  if (title.includes("сроч") || task?.priority === "urgent" || task?.priority === "high") tags.push("Срочно");
+  return tags.slice(0, 2);
+}
+
+function isOverdue(dateString) {
+  if (!dateString) return false;
+  const value = new Date(dateString);
+  if (Number.isNaN(value.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  value.setHours(0, 0, 0, 0);
+  return value.getTime() < today.getTime();
+}
+
 function taskCardHtml(task, compact = false) {
-  const due = task.due_date ? ` • дедлайн ${formatShortDate(task.due_date)}` : "";
+  const tags = extractTaskTags(task);
+  const overdue = isOverdue(task.due_date);
+  const assignee = String(task.assignee_email || "").trim();
+  const assigneeInitial = initialFromName(assignee || "A");
+  const dueText = task.due_date ? formatShortDate(task.due_date) : "";
+  const priority = taskPriorityClass(task.priority);
+  const priorityText = taskPriorityUiLabel(task.priority);
   return `
-    <article class="history-item task-item${compact ? " compact" : ""}" data-task-id="${task.id}">
-      <div><strong>${escapeText(task.title || "Без названия")}</strong> <span class="history-reason">${priorityLabel(task.priority)}</span></div>
-      <div class="history-meta">${escapeText(task.assignee_email || "Исполнитель не назначен")}${due}</div>
-      ${task.description ? `<div class="history-meta">${escapeText(task.description)}</div>` : ""}
-      <div class="hero-actions">
-        <button class="glass-btn btn-with-icon" type="button" data-task-action="prev" data-task-id="${task.id}">${iconSpan("minus")}<span>Назад</span></button>
-        <button class="secondary-btn btn-with-icon" type="button" data-task-action="next" data-task-id="${task.id}">${iconSpan("plus")}<span>Вперёд</span></button>
-        <button class="glass-btn btn-with-icon" type="button" data-task-action="comment" data-task-id="${task.id}">${iconSpan("message")}<span>Комментарий</span></button>
-        <button class="glass-btn btn-with-icon" type="button" data-task-action="edit" data-task-id="${task.id}">${iconSpan("edit")}<span>Изменить</span></button>
-        <button class="glass-btn btn-with-icon danger" type="button" data-task-action="delete" data-task-id="${task.id}">${iconSpan("trash")}<span>Удалить</span></button>
+    <article class="task-card-figma${compact ? " compact" : ""}" data-task-id="${task.id}" draggable="true">
+      <div class="task-card-top">
+        <span class="task-priority ${priority}">${iconSpan("flag")}${escapeText(priorityText)}</span>
+        <span class="task-code">${escapeText(taskCode(task))}</span>
+      </div>
+      <h5 class="task-card-title">${escapeText(task.title || "Без названия")}</h5>
+      ${task.description ? `<div class="task-card-desc">${escapeText(task.description)}</div>` : ""}
+      <div class="task-tag-row">${tags.map((tag) => `<span class="task-tag">${escapeText(tag)}</span>`).join("")}</div>
+      <div class="task-card-footer">
+        <div class="task-assignee">
+          <span class="task-avatar">${escapeText(assigneeInitial)}</span>
+          ${dueText ? `<span class="task-due${overdue ? " overdue" : ""}">${iconSpan("history")}${escapeText(dueText)}</span>` : ""}
+        </div>
+        <div class="task-mini-actions">
+          <button type="button" aria-label="Открыть" data-task-action="open" data-task-id="${task.id}">${iconSpan("message")}</button>
+          <button type="button" aria-label="Изменить" data-task-action="edit" data-task-id="${task.id}">${iconSpan("edit")}</button>
+          <button type="button" aria-label="Вперёд" data-task-action="next" data-task-id="${task.id}">${iconSpan("plus")}</button>
+          <button type="button" aria-label="Удалить" data-task-action="delete" data-task-id="${task.id}">${iconSpan("trash")}</button>
+        </div>
       </div>
     </article>
   `;
@@ -2028,6 +2113,10 @@ function renderTasksBoard(list = filteredTasks()) {
   const inProgress = list.filter((task) => task.status === "in_progress");
   const review = list.filter((task) => task.status === "review");
   const done = list.filter((task) => task.status === "done");
+  if (refs.tasksTodoCount) refs.tasksTodoCount.textContent = String(todo.length);
+  if (refs.tasksInProgressCount) refs.tasksInProgressCount.textContent = String(inProgress.length);
+  if (refs.tasksReviewCount) refs.tasksReviewCount.textContent = String(review.length);
+  if (refs.tasksDoneCount) refs.tasksDoneCount.textContent = String(done.length);
   renderTaskColumn(refs.tasksTodoList, todo);
   renderTaskColumn(refs.tasksInProgressList, inProgress);
   renderTaskColumn(refs.tasksReviewList, review);
@@ -2044,21 +2133,20 @@ function renderTasksList(list = filteredTasks()) {
   list.forEach((task) => {
     refs.tasksListContainer.insertAdjacentHTML(
       "beforeend",
-      `<div class="history-meta">${statusLabel(task.status)}</div>${taskCardHtml(task)}`
+      `<div class="history-meta">${statusLabel(task.status)}</div>${taskCardHtml(task, false)}`
     );
   });
 }
 
 function renderTasks() {
   const list = filteredTasks();
+  if (refs.tasksTotalCount) refs.tasksTotalCount.textContent = `${list.length} задач`;
   renderTasksBoard(list);
   renderTasksList(list);
   if (refs.tasksBoard) refs.tasksBoard.classList.toggle("is-hidden", state.taskViewMode !== "board");
   if (refs.tasksListContainer) refs.tasksListContainer.classList.toggle("is-hidden", state.taskViewMode === "board");
-  if (refs.tasksBoardBtn) refs.tasksBoardBtn.classList.toggle("secondary-btn", state.taskViewMode === "board");
-  if (refs.tasksBoardBtn) refs.tasksBoardBtn.classList.toggle("glass-btn", state.taskViewMode !== "board");
-  if (refs.tasksListBtn) refs.tasksListBtn.classList.toggle("secondary-btn", state.taskViewMode !== "list");
-  if (refs.tasksListBtn) refs.tasksListBtn.classList.toggle("glass-btn", state.taskViewMode === "list");
+  if (refs.tasksBoardBtn) refs.tasksBoardBtn.classList.toggle("is-active", state.taskViewMode === "board");
+  if (refs.tasksListBtn) refs.tasksListBtn.classList.toggle("is-active", state.taskViewMode === "list");
 }
 
 async function loadTasks() {
@@ -2073,22 +2161,52 @@ async function loadTasks() {
   renderTasks();
 }
 
-async function createTaskFromPrompt() {
-  const title = window.prompt("Название задачи", "");
-  if (!title || !String(title).trim()) return;
-  const assignee = window.prompt("Email исполнителя (опционально)", String(state.user?.email || ""));
-  const dueDate = window.prompt("Дедлайн (YYYY-MM-DD, опционально)", "");
-  const priority = (window.prompt("Приоритет: low / medium / high / urgent", "medium") || "medium").trim().toLowerCase();
-  await apiRequest("/api/inventory/tasks-create", {
-    method: "POST",
-    body: {
-      title: String(title).trim(),
-      assigneeEmail: String(assignee || "").trim().toLowerCase(),
-      dueDate: String(dueDate || "").trim(),
-      priority,
-      status: "todo",
-    },
-  });
+function populateTaskForm(task = null, status = "todo") {
+  if (!refs.taskModalTitle) return;
+  refs.taskModalTitle.textContent = task ? "Редактировать задачу" : "Новая задача";
+  if (refs.taskEditId) refs.taskEditId.value = task ? String(task.id || "") : "";
+  if (refs.taskEditTitle) refs.taskEditTitle.value = String(task?.title || "");
+  if (refs.taskEditDescription) refs.taskEditDescription.value = String(task?.description || "");
+  if (refs.taskEditPriority) refs.taskEditPriority.value = String(task?.priority || "medium");
+  if (refs.taskEditStatus) refs.taskEditStatus.value = String(task?.status || status || "todo");
+  if (refs.taskEditAssignee) refs.taskEditAssignee.value = String(task?.assignee_email || "");
+  if (refs.taskEditDueDate) refs.taskEditDueDate.value = String(task?.due_date || "");
+}
+
+function openTaskEditor(task = null, status = "todo") {
+  populateTaskForm(task, status);
+  openSimpleModal(refs.taskEditModal);
+  setTimeout(() => refs.taskEditTitle?.focus(), 50);
+}
+
+function closeTaskEditor() {
+  closeSimpleModal(refs.taskEditModal);
+}
+
+async function saveTaskFromForm() {
+  if (!refs.taskEditForm?.reportValidity()) return;
+  const id = String(refs.taskEditId?.value || "").trim();
+  const payload = {
+    title: String(refs.taskEditTitle?.value || "").trim(),
+    description: String(refs.taskEditDescription?.value || "").trim(),
+    priority: String(refs.taskEditPriority?.value || "medium"),
+    status: String(refs.taskEditStatus?.value || "todo"),
+    assigneeEmail: String(refs.taskEditAssignee?.value || "").trim().toLowerCase(),
+    dueDate: String(refs.taskEditDueDate?.value || "").trim(),
+  };
+  if (!payload.title) return;
+  if (id) {
+    await apiRequest("/api/inventory/tasks-update", {
+      method: "POST",
+      body: { id, ...payload },
+    });
+  } else {
+    await apiRequest("/api/inventory/tasks-create", {
+      method: "POST",
+      body: payload,
+    });
+  }
+  closeTaskEditor();
   await loadTasks();
   await loadHistory();
 }
@@ -2096,26 +2214,7 @@ async function createTaskFromPrompt() {
 async function editTaskFromPrompt(taskId) {
   const task = state.tasks.find((x) => String(x.id) === String(taskId));
   if (!task) return;
-  const title = window.prompt("Название задачи", task.title || "");
-  if (!title || !String(title).trim()) return;
-  const description = window.prompt("Описание", task.description || "") || "";
-  const assignee = window.prompt("Email исполнителя", task.assignee_email || "") || "";
-  const dueDate = window.prompt("Дедлайн YYYY-MM-DD", task.due_date || "") || "";
-  const priority = (window.prompt("Приоритет: low / medium / high / urgent", task.priority || "medium") || task.priority || "medium").trim().toLowerCase();
-  await apiRequest("/api/inventory/tasks-update", {
-    method: "POST",
-    body: {
-      id: task.id,
-      title: String(title).trim(),
-      description,
-      assigneeEmail: String(assignee).trim().toLowerCase(),
-      dueDate: String(dueDate).trim(),
-      priority,
-      status: task.status,
-    },
-  });
-  await loadTasks();
-  await loadHistory();
+  openTaskEditor(task, task.status || "todo");
 }
 
 async function updateTaskStatus(taskId, nextStatus) {
@@ -2150,6 +2249,34 @@ async function addTaskCommentFromPrompt(taskId) {
   });
   await loadTasks();
   await loadHistory();
+}
+
+async function openTaskDetails(taskId) {
+  const task = state.tasks.find((x) => String(x.id) === String(taskId));
+  if (!task) return;
+  if (refs.taskDetailTitle) refs.taskDetailTitle.textContent = String(task.title || "Задача");
+  if (refs.taskDetailMeta) {
+    refs.taskDetailMeta.textContent = `${statusLabel(task.status)} • ${priorityLabel(task.priority)} • ${task.assignee_email || "без исполнителя"}`;
+  }
+  if (refs.taskDetailDescription) refs.taskDetailDescription.textContent = String(task.description || "Описание отсутствует.");
+  if (refs.taskCommentsList) refs.taskCommentsList.innerHTML = '<p class="muted">Загрузка комментариев...</p>';
+  refs.taskDetailEditBtn?.setAttribute("data-task-id", String(task.id));
+  refs.taskDetailDeleteBtn?.setAttribute("data-task-id", String(task.id));
+  openSimpleModal(refs.taskDetailModal);
+  try {
+    const data = await apiRequest(`/api/inventory/task-comments?task_id=${encodeURIComponent(String(task.id))}`);
+    const list = Array.isArray(data.comments) ? data.comments : [];
+    if (!refs.taskCommentsList) return;
+    if (!list.length) {
+      refs.taskCommentsList.innerHTML = '<p class="muted">Комментариев пока нет.</p>';
+      return;
+    }
+    refs.taskCommentsList.innerHTML = list
+      .map((row) => `<article class="history-item"><strong>${escapeText(row.author_email || "Пользователь")}</strong><div class="history-meta">${escapeText(row.body || "")}</div><div class="history-meta">${formatHistoryDate(row.created_at)}</div></article>`)
+      .join("");
+  } catch (error) {
+    if (refs.taskCommentsList) refs.taskCommentsList.innerHTML = `<p class="muted">${escapeText(error.message || "Ошибка загрузки комментариев")}</p>`;
+  }
 }
 
 function formatHistoryDate(value) {
@@ -5436,12 +5563,12 @@ if (refs.chatChannelsBtn) refs.chatChannelsBtn.addEventListener("click", async (
 });
 if (refs.taskCreateBtn) refs.taskCreateBtn.addEventListener("click", async () => {
   try {
-    await runDbAction(() => createTaskFromPrompt(), {
+    await runDbAction(() => {
+      openTaskEditor(null, "todo");
+    }, {
       button: refs.taskCreateBtn,
-      message: "Создаем задачу...",
+      message: "Открываем форму задачи...",
     });
-    showToast("Задача сохранена");
-    hapticSuccess();
   } catch (error) {
     showToast(error.message);
     hapticWarning();
@@ -5460,6 +5587,58 @@ if (refs.tasksListBtn) refs.tasksListBtn.addEventListener("click", () => {
   renderTasks();
   hapticSelection();
 });
+if (refs.tasksFilterBtn) refs.tasksFilterBtn.addEventListener("click", () => {
+  showToast("Фильтры задач будут в следующем шаге");
+  hapticSelection();
+});
+if (refs.taskEditForm) refs.taskEditForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
+  try {
+    await runDbAction(() => saveTaskFromForm(), {
+      button: submitBtn,
+      message: "Сохраняем задачу...",
+    });
+    showToast("Задача сохранена");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.cancelTaskEditBtn) refs.cancelTaskEditBtn.addEventListener("click", () => closeTaskEditor());
+if (refs.closeTaskEditBtn) refs.closeTaskEditBtn.addEventListener("click", () => closeTaskEditor());
+if (refs.taskEditBackdrop) refs.taskEditBackdrop.addEventListener("click", () => closeTaskEditor());
+if (refs.closeTaskDetailBtn) refs.closeTaskDetailBtn.addEventListener("click", () => closeSimpleModal(refs.taskDetailModal));
+if (refs.taskDetailBackdrop) refs.taskDetailBackdrop.addEventListener("click", () => closeSimpleModal(refs.taskDetailModal));
+if (refs.taskDetailEditBtn) refs.taskDetailEditBtn.addEventListener("click", async () => {
+  const taskId = String(refs.taskDetailEditBtn.getAttribute("data-task-id") || "").trim();
+  if (!taskId) return;
+  closeSimpleModal(refs.taskDetailModal);
+  await editTaskFromPrompt(taskId);
+});
+if (refs.taskDetailDeleteBtn) refs.taskDetailDeleteBtn.addEventListener("click", async () => {
+  const taskId = String(refs.taskDetailDeleteBtn.getAttribute("data-task-id") || "").trim();
+  if (!taskId) return;
+  const ok = window.confirm("Удалить задачу?");
+  if (!ok) return;
+  try {
+    await runDbAction(() => deleteTaskById(taskId), { button: refs.taskDetailDeleteBtn, message: "Удаляем задачу..." });
+    closeSimpleModal(refs.taskDetailModal);
+    showToast("Задача удалена");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+document.querySelectorAll("button[data-task-add-status]").forEach((node) => {
+  node.addEventListener("click", () => {
+    const status = String(node.getAttribute("data-task-add-status") || "todo");
+    openTaskEditor(null, status);
+    hapticSelection();
+  });
+});
 
 async function onTaskAction(event) {
   const target = event.target;
@@ -5471,7 +5650,11 @@ async function onTaskAction(event) {
   if (!action || !taskId) return;
 
   if (action === "edit") {
-    await runDbAction(() => editTaskFromPrompt(taskId), { button: btn, message: "Сохраняем задачу..." });
+    await runDbAction(() => editTaskFromPrompt(taskId), { button: btn, message: "Открываем задачу..." });
+    return;
+  }
+  if (action === "open") {
+    await runDbAction(() => openTaskDetails(taskId), { button: btn, message: "Открываем детали..." });
     return;
   }
   if (action === "comment") {
@@ -5514,6 +5697,45 @@ if (refs.tasksListContainer) refs.tasksListContainer.addEventListener("click", (
     hapticWarning();
   });
 });
+if (refs.tasksBoard) {
+  refs.tasksBoard.addEventListener("dragstart", (event) => {
+    const target = event.target instanceof HTMLElement ? event.target.closest("[data-task-id]") : null;
+    if (!(target instanceof HTMLElement) || !event.dataTransfer) return;
+    const taskId = String(target.getAttribute("data-task-id") || "");
+    event.dataTransfer.setData("text/task-id", taskId);
+    target.classList.add("is-dragging");
+  });
+  refs.tasksBoard.addEventListener("dragend", (event) => {
+    const target = event.target instanceof HTMLElement ? event.target.closest("[data-task-id]") : null;
+    if (target instanceof HTMLElement) target.classList.remove("is-dragging");
+    refs.tasksBoard.querySelectorAll(".tasks-column-drop").forEach((el) => el.classList.remove("is-drop-target"));
+  });
+  refs.tasksBoard.addEventListener("dragover", (event) => {
+    const drop = event.target instanceof HTMLElement ? event.target.closest(".tasks-column-drop") : null;
+    if (!(drop instanceof HTMLElement)) return;
+    event.preventDefault();
+    refs.tasksBoard.querySelectorAll(".tasks-column-drop").forEach((el) => el.classList.remove("is-drop-target"));
+    drop.classList.add("is-drop-target");
+  });
+  refs.tasksBoard.addEventListener("drop", (event) => {
+    const drop = event.target instanceof HTMLElement ? event.target.closest(".tasks-column-drop") : null;
+    if (!(drop instanceof HTMLElement) || !event.dataTransfer) return;
+    event.preventDefault();
+    refs.tasksBoard.querySelectorAll(".tasks-column-drop").forEach((el) => el.classList.remove("is-drop-target"));
+    const taskId = String(event.dataTransfer.getData("text/task-id") || "").trim();
+    const status = String(drop.getAttribute("data-task-status") || "").trim();
+    if (!taskId || !status) return;
+    runDbAction(() => updateTaskStatus(taskId, status), { message: "Перемещаем задачу..." })
+      .then(() => {
+        showToast("Задача перемещена");
+        hapticSuccess();
+      })
+      .catch((error) => {
+        showToast(error.message);
+        hapticWarning();
+      });
+  });
+}
 
 if (refs.boxSearchBtn) refs.boxSearchBtn.addEventListener("click", () => {
   searchBoxesByInput().catch((error) => {

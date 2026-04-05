@@ -97,6 +97,9 @@
       <symbol id="i-filter" viewBox="0 0 24 24">
         <path d="M4 6h16l-6 7v5l-4 2v-7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
       </symbol>
+      <symbol id="i-flag" viewBox="0 0 24 24">
+        <path d="M6 21V4m0 0h9l-1.5 3L15 10H6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
       <symbol id="i-settings" viewBox="0 0 24 24">
         <path d="M12 8.5A3.5 3.5 0 1 0 12 15.5A3.5 3.5 0 1 0 12 8.5Z" fill="none" stroke="currentColor" stroke-width="1.8" />
         <path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a1.2 1.2 0 0 1 0 1.7l-1.6 1.6a1.2 1.2 0 0 1-1.7 0l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a1.2 1.2 0 0 1-1.2 1.2h-2.2A1.2 1.2 0 0 1 10 20v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a1.2 1.2 0 0 1-1.7 0l-1.6-1.6a1.2 1.2 0 0 1 0-1.7l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a1.2 1.2 0 0 1-1.2-1.2v-2.2A1.2 1.2 0 0 1 4 9.8h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a1.2 1.2 0 0 1 0-1.7l1.6-1.6a1.2 1.2 0 0 1 1.7 0l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a1.2 1.2 0 0 1 1.2-1.2h2.2A1.2 1.2 0 0 1 14.4 4v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a1.2 1.2 0 0 1 1.7 0l1.6 1.6a1.2 1.2 0 0 1 0 1.7l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6h.2A1.2 1.2 0 0 1 21.2 11v2.2A1.2 1.2 0 0 1 20 14.4h-.2a1 1 0 0 0-.9.6z" fill="none" stroke="currentColor" stroke-width="1.2" />
@@ -859,38 +862,83 @@
         </section>
 
         <section id="tasksTab" class="tab-panel">
-          <section class="panel panel-collapsible">
-            <div class="section-head">
+          <section class="tasks-figma-page">
+            <header class="tasks-figma-head">
               <h3>Задачи</h3>
-              <p>Канбан-задачи команды: бэклог, в работе, проверка, готово.</p>
-            </div>
-            <div class="search-row">
+              <button class="tasks-add-btn" id="taskCreateBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span>
+                <span>Задача</span>
+              </button>
+            </header>
+
+            <label class="tasks-search-wrap">
+              <span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span>
               <input type="search" id="tasksSearchInput" placeholder="Поиск задач..." autocomplete="off" />
-              <button class="primary-btn btn-with-icon" id="taskCreateBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Новая задача</span></button>
+            </label>
+
+            <div class="tasks-top-controls">
+              <div class="tasks-view-switch">
+                <button class="tasks-view-btn is-active" id="tasksBoardBtn" type="button">Доска</button>
+                <button class="tasks-view-btn" id="tasksListBtn" type="button">Список</button>
+              </div>
+              <button class="tasks-filter-btn" id="tasksFilterBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-filter"></use></svg></span>
+                <span>Фильтры</span>
+              </button>
+              <p class="tasks-total-count" id="tasksTotalCount">0 задач</p>
             </div>
-            <div class="hero-actions">
-              <button class="secondary-btn btn-with-icon" id="tasksBoardBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span><span>Доска</span></button>
-              <button class="glass-btn btn-with-icon" id="tasksListBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-layout-list"></use></svg></span><span>Список</span></button>
-            </div>
-            <div class="tasks-board" id="tasksBoard">
-              <section class="panel tasks-column">
-                <div class="section-head compact"><h3>К выполнению</h3></div>
-                <div class="history-list" id="tasksTodoList"><p class="muted">Пусто.</p></div>
-              </section>
-              <section class="panel tasks-column">
-                <div class="section-head compact"><h3>В работе</h3></div>
-                <div class="history-list" id="tasksInProgressList"><p class="muted">Пусто.</p></div>
-              </section>
-              <section class="panel tasks-column">
-                <div class="section-head compact"><h3>Проверка</h3></div>
-                <div class="history-list" id="tasksReviewList"><p class="muted">Пусто.</p></div>
-              </section>
-              <section class="panel tasks-column">
-                <div class="section-head compact"><h3>Готово</h3></div>
-                <div class="history-list" id="tasksDoneList"><p class="muted">Пусто.</p></div>
-              </section>
-            </div>
-            <div class="history-list is-hidden" id="tasksListContainer">
+
+            <section class="tasks-board-figma" id="tasksBoard">
+              <article class="tasks-column-figma">
+                <header class="tasks-column-head">
+                  <span class="tasks-dot dot-gray"></span>
+                  <h4>К выполнению</h4>
+                  <span class="tasks-count-pill" id="tasksTodoCount">0</span>
+                  <button class="tasks-col-add" type="button" data-task-add-status="todo">+</button>
+                </header>
+                <div class="tasks-column-drop" id="tasksTodoList" data-task-status="todo">
+                  <p class="muted">Пусто.</p>
+                </div>
+              </article>
+
+              <article class="tasks-column-figma">
+                <header class="tasks-column-head">
+                  <span class="tasks-dot dot-blue"></span>
+                  <h4>В работе</h4>
+                  <span class="tasks-count-pill" id="tasksInProgressCount">0</span>
+                  <button class="tasks-col-add" type="button" data-task-add-status="in_progress">+</button>
+                </header>
+                <div class="tasks-column-drop" id="tasksInProgressList" data-task-status="in_progress">
+                  <p class="muted">Пусто.</p>
+                </div>
+              </article>
+
+              <article class="tasks-column-figma">
+                <header class="tasks-column-head">
+                  <span class="tasks-dot dot-orange"></span>
+                  <h4>На проверке</h4>
+                  <span class="tasks-count-pill" id="tasksReviewCount">0</span>
+                  <button class="tasks-col-add" type="button" data-task-add-status="review">+</button>
+                </header>
+                <div class="tasks-column-drop" id="tasksReviewList" data-task-status="review">
+                  <p class="muted">Пусто.</p>
+                </div>
+              </article>
+
+              <article class="tasks-column-figma">
+                <header class="tasks-column-head">
+                  <span class="tasks-dot dot-purple"></span>
+                  <h4>Готово</h4>
+                  <span class="tasks-count-pill" id="tasksDoneCount">0</span>
+                  <button class="tasks-col-add" type="button" data-task-add-status="done">+</button>
+                </header>
+                <div class="tasks-column-drop" id="tasksDoneList" data-task-status="done">
+                  <p class="muted">Пусто.</p>
+                </div>
+              </article>
+            </section>
+
+            <div class="history-list is-hidden tasks-list-figma" id="tasksListContainer">
               <p class="muted">Список задач загружается...</p>
             </div>
           </section>
@@ -1316,6 +1364,70 @@
             <span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить</span>
           </button>
         </form>
+      </section>
+    </div>
+
+    <div class="auth-modal" id="taskEditModal" hidden>
+      <div class="auth-backdrop" id="taskEditBackdrop"></div>
+      <section class="auth-card task-modal-card" role="dialog" aria-modal="true" aria-label="Редактирование задачи">
+        <button class="close-btn" id="closeTaskEditBtn" type="button" aria-label="Закрыть">×</button>
+        <h3 id="taskModalTitle">Новая задача</h3>
+        <form class="stock-form" id="taskEditForm" novalidate>
+          <input type="hidden" id="taskEditId" />
+          <label>Заголовок
+            <input type="text" id="taskEditTitle" required />
+          </label>
+          <label>Описание
+            <textarea id="taskEditDescription" rows="4"></textarea>
+          </label>
+          <div class="task-modal-grid">
+            <label>Приоритет
+              <select id="taskEditPriority">
+                <option value="low">Низкий</option>
+                <option value="medium">Средний</option>
+                <option value="high">Высокий</option>
+                <option value="urgent">Срочный</option>
+              </select>
+            </label>
+            <label>Колонка
+              <select id="taskEditStatus">
+                <option value="todo">К выполнению</option>
+                <option value="in_progress">В работе</option>
+                <option value="review">На проверке</option>
+                <option value="done">Готово</option>
+              </select>
+            </label>
+          </div>
+          <div class="task-modal-grid">
+            <label>Исполнитель (email)
+              <input type="email" id="taskEditAssignee" placeholder="user@company.com" />
+            </label>
+            <label>Дедлайн
+              <input type="date" id="taskEditDueDate" />
+            </label>
+          </div>
+          <div class="hero-actions">
+            <button class="glass-btn full" id="cancelTaskEditBtn" type="button">Отмена</button>
+            <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить</span></button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div class="auth-modal" id="taskDetailModal" hidden>
+      <div class="auth-backdrop" id="taskDetailBackdrop"></div>
+      <section class="auth-card task-detail-card" role="dialog" aria-modal="true" aria-label="Детали задачи">
+        <button class="close-btn" id="closeTaskDetailBtn" type="button" aria-label="Закрыть">×</button>
+        <h3 id="taskDetailTitle">Задача</h3>
+        <p class="helper" id="taskDetailMeta">Статус и приоритет</p>
+        <p id="taskDetailDescription" class="task-detail-description"></p>
+        <div class="history-list" id="taskCommentsList">
+          <p class="muted">Комментарии загрузятся...</p>
+        </div>
+        <div class="hero-actions">
+          <button class="glass-btn btn-with-icon" id="taskDetailEditBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-edit"></use></svg></span><span>Изменить</span></button>
+          <button class="glass-btn btn-with-icon danger" id="taskDetailDeleteBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-trash"></use></svg></span><span>Удалить</span></button>
+        </div>
       </section>
     </div>
 
