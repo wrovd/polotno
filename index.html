@@ -132,6 +132,36 @@
         </div>
       </header>
 
+      <aside class="desktop-sidebar" id="desktopSidebar" aria-label="Основная навигация">
+        <div class="desktop-sidebar-brand">
+          <h2>Polotno</h2>
+          <p>Система управления складом</p>
+        </div>
+        <nav class="desktop-sidebar-nav">
+          <button class="desktop-sidebar-item is-active" id="desktopNavHomeBtn" type="button">
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-home"></use></svg></span><span>Главная</span>
+          </button>
+          <button class="desktop-sidebar-item" id="desktopNavInventoryBtn" type="button">
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span><span>Расходники</span>
+          </button>
+          <button class="desktop-sidebar-item" id="desktopNavFilmsBtn" type="button">
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-warehouse"></use></svg></span><span>Пленки</span>
+          </button>
+          <button class="desktop-sidebar-item" id="desktopNavBoxesBtn" type="button">
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Коробки</span>
+          </button>
+          <button class="desktop-sidebar-item" id="desktopNavHistoryBtn" type="button">
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-history"></use></svg></span><span>История</span>
+          </button>
+          <button class="desktop-sidebar-item" id="desktopNavStatsBtn" type="button">
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-chart"></use></svg></span><span>Статистика</span>
+          </button>
+          <button class="desktop-sidebar-item" id="desktopNavSettingsBtn" type="button">
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-settings"></use></svg></span><span>Настройки</span>
+          </button>
+        </nav>
+      </aside>
+
       <section id="homeView" class="view active">
         <div class="home-dashboard">
           <aside class="home-dashboard-sidebar">
@@ -488,29 +518,51 @@
         </section>
 
         <section id="filmsTab" class="tab-panel">
-          <section class="panel search-panel">
-            <label for="filmsSearchInput">Поиск пленок</label>
-            <div class="search-row">
-              <input id="filmsSearchInput" type="search" placeholder="Наименование, штрихкод или ячейка" autocomplete="off" />
-              <button class="primary-btn btn-with-icon" id="filmsSearchBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Найти</span></button>
-            </div>
-            <div class="history-filters main-filters">
-              <input id="filmsBarcodeFilter" type="search" placeholder="Фильтр по штрихкоду" autocomplete="off" />
-              <input id="filmsCellFilter" type="search" placeholder="Фильтр по ячейке" autocomplete="off" />
-              <button class="secondary-btn btn-with-icon" id="applyFilmsFiltersBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-check"></use></svg></span><span>Применить</span></button>
-              <button class="glass-btn btn-with-icon" id="resetFilmsFiltersBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-reset"></use></svg></span><span>Сбросить</span></button>
-              <button class="secondary-btn btn-with-icon desktop-only" id="downloadFilmsTemplateBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-download"></use></svg></span><span>Скачать шаблон Excel</span></button>
-              <button class="secondary-btn btn-with-icon desktop-only" id="importFilmsExcelBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Загрузить Excel</span></button>
-            </div>
-            <input id="importFilmsFile" type="file" accept=".xlsx,.xls,.csv" hidden />
-          </section>
-
-          <section class="layout-grid">
-            <section class="panel panel-collapsible admin-only is-hidden" id="quickFilmIngestPanel">
-              <div class="section-head">
-                <h3>Быстрое занесение пленок</h3>
-                <p>Для поставки: выберите ячейку, сканируйте штрихкоды подряд и сохраните массово.</p>
+          <section class="films-page">
+            <header class="films-head-row">
+              <h2>Склад пленок</h2>
+              <div class="films-head-actions">
+                <button class="glass-btn btn-with-icon" id="filmsHeaderBulkBtn" type="button">
+                  <span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span><span>Массовое</span>
+                </button>
+                <button class="primary-btn btn-with-icon" id="filmsHeaderAddBtn" type="button">
+                  <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Добавить</span>
+                </button>
               </div>
+            </header>
+
+            <label class="films-search" for="filmsSearchInput">
+              <span class="films-search-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span>
+              <input id="filmsSearchInput" type="search" placeholder="Наименование, штрихкод или ячейка" autocomplete="off" />
+              <button class="is-hidden" id="filmsSearchBtn" type="button">Найти</button>
+            </label>
+
+            <div class="films-chip-row">
+              <button class="films-chip" id="applyFilmsFiltersBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-filter"></use></svg></span><span>Фильтры</span>
+              </button>
+              <button class="films-chip" id="downloadFilmsTemplateBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-download"></use></svg></span><span>Шаблон Excel</span>
+              </button>
+              <button class="films-chip" id="importFilmsExcelBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Загрузить Excel</span>
+              </button>
+              <button class="is-hidden" id="resetFilmsFiltersBtn" type="button">Сбросить</button>
+            </div>
+
+            <input id="filmsBarcodeFilter" type="search" class="is-hidden" placeholder="Фильтр по штрихкоду" autocomplete="off" />
+            <input id="filmsCellFilter" type="search" class="is-hidden" placeholder="Фильтр по ячейке" autocomplete="off" />
+            <input id="importFilmsFile" type="file" accept=".xlsx,.xls,.csv" hidden />
+
+            <div class="films-segmented">
+              <button class="films-seg-btn active" id="filmsGroupWithBtn" type="button">С ячейками</button>
+              <button class="films-seg-btn" id="filmsGroupWithoutBtn" type="button">Без ячеек</button>
+            </div>
+
+            <section class="films-cards-list" id="filmsCardsList"></section>
+            <div class="pager" id="filmsPager" hidden></div>
+
+            <section class="films-hidden-tools admin-only is-hidden" id="quickFilmIngestPanel">
               <form class="stock-form" id="quickFilmCellForm" novalidate>
                 <label>
                   Номер ячейки
@@ -537,11 +589,7 @@
               </form>
             </section>
 
-            <section class="panel panel-collapsible">
-              <div class="section-head">
-                <h3>Добавить пленку</h3>
-                <p>Одинаковый штрихкод может храниться в нескольких ячейках.</p>
-              </div>
+            <section class="films-hidden-tools is-hidden">
               <form class="stock-form" id="filmForm" novalidate>
                 <label>
                   Наименование товара
@@ -557,42 +605,14 @@
                 </label>
                 <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить пленку</span></button>
               </form>
+              <button class="secondary-btn full btn-with-icon" id="filmsStartScanBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span><span>Сканировать штрихкод</span></button>
             </section>
 
-            <section class="panel panel-collapsible">
-              <div class="section-head">
-                <h3>Работа сборщика</h3>
-                <p>Нажмите кнопку сканирования. В режиме «Склад пленок» сканер покажет ячейки товара.</p>
-              </div>
-              <div class="hero-actions">
-                <button class="secondary-btn full btn-with-icon" id="filmsStartScanBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span><span>Сканировать штрихкод</span></button>
-              </div>
-            </section>
-          </section>
-
-          <section class="panel panel-collapsible">
-            <div class="section-head">
-              <h3>Список пленок</h3>
-              <p>Группы: с ячейками и без ячеек. По умолчанию показываем только с ячейками.</p>
-            </div>
-            <div class="segmented segmented-two">
-              <button class="seg-btn active" id="filmsGroupWithBtn" type="button">С ячейками</button>
-              <button class="seg-btn" id="filmsGroupWithoutBtn" type="button">Без ячеек</button>
-            </div>
-            <div class="table-wrap">
+            <div class="table-wrap is-hidden">
               <table>
-                <thead>
-                  <tr>
-                    <th>Товар</th>
-                    <th>Штрихкод</th>
-                    <th>Ячейки</th>
-                    <th>Действия</th>
-                  </tr>
-                </thead>
                 <tbody id="filmsTableBody"></tbody>
               </table>
             </div>
-            <div class="pager" id="filmsPager" hidden></div>
           </section>
         </section>
 

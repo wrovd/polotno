@@ -130,6 +130,13 @@ const refs = {
   homeSummaryDeleted: document.getElementById("homeSummaryDeleted"),
   homeSummaryBoxes: document.getElementById("homeSummaryBoxes"),
   homeScanBtn: document.getElementById("homeScanBtn"),
+  desktopNavHomeBtn: document.getElementById("desktopNavHomeBtn"),
+  desktopNavInventoryBtn: document.getElementById("desktopNavInventoryBtn"),
+  desktopNavFilmsBtn: document.getElementById("desktopNavFilmsBtn"),
+  desktopNavBoxesBtn: document.getElementById("desktopNavBoxesBtn"),
+  desktopNavHistoryBtn: document.getElementById("desktopNavHistoryBtn"),
+  desktopNavStatsBtn: document.getElementById("desktopNavStatsBtn"),
+  desktopNavSettingsBtn: document.getElementById("desktopNavSettingsBtn"),
   homeBtn: document.getElementById("homeBtn"),
   inventoryTabsRow: document.getElementById("inventoryTabsRow"),
   mainTabBtn: document.getElementById("mainTabBtn"),
@@ -213,6 +220,8 @@ const refs = {
   importInventoryFile: document.getElementById("importInventoryFile"),
   filmsSearchInput: document.getElementById("filmsSearchInput"),
   filmsSearchBtn: document.getElementById("filmsSearchBtn"),
+  filmsHeaderBulkBtn: document.getElementById("filmsHeaderBulkBtn"),
+  filmsHeaderAddBtn: document.getElementById("filmsHeaderAddBtn"),
   filmsBarcodeFilter: document.getElementById("filmsBarcodeFilter"),
   filmsCellFilter: document.getElementById("filmsCellFilter"),
   applyFilmsFiltersBtn: document.getElementById("applyFilmsFiltersBtn"),
@@ -235,6 +244,7 @@ const refs = {
   quickFilmBatchList: document.getElementById("quickFilmBatchList"),
   quickFilmMissingNames: document.getElementById("quickFilmMissingNames"),
   filmsStartScanBtn: document.getElementById("filmsStartScanBtn"),
+  filmsCardsList: document.getElementById("filmsCardsList"),
   filmsTableBody: document.getElementById("filmsTableBody"),
   filmsPager: document.getElementById("filmsPager"),
   filmsGroupWithBtn: document.getElementById("filmsGroupWithBtn"),
@@ -594,6 +604,35 @@ function closeAccountMenu() {
   refs.accountMenu.hidden = true;
 }
 
+function updateDesktopSidebarActive() {
+  const map = {
+    home: refs.desktopNavHomeBtn,
+    inventory: refs.desktopNavInventoryBtn,
+    films: refs.desktopNavFilmsBtn,
+    boxes: refs.desktopNavBoxesBtn,
+    history: refs.desktopNavHistoryBtn,
+    stats: refs.desktopNavStatsBtn,
+    settings: refs.desktopNavSettingsBtn,
+  };
+  Object.values(map).forEach((btn) => btn?.classList.remove("is-active"));
+
+  if (state.moduleView === "home") {
+    map.home?.classList.add("is-active");
+    return;
+  }
+  if (state.moduleView === "settings") {
+    map.settings?.classList.add("is-active");
+    return;
+  }
+  if (state.moduleView !== "inventory") return;
+
+  if (state.inventoryTab === "films") map.films?.classList.add("is-active");
+  else if (state.inventoryTab === "box-search") map.boxes?.classList.add("is-active");
+  else if (state.inventoryTab === "history") map.history?.classList.add("is-active");
+  else if (state.inventoryTab === "stats") map.stats?.classList.add("is-active");
+  else map.inventory?.classList.add("is-active");
+}
+
 function openEditModal(item) {
   state.editingItemId = item.id;
   refs.editItemName.value = item.name || "";
@@ -650,6 +689,7 @@ function setModuleView(view) {
   }
   closeAccountMenu();
   updateMobileScanFab();
+  updateDesktopSidebarActive();
   hapticSelection();
 }
 
@@ -717,6 +757,7 @@ function setInventoryTab(tab) {
     loadFilmDeleteStats();
   }
   updateMobileScanFab();
+  updateDesktopSidebarActive();
   hapticSelection();
 }
 
@@ -1183,7 +1224,7 @@ function applyRoleAccess() {
     refs.adminPanel.classList.toggle("is-hidden", !canManageUsers);
   }
   if (refs.quickFilmIngestPanel) {
-    refs.quickFilmIngestPanel.classList.toggle("is-hidden", !canManageUsers);
+    if (!canManageUsers) refs.quickFilmIngestPanel.classList.add("is-hidden");
   }
 
   refs.stockManagePanel.classList.toggle("is-hidden", !canManageUsers);
@@ -1544,12 +1585,13 @@ function filteredFilms() {
 }
 
 function renderFilmsTable(list = filteredFilms()) {
-  if (!refs.filmsTableBody) return;
+  if (!refs.filmsCardsList && !refs.filmsTableBody) return;
   if (refs.filmsGroupWithBtn && refs.filmsGroupWithoutBtn) {
     refs.filmsGroupWithBtn.classList.toggle("active", state.filmsGroup === "with");
     refs.filmsGroupWithoutBtn.classList.toggle("active", state.filmsGroup === "without");
   }
-  refs.filmsTableBody.innerHTML = "";
+  if (refs.filmsCardsList) refs.filmsCardsList.innerHTML = "";
+  if (refs.filmsTableBody) refs.filmsTableBody.innerHTML = "";
 
   if (!list.length) {
     const emptyMessage = state.token
@@ -1557,7 +1599,8 @@ function renderFilmsTable(list = filteredFilms()) {
         ? "Пленок без ячеек нет."
         : "Пленки с ячейками не найдены."
       : "Для загрузки склада пленок выполните вход в систему.";
-    refs.filmsTableBody.innerHTML = `<tr><td colspan="4" class="muted">${emptyMessage}</td></tr>`;
+    if (refs.filmsCardsList) refs.filmsCardsList.innerHTML = `<p class="muted">${emptyMessage}</p>`;
+    if (refs.filmsTableBody) refs.filmsTableBody.innerHTML = `<tr><td colspan="4" class="muted">${emptyMessage}</td></tr>`;
     if (refs.filmsPager) {
       refs.filmsPager.hidden = true;
       refs.filmsPager.innerHTML = "";
@@ -1567,32 +1610,32 @@ function renderFilmsTable(list = filteredFilms()) {
 
   const page = paginateList(list, "films");
   for (const film of page.items) {
-    const row = document.createElement("tr");
-    const avatar = initialFromName(film.name);
-    row.innerHTML = `
-      <td data-label="Товар">
-        <div class="item-main">
-          <span class="item-avatar">${avatar}</span>
-          <div class="item-copy">
-            <strong>${film.name}</strong><br />
-            <span class="muted">Ячеек: ${film.cells.length} • Ед.: ${film.count}</span>
-          </div>
+    if (refs.filmsCardsList) {
+      const card = document.createElement("article");
+      card.className = "film-card";
+      card.innerHTML = `
+        <div class="film-card-avatar">${initialFromName(film.name)}</div>
+        <div class="film-card-main">
+          <p class="film-card-name">${film.name}</p>
+          <p class="film-card-meta">${film.barcode} • Ячеек: ${film.cells.length} • Ед.: ${film.count}</p>
+          <div class="film-card-cells">${
+            film.cells.length
+              ? film.cells.map((c) => `<span class="film-cell-chip">${c}</span>`).join("")
+              : '<span class="muted">Без ячейки</span>'
+          }</div>
         </div>
-      </td>
-      <td data-label="Штрихкод">${film.barcode}</td>
-      <td data-label="Ячейки">${
-        film.cells.length
-          ? film.cells.map((c) => `<span class="badge badge-ok">${c}</span>`).join(" ")
-          : '<span class="badge badge-low">Без ячейки</span>'
-      }</td>
-      <td data-label="Действия">
-        <div class="actions compact-actions">
-          <button title="Добавить такую же пленку" class="secondary-btn btn-with-icon action-btn" data-film-action="clone" data-film-barcode="${film.barcode}" type="button">${iconSpan("plus")}<span class="action-text">Добавить</span></button>
-          <button title="Удалить из ячейки" class="glass-btn btn-with-icon action-btn danger ${film.cells.length ? "" : "is-hidden"}" data-film-action="delete" data-film-barcode="${film.barcode}" type="button">${iconSpan("trash")}<span class="action-text">Удалить</span></button>
+        <div class="film-card-actions">
+          <button title="Добавить такую же пленку" class="film-action-btn" data-film-action="clone" data-film-barcode="${film.barcode}" type="button">${iconSpan("plus")}<span>Добавить</span></button>
+          <button title="Удалить из ячейки" class="film-action-btn is-danger ${film.cells.length ? "" : "is-hidden"}" data-film-action="delete" data-film-barcode="${film.barcode}" type="button">${iconSpan("trash")}<span>Удалить</span></button>
         </div>
-      </td>
-    `;
-    refs.filmsTableBody.appendChild(row);
+      `;
+      refs.filmsCardsList.appendChild(card);
+    }
+    if (refs.filmsTableBody) {
+      const row = document.createElement("tr");
+      row.innerHTML = `<td>${film.name}</td>`;
+      refs.filmsTableBody.appendChild(row);
+    }
   }
 
   renderPager(refs.filmsPager, "films", page, () => renderFilmsTable(list));
@@ -3907,6 +3950,35 @@ if (refs.homeNavSettingsBtn) refs.homeNavSettingsBtn.addEventListener("click", (
     hapticWarning();
   });
 });
+if (refs.desktopNavHomeBtn) refs.desktopNavHomeBtn.addEventListener("click", () => {
+  setModuleView("home");
+});
+if (refs.desktopNavInventoryBtn) refs.desktopNavInventoryBtn.addEventListener("click", () => {
+  setModuleView("inventory");
+  setInventoryTab("main");
+});
+if (refs.desktopNavFilmsBtn) refs.desktopNavFilmsBtn.addEventListener("click", () => {
+  setModuleView("inventory");
+  setInventoryTab("films");
+});
+if (refs.desktopNavBoxesBtn) refs.desktopNavBoxesBtn.addEventListener("click", () => {
+  setModuleView("inventory");
+  setInventoryTab("box-search");
+});
+if (refs.desktopNavHistoryBtn) refs.desktopNavHistoryBtn.addEventListener("click", () => {
+  setModuleView("inventory");
+  setInventoryTab("history");
+});
+if (refs.desktopNavStatsBtn) refs.desktopNavStatsBtn.addEventListener("click", () => {
+  setModuleView("inventory");
+  setInventoryTab("stats");
+});
+if (refs.desktopNavSettingsBtn) refs.desktopNavSettingsBtn.addEventListener("click", () => {
+  openSettingsView().catch((error) => {
+    showToast(error.message);
+    hapticWarning();
+  });
+});
 if (refs.homeScanBtn) refs.homeScanBtn.addEventListener("click", async () => {
   openScanModal();
   await startScanner();
@@ -4525,6 +4597,33 @@ if (refs.quickFilmNextCellBtn) refs.quickFilmNextCellBtn.addEventListener("click
 });
 
 if (refs.filmsSearchBtn) refs.filmsSearchBtn.addEventListener("click", handleFilmsSearch);
+if (refs.filmsHeaderAddBtn) refs.filmsHeaderAddBtn.addEventListener("click", () => {
+  if (!canAdmin()) {
+    showToast("Только для администратора");
+    hapticWarning();
+    return;
+  }
+  if (refs.filmAddName) refs.filmAddName.value = "";
+  if (refs.filmAddBarcode) refs.filmAddBarcode.value = "";
+  if (refs.filmAddCellNo) refs.filmAddCellNo.value = "";
+  openSimpleModal(refs.filmAddModal);
+  hapticSelection();
+});
+if (refs.filmsHeaderBulkBtn) refs.filmsHeaderBulkBtn.addEventListener("click", () => {
+  if (!canAdmin()) {
+    showToast("Только для администратора");
+    hapticWarning();
+    return;
+  }
+  if (refs.quickFilmIngestPanel) {
+    refs.quickFilmIngestPanel.classList.toggle("is-hidden");
+    if (!refs.quickFilmIngestPanel.classList.contains("is-hidden")) {
+      refs.quickFilmIngestPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+      refs.quickFilmCellNo?.focus();
+    }
+  }
+  hapticSelection();
+});
 if (refs.filmsSearchInput) refs.filmsSearchInput.addEventListener("keydown", (event) => {
   if (event.key !== "Enter") return;
   event.preventDefault();
@@ -4577,6 +4676,34 @@ if (refs.filmsStartScanBtn) refs.filmsStartScanBtn.addEventListener("click", asy
   state.scanContext = "films";
   openScanModal();
   await startScanner();
+});
+if (refs.filmsCardsList) refs.filmsCardsList.addEventListener("click", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const button = target.closest("button[data-film-action]");
+  if (!(button instanceof HTMLButtonElement)) return;
+  const action = String(button.getAttribute("data-film-action") || "");
+  const barcode = String(button.getAttribute("data-film-barcode") || "").trim();
+
+  try {
+    if (action === "clone") {
+      const films = state.films.filter((x) => String(x.barcode) === barcode);
+      if (!films.length) return;
+      state.scanFilmMatches = films;
+      openFilmAddModalFromScan();
+      return;
+    }
+    if (action === "delete") {
+      const films = state.films.filter((x) => String(x.barcode) === barcode);
+      if (!films.length) return;
+      state.scanFilmMatches = films;
+      openFilmDeleteModalFromScan();
+      hapticSelection();
+    }
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
 });
 if (refs.filmsTableBody) refs.filmsTableBody.addEventListener("click", async (event) => {
   const target = event.target;
