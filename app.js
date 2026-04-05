@@ -280,9 +280,13 @@ const refs = {
   searchInput: document.getElementById("searchInput"),
   iosSearchInput: document.getElementById("iosSearchInput"),
   iosFiltersChipBtn: document.getElementById("iosFiltersChipBtn"),
+  iosExportChipBtn: document.getElementById("iosExportChipBtn"),
+  iosImportChipBtn: document.getElementById("iosImportChipBtn"),
+  iosInventorySheetChipBtn: document.getElementById("iosInventorySheetChipBtn"),
   iosFilterParams: document.getElementById("iosFilterParams"),
   iosItemsPager: document.getElementById("iosItemsPager"),
   mainBackBtn: document.getElementById("mainBackBtn"),
+  mainHeaderAddBtn: document.getElementById("mainHeaderAddBtn"),
   mainScanBtn: document.getElementById("mainScanBtn"),
   consumablesList: document.getElementById("consumablesList"),
   legacyMainLayout: document.getElementById("legacyMainLayout"),
@@ -687,7 +691,7 @@ function setInventoryTab(tab) {
     refs.inventoryTabsRow.classList.toggle("context-tabs-films", isFilmsContext);
     refs.inventoryTabsRow.classList.toggle("context-tabs-boxes", isBoxesContext);
   }
-  if (refs.inventoryView) refs.inventoryView.classList.remove("is-main-ios-mode");
+  if (refs.inventoryView) refs.inventoryView.classList.toggle("is-main-ios-mode", isMain);
   if (refs.mainBottomMainBtn) refs.mainBottomMainBtn.classList.toggle("is-active", isMain);
   if (refs.mainBottomToolsBtn) refs.mainBottomToolsBtn.classList.toggle("is-active", isTools);
   if (refs.mainBottomHistoryBtn) refs.mainBottomHistoryBtn.classList.toggle("is-active", isHistory);
@@ -1397,20 +1401,32 @@ function renderTable(list = state.items) {
       }
     } else {
       for (const item of itemsForView) {
-        const low = Number(item.qty) <= Number(item.threshold);
+        const qty = Number(item.qty || 0);
+        const threshold = Number(item.threshold || 0);
+        const low = qty <= threshold;
+        const zero = qty <= 0;
+        const badgeText = zero ? "Нет" : low ? "Мало" : "";
         const card = document.createElement("article");
         card.className = "consumable-card";
         card.innerHTML = `
-          <span class="consumable-icon">${initialFromName(item.name)}</span>
-          <div class="consumable-info">
-            <p class="consumable-category">${item.group_name || "Без категории"}</p>
-            <p class="consumable-name">${item.name}</p>
-            <span class="consumable-badge ${low ? "is-low" : "is-ok"}">${low ? "Мало" : "В норме"}</span>
+          <div class="consumable-main-row">
+            <div class="consumable-info">
+              <div class="consumable-name-row">
+                <p class="consumable-name">${item.name}</p>
+                ${badgeText ? `<span class="consumable-badge ${zero ? "is-low" : "is-warn"}">${badgeText}</span>` : ""}
+              </div>
+              <p class="consumable-meta">${item.id} • ${item.group_name || "Без категории"}${threshold ? ` • Лимит: ${threshold}` : ""}</p>
+            </div>
+            <div class="consumable-stepper">
+              <button class="consumable-step-btn" data-action="consume" data-id="${item.id}" type="button">−</button>
+              <span class="consumable-qty ${low ? "is-low" : ""}">${qty}</span>
+              <button class="consumable-step-btn ${canAdmin() ? "" : "is-hidden"}" data-action="plus-one" data-id="${item.id}" type="button">+</button>
+            </div>
           </div>
-          <div class="consumable-stepper">
-            <button class="consumable-step-btn" data-action="consume" data-id="${item.id}" type="button">−</button>
-            <span class="consumable-qty ${low ? "is-low" : "is-ok"}">${item.qty}</span>
-            <button class="consumable-step-btn ${canAdmin() ? "" : "is-hidden"}" data-action="plus-one" data-id="${item.id}" type="button">+</button>
+          <div class="consumable-actions-row">
+            <button class="consumable-mini-btn ${canAdmin() ? "" : "is-hidden"}" data-action="edit" data-id="${item.id}" type="button">${iconSpan("edit")}<span>Изменить</span></button>
+            <button class="consumable-mini-btn ${canDesktopPrint() ? "" : "is-hidden"}" data-action="print" data-id="${item.id}" type="button">${iconSpan("print")}<span>QR</span></button>
+            <button class="consumable-mini-btn is-danger ${canAdmin() ? "" : "is-hidden"}" data-action="delete" data-id="${item.id}" type="button">${iconSpan("trash")}<span>Удалить</span></button>
           </div>
         `;
         refs.consumablesList.appendChild(card);
@@ -4279,6 +4295,12 @@ if (refs.iosSearchInput) refs.iosSearchInput.addEventListener("input", () => {
   refs.searchInput.value = refs.iosSearchInput.value;
   handleSearch();
 });
+if (refs.mainHeaderAddBtn) refs.mainHeaderAddBtn.addEventListener("click", () => {
+  if (refs.inventoryView) refs.inventoryView.classList.remove("is-main-ios-mode");
+  if (refs.legacyMainLayout) refs.legacyMainLayout.classList.remove("is-hidden");
+  refs.itemName?.focus();
+  hapticSelection();
+});
 if (refs.iosFiltersChipBtn) refs.iosFiltersChipBtn.addEventListener("click", () => {
   if (refs.legacyMainLayout) {
     refs.legacyMainLayout.classList.remove("is-hidden");
@@ -4286,6 +4308,9 @@ if (refs.iosFiltersChipBtn) refs.iosFiltersChipBtn.addEventListener("click", () 
   refs.mainGroupFilter?.focus();
   hapticSelection();
 });
+if (refs.iosExportChipBtn) refs.iosExportChipBtn.addEventListener("click", () => refs.exportInventoryBtn?.click());
+if (refs.iosImportChipBtn) refs.iosImportChipBtn.addEventListener("click", () => refs.importInventoryBtn?.click());
+if (refs.iosInventorySheetChipBtn) refs.iosInventorySheetChipBtn.addEventListener("click", () => refs.exportInventorySheetBtn?.click());
 if (refs.iosFilterParams) refs.iosFilterParams.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;

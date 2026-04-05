@@ -267,7 +267,7 @@
         <section class="panel role-hint is-hidden" id="roleHint"></section>
 
         <section id="mainTab" class="tab-panel active">
-          <section class="inventory-ios is-hidden" id="inventoryIosLayout">
+          <section class="inventory-ios" id="inventoryIosLayout">
             <header class="inventory-ios-head">
               <button class="ios-back-btn" id="mainBackBtn" type="button" aria-label="Назад">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
@@ -275,17 +275,32 @@
                 </svg>
               </button>
               <h2 class="inventory-ios-title">Учет расходников</h2>
+              <button class="primary-btn btn-with-icon inventory-ios-add-btn" id="mainHeaderAddBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Добавить</span>
+              </button>
             </header>
 
             <label class="home-search inventory-ios-search" aria-label="Поиск расходников">
               <span class="home-search-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span>
-              <input id="iosSearchInput" type="search" placeholder="Поиск" autocomplete="off" />
+              <input id="iosSearchInput" type="search" placeholder="Название, код, заметка..." autocomplete="off" />
             </label>
 
             <div class="inventory-chip-row">
               <button class="inventory-chip" id="iosFiltersChipBtn" type="button">
                 <span class="btn-icon" aria-hidden="true"><svg><use href="#i-filter"></use></svg></span>
                 <span>Фильтры</span>
+              </button>
+              <button class="inventory-chip" id="iosExportChipBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-download"></use></svg></span>
+                <span>Экспорт</span>
+              </button>
+              <button class="inventory-chip" id="iosImportChipBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span>
+                <span>Импорт</span>
+              </button>
+              <button class="inventory-chip" id="iosInventorySheetChipBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-print"></use></svg></span>
+                <span>Инвентаризация</span>
               </button>
               <div class="inventory-chip-row inventory-chip-params" id="iosFilterParams"></div>
             </div>
