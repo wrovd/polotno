@@ -104,6 +104,15 @@
         <path d="M3.5 10.2L12 4l8.5 6.2V20h-17z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
         <path d="M8 20v-6h8v6M9 9h.01M12 9h.01M15 9h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
       </symbol>
+      <symbol id="i-message" viewBox="0 0 24 24">
+        <path d="M5 6.5h14a2.5 2.5 0 0 1 2.5 2.5v6a2.5 2.5 0 0 1-2.5 2.5H10l-5 3v-3H5A2.5 2.5 0 0 1 2.5 15V9A2.5 2.5 0 0 1 5 6.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-layout-list" viewBox="0 0 24 24">
+        <rect x="4" y="5" width="4" height="4" rx="1" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <rect x="4" y="10" width="4" height="4" rx="1" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <rect x="4" y="15" width="4" height="4" rx="1" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <path d="M11 7h9M11 12h9M11 17h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+      </symbol>
     </svg>
 
     <div class="bg-shape bg-shape-top" aria-hidden="true"></div>
@@ -150,6 +159,12 @@
           <button class="desktop-sidebar-item" id="desktopNavBoxesBtn" type="button">
             <span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Коробки</span>
           </button>
+          <button class="desktop-sidebar-item" id="desktopNavChatBtn" type="button">
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-message"></use></svg></span><span>Чат</span>
+          </button>
+          <button class="desktop-sidebar-item" id="desktopNavTasksBtn" type="button">
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-layout-list"></use></svg></span><span>Задачи</span>
+          </button>
           <button class="desktop-sidebar-item" id="desktopNavHistoryBtn" type="button">
             <span class="btn-icon" aria-hidden="true"><svg><use href="#i-history"></use></svg></span><span>История</span>
           </button>
@@ -182,6 +197,12 @@
               <button class="home-dashboard-nav-item" id="homeNavBoxesBtn" type="button">
                 <span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Коробки</span>
               </button>
+              <button class="home-dashboard-nav-item" id="homeNavChatBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-message"></use></svg></span><span>Чат</span>
+              </button>
+              <button class="home-dashboard-nav-item" id="homeNavTasksBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-layout-list"></use></svg></span><span>Задачи</span>
+              </button>
               <button class="home-dashboard-nav-item" id="homeNavHistoryBtn" type="button">
                 <span class="btn-icon" aria-hidden="true"><svg><use href="#i-history"></use></svg></span><span>История</span>
               </button>
@@ -201,7 +222,7 @@
                 <p class="home-auth-email" id="homeAuthEmail">Гость</p>
               </div>
               <div class="home-dashboard-top-actions">
-                <button class="home-bell-btn" type="button" aria-label="Уведомления">
+                <button class="home-bell-btn" id="homeBellBtn" type="button" aria-label="Уведомления">
                   <span class="btn-icon" aria-hidden="true"><svg><use href="#i-bell"></use></svg></span>
                 </button>
                 <button class="home-profile-btn home-profile-chip" id="homeProfileBtn" type="button" aria-label="Профиль">
@@ -222,7 +243,7 @@
             <section class="home-process-wrap">
               <div class="home-process-headline">
                 <h3>Модули</h3>
-                <span class="home-process-counter" id="homeProcessCounter">6 модулей</span>
+                <span class="home-process-counter" id="homeProcessCounter">8 модулей</span>
               </div>
               <section class="home-process-grid" id="homeProcessGrid">
                 <button class="home-module-card" id="openInventoryTile" type="button" data-process-title="Учет расходников">
@@ -239,6 +260,16 @@
                   <span class="home-module-icon is-orange"><svg><use href="#i-search"></use></svg></span>
                   <strong>Поиск по коробкам</strong>
                   <small>Коробки, товары, сканер</small>
+                </button>
+                <button class="home-module-card" id="openChatHomeTile" type="button" data-process-title="Чат">
+                  <span class="home-module-icon is-blue"><svg><use href="#i-message"></use></svg></span>
+                  <strong>Чат</strong>
+                  <small>Сообщения и группы</small>
+                </button>
+                <button class="home-module-card" id="openTasksHomeTile" type="button" data-process-title="Задачи">
+                  <span class="home-module-icon is-indigo"><svg><use href="#i-layout-list"></use></svg></span>
+                  <strong>Задачи</strong>
+                  <small>Канбан-доска задач</small>
                 </button>
                 <button class="home-module-card" id="openHistoryHomeTile" type="button" data-process-title="История">
                   <span class="home-module-icon is-purple"><svg><use href="#i-history"></use></svg></span>
@@ -289,6 +320,8 @@
             <button class="seg-btn btn-with-icon active" id="mainTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span><span>Основное</span></button>
             <button class="seg-btn btn-with-icon" id="filmsTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-warehouse"></use></svg></span><span>Склад пленок</span></button>
             <button class="seg-btn btn-with-icon" id="boxSearchTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Поиск по коробкам</span></button>
+            <button class="seg-btn btn-with-icon" id="chatTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-message"></use></svg></span><span>Чат</span></button>
+            <button class="seg-btn btn-with-icon" id="tasksTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-layout-list"></use></svg></span><span>Задачи</span></button>
             <button class="seg-btn btn-with-icon" id="toolsTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-toolbox"></use></svg></span><span>Инструменты</span></button>
             <button class="seg-btn btn-with-icon" id="historyTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-history"></use></svg></span><span>История</span></button>
             <button class="seg-btn btn-with-icon" id="statsTabBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-chart"></use></svg></span><span>Статистика</span></button>
@@ -703,6 +736,79 @@
           </section>
         </section>
 
+        <section id="chatTab" class="tab-panel">
+          <section class="panel panel-collapsible">
+            <div class="section-head">
+              <h3>Чат</h3>
+              <p>Командные и личные сообщения внутри системы.</p>
+            </div>
+            <div class="search-row">
+              <input type="search" id="chatSearchInput" placeholder="Поиск по чатам и сообщениям..." autocomplete="off" />
+              <button class="primary-btn btn-with-icon" id="chatCreateBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Новый чат</span></button>
+            </div>
+            <div class="hero-actions">
+              <button class="secondary-btn btn-with-icon" id="chatCreateGroupBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-user"></use></svg></span><span>Создать группу</span></button>
+              <button class="glass-btn btn-with-icon" id="chatChannelsBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-message"></use></svg></span><span>Каналы</span></button>
+            </div>
+            <div class="chat-shell">
+              <div class="history-list chat-threads" id="chatList">
+                <p class="muted">Чаты загружаются...</p>
+              </div>
+              <section class="panel chat-thread-panel">
+                <div class="section-head compact">
+                  <h3 id="chatThreadTitle">Выберите чат</h3>
+                  <p id="chatThreadMeta">Откройте чат слева, чтобы начать переписку</p>
+                </div>
+                <div class="history-list chat-messages" id="chatMessages">
+                  <p class="muted">Сообщений пока нет.</p>
+                </div>
+                <form class="search-row chat-composer" id="chatMessageForm" novalidate>
+                  <input type="text" id="chatMessageInput" placeholder="Написать сообщение..." autocomplete="off" required />
+                  <button class="primary-btn btn-with-icon" id="chatSendBtn" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-message"></use></svg></span><span>Отправить</span></button>
+                </form>
+              </section>
+            </div>
+          </section>
+        </section>
+
+        <section id="tasksTab" class="tab-panel">
+          <section class="panel panel-collapsible">
+            <div class="section-head">
+              <h3>Задачи</h3>
+              <p>Канбан-задачи команды: бэклог, в работе, проверка, готово.</p>
+            </div>
+            <div class="search-row">
+              <input type="search" id="tasksSearchInput" placeholder="Поиск задач..." autocomplete="off" />
+              <button class="primary-btn btn-with-icon" id="taskCreateBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Новая задача</span></button>
+            </div>
+            <div class="hero-actions">
+              <button class="secondary-btn btn-with-icon" id="tasksBoardBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span><span>Доска</span></button>
+              <button class="glass-btn btn-with-icon" id="tasksListBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-layout-list"></use></svg></span><span>Список</span></button>
+            </div>
+            <div class="tasks-board" id="tasksBoard">
+              <section class="panel tasks-column">
+                <div class="section-head compact"><h3>К выполнению</h3></div>
+                <div class="history-list" id="tasksTodoList"><p class="muted">Пусто.</p></div>
+              </section>
+              <section class="panel tasks-column">
+                <div class="section-head compact"><h3>В работе</h3></div>
+                <div class="history-list" id="tasksInProgressList"><p class="muted">Пусто.</p></div>
+              </section>
+              <section class="panel tasks-column">
+                <div class="section-head compact"><h3>Проверка</h3></div>
+                <div class="history-list" id="tasksReviewList"><p class="muted">Пусто.</p></div>
+              </section>
+              <section class="panel tasks-column">
+                <div class="section-head compact"><h3>Готово</h3></div>
+                <div class="history-list" id="tasksDoneList"><p class="muted">Пусто.</p></div>
+              </section>
+            </div>
+            <div class="history-list is-hidden" id="tasksListContainer">
+              <p class="muted">Список задач загружается...</p>
+            </div>
+          </section>
+        </section>
+
         <section id="historyTab" class="tab-panel">
           <section class="panel panel-collapsible">
             <div class="section-head">
@@ -724,6 +830,12 @@
                 <option value="film_delete">Пленки: удаление</option>
                 <option value="box_create">Коробки: добавление</option>
                 <option value="box_delete">Коробки: удаление</option>
+                <option value="chat_create">Чат: создание</option>
+                <option value="chat_message">Чат: сообщение</option>
+                <option value="task_create">Задача: создание</option>
+                <option value="task_update">Задача: обновление</option>
+                <option value="task_delete">Задача: удаление</option>
+                <option value="task_comment">Задача: комментарий</option>
               </select>
               <input type="date" id="historyDateFrom" />
               <input type="date" id="historyDateTo" />

@@ -36,6 +36,11 @@ const state = {
   adminUsers: [],
   adminHistory: [],
   films: [],
+  chatThreads: [],
+  chatMessages: [],
+  chatActiveThreadId: "",
+  tasks: [],
+  taskViewMode: "board",
   boxCatalog: [],
   boxTrackingEntries: [],
   boxSearchResult: [],
@@ -109,16 +114,21 @@ const refs = {
   openInventoryTile: document.getElementById("openInventoryTile"),
   openFilmsTile: document.getElementById("openFilmsTile"),
   openProductsSearchTile: document.getElementById("openProductsSearchTile"),
+  openChatHomeTile: document.getElementById("openChatHomeTile"),
+  openTasksHomeTile: document.getElementById("openTasksHomeTile"),
   openHistoryHomeTile: document.getElementById("openHistoryHomeTile"),
   openStatsHomeTile: document.getElementById("openStatsHomeTile"),
   openSettingsHomeTile: document.getElementById("openSettingsHomeTile"),
   homeNavInventoryBtn: document.getElementById("homeNavInventoryBtn"),
   homeNavFilmsBtn: document.getElementById("homeNavFilmsBtn"),
   homeNavBoxesBtn: document.getElementById("homeNavBoxesBtn"),
+  homeNavChatBtn: document.getElementById("homeNavChatBtn"),
+  homeNavTasksBtn: document.getElementById("homeNavTasksBtn"),
   homeNavHistoryBtn: document.getElementById("homeNavHistoryBtn"),
   homeNavStatsBtn: document.getElementById("homeNavStatsBtn"),
   homeNavSettingsBtn: document.getElementById("homeNavSettingsBtn"),
   homeProfileBtn: document.getElementById("homeProfileBtn"),
+  homeBellBtn: document.getElementById("homeBellBtn"),
   homeAuthCaption: document.getElementById("homeAuthCaption"),
   homeAuthEmail: document.getElementById("homeAuthEmail"),
   homeProcessSearch: document.getElementById("homeProcessSearch"),
@@ -134,6 +144,8 @@ const refs = {
   desktopNavInventoryBtn: document.getElementById("desktopNavInventoryBtn"),
   desktopNavFilmsBtn: document.getElementById("desktopNavFilmsBtn"),
   desktopNavBoxesBtn: document.getElementById("desktopNavBoxesBtn"),
+  desktopNavChatBtn: document.getElementById("desktopNavChatBtn"),
+  desktopNavTasksBtn: document.getElementById("desktopNavTasksBtn"),
   desktopNavHistoryBtn: document.getElementById("desktopNavHistoryBtn"),
   desktopNavStatsBtn: document.getElementById("desktopNavStatsBtn"),
   desktopNavSettingsBtn: document.getElementById("desktopNavSettingsBtn"),
@@ -142,12 +154,16 @@ const refs = {
   mainTabBtn: document.getElementById("mainTabBtn"),
   filmsTabBtn: document.getElementById("filmsTabBtn"),
   boxSearchTabBtn: document.getElementById("boxSearchTabBtn"),
+  chatTabBtn: document.getElementById("chatTabBtn"),
+  tasksTabBtn: document.getElementById("tasksTabBtn"),
   toolsTabBtn: document.getElementById("toolsTabBtn"),
   historyTabBtn: document.getElementById("historyTabBtn"),
   statsTabBtn: document.getElementById("statsTabBtn"),
   mainTab: document.getElementById("mainTab"),
   filmsTab: document.getElementById("filmsTab"),
   boxSearchTab: document.getElementById("boxSearchTab"),
+  chatTab: document.getElementById("chatTab"),
+  tasksTab: document.getElementById("tasksTab"),
   toolsTab: document.getElementById("toolsTab"),
   historyTab: document.getElementById("historyTab"),
   statsTab: document.getElementById("statsTab"),
@@ -281,6 +297,27 @@ const refs = {
   closeBoxFoundBtn: document.getElementById("closeBoxFoundBtn"),
   boxFoundSummary: document.getElementById("boxFoundSummary"),
   boxFoundList: document.getElementById("boxFoundList"),
+  chatSearchInput: document.getElementById("chatSearchInput"),
+  chatCreateBtn: document.getElementById("chatCreateBtn"),
+  chatCreateGroupBtn: document.getElementById("chatCreateGroupBtn"),
+  chatChannelsBtn: document.getElementById("chatChannelsBtn"),
+  chatList: document.getElementById("chatList"),
+  chatMessages: document.getElementById("chatMessages"),
+  chatThreadTitle: document.getElementById("chatThreadTitle"),
+  chatThreadMeta: document.getElementById("chatThreadMeta"),
+  chatMessageForm: document.getElementById("chatMessageForm"),
+  chatMessageInput: document.getElementById("chatMessageInput"),
+  chatSendBtn: document.getElementById("chatSendBtn"),
+  tasksSearchInput: document.getElementById("tasksSearchInput"),
+  taskCreateBtn: document.getElementById("taskCreateBtn"),
+  tasksBoardBtn: document.getElementById("tasksBoardBtn"),
+  tasksListBtn: document.getElementById("tasksListBtn"),
+  tasksBoard: document.getElementById("tasksBoard"),
+  tasksListContainer: document.getElementById("tasksListContainer"),
+  tasksTodoList: document.getElementById("tasksTodoList"),
+  tasksInProgressList: document.getElementById("tasksInProgressList"),
+  tasksReviewList: document.getElementById("tasksReviewList"),
+  tasksDoneList: document.getElementById("tasksDoneList"),
   toToolsBtn: document.getElementById("toToolsBtn"),
   stockManagePanel: document.getElementById("stockManagePanel"),
   adjustPanel: document.getElementById("adjustPanel"),
@@ -610,6 +647,8 @@ function updateDesktopSidebarActive() {
     inventory: refs.desktopNavInventoryBtn,
     films: refs.desktopNavFilmsBtn,
     boxes: refs.desktopNavBoxesBtn,
+    chat: refs.desktopNavChatBtn,
+    tasks: refs.desktopNavTasksBtn,
     history: refs.desktopNavHistoryBtn,
     stats: refs.desktopNavStatsBtn,
     settings: refs.desktopNavSettingsBtn,
@@ -628,6 +667,8 @@ function updateDesktopSidebarActive() {
 
   if (state.inventoryTab === "films") map.films?.classList.add("is-active");
   else if (state.inventoryTab === "box-search") map.boxes?.classList.add("is-active");
+  else if (state.inventoryTab === "chat") map.chat?.classList.add("is-active");
+  else if (state.inventoryTab === "tasks") map.tasks?.classList.add("is-active");
   else if (state.inventoryTab === "history") map.history?.classList.add("is-active");
   else if (state.inventoryTab === "stats") map.stats?.classList.add("is-active");
   else map.inventory?.classList.add("is-active");
@@ -698,38 +739,52 @@ function setInventoryTab(tab) {
   const isMain = tab === "main";
   const isFilms = tab === "films";
   const isBoxSearch = tab === "box-search";
+  const isChat = tab === "chat";
+  const isTasks = tab === "tasks";
   const isTools = tab === "tools";
   const isHistory = tab === "history";
   const isStats = tab === "stats";
   if (isMain || isTools) state.inventoryContext = "consumables";
   if (isFilms || isStats) state.inventoryContext = "films";
   if (isBoxSearch) state.inventoryContext = "boxes";
+  if (isChat) state.inventoryContext = "chat";
+  if (isTasks) state.inventoryContext = "tasks";
   const isFilmsContext = state.inventoryContext === "films";
   const isBoxesContext = state.inventoryContext === "boxes";
+  const isChatContext = state.inventoryContext === "chat";
+  const isTasksContext = state.inventoryContext === "tasks";
 
   refs.mainTabBtn.classList.toggle("active", isMain);
   refs.filmsTabBtn.classList.toggle("active", isFilms);
   if (refs.boxSearchTabBtn) refs.boxSearchTabBtn.classList.toggle("active", isBoxSearch);
+  if (refs.chatTabBtn) refs.chatTabBtn.classList.toggle("active", isChat);
+  if (refs.tasksTabBtn) refs.tasksTabBtn.classList.toggle("active", isTasks);
   refs.toolsTabBtn.classList.toggle("active", isTools);
   refs.historyTabBtn.classList.toggle("active", isHistory);
   refs.statsTabBtn.classList.toggle("active", isStats);
   refs.mainTab.classList.toggle("active", isMain);
   refs.filmsTab.classList.toggle("active", isFilms);
   if (refs.boxSearchTab) refs.boxSearchTab.classList.toggle("active", isBoxSearch);
+  if (refs.chatTab) refs.chatTab.classList.toggle("active", isChat);
+  if (refs.tasksTab) refs.tasksTab.classList.toggle("active", isTasks);
   refs.toolsTab.classList.toggle("active", isTools);
   refs.historyTab.classList.toggle("active", isHistory);
   refs.statsTab.classList.toggle("active", isStats);
-  const hideConsumablesTabs = isFilmsContext || isBoxesContext;
+  const hideConsumablesTabs = isFilmsContext || isBoxesContext || isChatContext || isTasksContext;
   refs.mainTabBtn.classList.toggle("is-hidden", hideConsumablesTabs);
   refs.toolsTabBtn.classList.toggle("is-hidden", hideConsumablesTabs);
   refs.filmsTabBtn.classList.toggle("is-hidden", !isFilmsContext);
   refs.statsTabBtn.classList.toggle("is-hidden", !isFilmsContext);
   if (refs.boxSearchTabBtn) refs.boxSearchTabBtn.classList.toggle("is-hidden", !isBoxesContext);
+  if (refs.chatTabBtn) refs.chatTabBtn.classList.toggle("is-hidden", !isChatContext);
+  if (refs.tasksTabBtn) refs.tasksTabBtn.classList.toggle("is-hidden", !isTasksContext);
   if (refs.toToolsBtn) refs.toToolsBtn.classList.toggle("is-hidden", hideConsumablesTabs);
   if (refs.inventoryTabsRow) {
-    refs.inventoryTabsRow.classList.toggle("context-tabs-consumables", !isFilmsContext && !isBoxesContext);
+    refs.inventoryTabsRow.classList.toggle("context-tabs-consumables", !isFilmsContext && !isBoxesContext && !isChatContext && !isTasksContext);
     refs.inventoryTabsRow.classList.toggle("context-tabs-films", isFilmsContext);
     refs.inventoryTabsRow.classList.toggle("context-tabs-boxes", isBoxesContext);
+    refs.inventoryTabsRow.classList.toggle("context-tabs-chat", isChatContext);
+    refs.inventoryTabsRow.classList.toggle("context-tabs-tasks", isTasksContext);
   }
   if (refs.inventoryView) refs.inventoryView.classList.toggle("is-main-ios-mode", isMain);
   if (refs.mainBottomMainBtn) refs.mainBottomMainBtn.classList.toggle("is-active", isMain);
@@ -747,6 +802,19 @@ function setInventoryTab(tab) {
   if (isBoxSearch) {
     stopScanner();
     loadBoxSearchData();
+  }
+  if (isChat || isTasks) {
+    stopScanner();
+  }
+  if (isChat) {
+    loadChatData().catch((error) => {
+      showToast(error.message || "Не удалось загрузить чаты");
+    });
+  }
+  if (isTasks) {
+    loadTasks().catch((error) => {
+      showToast(error.message || "Не удалось загрузить задачи");
+    });
   }
   if (isHistory) {
     stopScanner();
@@ -773,7 +841,7 @@ function updateAuthButton() {
     refs.openAuthBtn.classList.remove("primary-btn");
     refs.openAuthBtn.classList.add("glass-btn");
     if (refs.homeAuthCaption) refs.homeAuthCaption.textContent = "Добро пожаловать";
-    if (refs.homeAuthEmail) refs.homeAuthEmail.textContent = state.user.email;
+    if (refs.homeAuthEmail) refs.homeAuthEmail.textContent = state.user.name || state.user.email;
     void updateHomeProfilePhoto().catch(() => setHomeProfileButtonPhoto(""));
     return;
   }
@@ -1071,6 +1139,8 @@ function performLogout() {
   loadHistory();
   loadFilms();
   loadBoxSearchData();
+  loadChatData();
+  loadTasks();
   showToast("Вы вышли из аккаунта");
   hapticSuccess();
 }
@@ -1665,6 +1735,376 @@ function renderAlerts(lowItems = null) {
   renderPager(refs.alertsPager, "alerts", page, () => renderAlerts(low));
 }
 
+function escapeText(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatShortDate(value) {
+  if (!value) return "";
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return String(value);
+  return dt.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit" });
+}
+
+function chatThreadById(threadId) {
+  return state.chatThreads.find((row) => String(row.id) === String(threadId)) || null;
+}
+
+function filteredChatThreads() {
+  const search = String(refs.chatSearchInput?.value || "").trim().toLowerCase();
+  if (!search) return state.chatThreads;
+  return state.chatThreads.filter((thread) => {
+    return (
+      String(thread.title || "").toLowerCase().includes(search) ||
+      String(thread.last_message_preview || "").toLowerCase().includes(search)
+    );
+  });
+}
+
+function renderChatThreads(list = filteredChatThreads()) {
+  if (!refs.chatList) return;
+  refs.chatList.innerHTML = "";
+  if (!list.length) {
+    refs.chatList.innerHTML = '<p class="muted">Чатов пока нет.</p>';
+    return;
+  }
+
+  list.forEach((thread) => {
+    const card = document.createElement("article");
+    const active = String(state.chatActiveThreadId) === String(thread.id);
+    card.className = `history-item chat-thread-item${active ? " is-active" : ""}`;
+    card.setAttribute("data-chat-open", String(thread.id));
+    const unread = Number(thread.unread_count || 0);
+    const preview = String(thread.last_message_preview || "").trim();
+    card.innerHTML = `
+      <div>
+        <strong>${escapeText(thread.title || "Без названия")}</strong>
+        ${unread > 0 ? `<span class="history-reason">${unread} новых</span>` : ""}
+      </div>
+      <div class="history-meta">${escapeText(preview || "Нет сообщений")}</div>
+      <div class="history-meta">${thread.last_message_at ? formatHistoryDate(thread.last_message_at) : ""}</div>
+    `;
+    refs.chatList.appendChild(card);
+  });
+}
+
+function renderChatMessages() {
+  if (!refs.chatMessages) return;
+  refs.chatMessages.innerHTML = "";
+  if (!state.chatActiveThreadId) {
+    refs.chatMessages.innerHTML = '<p class="muted">Откройте чат, чтобы увидеть сообщения.</p>';
+    return;
+  }
+  if (!state.chatMessages.length) {
+    refs.chatMessages.innerHTML = '<p class="muted">Сообщений пока нет.</p>';
+    return;
+  }
+
+  state.chatMessages.forEach((message) => {
+    const mine = String(message.author_email || "").toLowerCase() === String(state.user?.email || "").toLowerCase();
+    const row = document.createElement("article");
+    row.className = `history-item chat-message${mine ? " is-mine" : ""}`;
+    row.innerHTML = `
+      <div><strong>${escapeText(mine ? "Вы" : message.author_email || "Пользователь")}</strong></div>
+      <div class="history-meta">${escapeText(message.body || "")}</div>
+      <div class="history-meta">${formatHistoryDate(message.created_at)}</div>
+    `;
+    refs.chatMessages.appendChild(row);
+  });
+  refs.chatMessages.scrollTop = refs.chatMessages.scrollHeight;
+}
+
+async function openChatThread(threadId) {
+  if (!state.token) return;
+  const id = String(threadId || "").trim();
+  if (!id) return;
+  const data = await apiRequest(`/api/inventory/chat-messages?thread_id=${encodeURIComponent(id)}`);
+  state.chatActiveThreadId = id;
+  state.chatMessages = Array.isArray(data.messages) ? data.messages : [];
+  const thread = chatThreadById(id);
+  if (refs.chatThreadTitle) refs.chatThreadTitle.textContent = thread?.title || "Чат";
+  if (refs.chatThreadMeta) refs.chatThreadMeta.textContent = thread?.kind === "direct" ? "Личный чат" : "Групповой чат";
+  renderChatMessages();
+  state.chatThreads = state.chatThreads.map((row) =>
+    String(row.id) === id
+      ? { ...row, unread_count: 0 }
+      : row
+  );
+  renderChatThreads();
+}
+
+async function loadChatData() {
+  if (!state.token) {
+    state.chatThreads = [];
+    state.chatMessages = [];
+    state.chatActiveThreadId = "";
+    renderChatThreads([]);
+    renderChatMessages();
+    return;
+  }
+  const search = String(refs.chatSearchInput?.value || "").trim();
+  const data = await apiRequest(`/api/inventory/chat-list?search=${encodeURIComponent(search)}`);
+  state.chatThreads = Array.isArray(data.threads) ? data.threads : [];
+  renderChatThreads();
+  const activeStillExists = state.chatThreads.some((row) => String(row.id) === String(state.chatActiveThreadId));
+  if (activeStillExists) {
+    await openChatThread(state.chatActiveThreadId);
+    return;
+  }
+  const first = state.chatThreads[0];
+  if (first?.id) {
+    await openChatThread(first.id);
+    return;
+  }
+  state.chatMessages = [];
+  state.chatActiveThreadId = "";
+  if (refs.chatThreadTitle) refs.chatThreadTitle.textContent = "Выберите чат";
+  if (refs.chatThreadMeta) refs.chatThreadMeta.textContent = "Откройте чат слева, чтобы начать переписку";
+  renderChatMessages();
+}
+
+async function createChat(kind = "direct") {
+  if (!state.token) throw new Error("Требуется вход в систему");
+  const defaultTitle = kind === "group" ? "Новая группа" : "Новый чат";
+  const title = window.prompt("Название чата", defaultTitle);
+  if (!title || !String(title).trim()) return null;
+  const threadPayload = {
+    title: String(title).trim(),
+    kind: kind === "group" ? "group" : "direct",
+    memberEmails: [],
+  };
+  if (kind !== "group") {
+    const target = window.prompt("Email второго участника (опционально)", "");
+    if (target && String(target).trim()) {
+      threadPayload.memberEmails = [String(target).trim().toLowerCase()];
+    }
+  }
+  const result = await apiRequest("/api/inventory/chat-create", {
+    method: "POST",
+    body: threadPayload,
+  });
+  return result.thread || null;
+}
+
+async function sendActiveChatMessage() {
+  if (!state.token) throw new Error("Требуется вход в систему");
+  const threadId = String(state.chatActiveThreadId || "").trim();
+  if (!threadId) throw new Error("Выберите чат");
+  const text = String(refs.chatMessageInput?.value || "").trim();
+  if (!text) return;
+  await apiRequest("/api/inventory/chat-send", {
+    method: "POST",
+    body: { threadId, body: text },
+  });
+  if (refs.chatMessageInput) refs.chatMessageInput.value = "";
+  await openChatThread(threadId);
+  await loadChatData();
+}
+
+function priorityLabel(priority) {
+  if (priority === "urgent") return "Срочно";
+  if (priority === "high") return "Высокий";
+  if (priority === "low") return "Низкий";
+  return "Средний";
+}
+
+function statusLabel(status) {
+  if (status === "in_progress") return "В работе";
+  if (status === "review") return "Проверка";
+  if (status === "done") return "Готово";
+  return "К выполнению";
+}
+
+function statusNext(status) {
+  if (status === "todo") return "in_progress";
+  if (status === "in_progress") return "review";
+  if (status === "review") return "done";
+  return "done";
+}
+
+function statusPrev(status) {
+  if (status === "done") return "review";
+  if (status === "review") return "in_progress";
+  if (status === "in_progress") return "todo";
+  return "todo";
+}
+
+function filteredTasks() {
+  const search = String(refs.tasksSearchInput?.value || "").trim().toLowerCase();
+  if (!search) return state.tasks;
+  return state.tasks.filter((task) => {
+    return (
+      String(task.title || "").toLowerCase().includes(search) ||
+      String(task.description || "").toLowerCase().includes(search) ||
+      String(task.assignee_email || "").toLowerCase().includes(search)
+    );
+  });
+}
+
+function taskCardHtml(task, compact = false) {
+  const due = task.due_date ? ` • дедлайн ${formatShortDate(task.due_date)}` : "";
+  return `
+    <article class="history-item task-item${compact ? " compact" : ""}" data-task-id="${task.id}">
+      <div><strong>${escapeText(task.title || "Без названия")}</strong> <span class="history-reason">${priorityLabel(task.priority)}</span></div>
+      <div class="history-meta">${escapeText(task.assignee_email || "Исполнитель не назначен")}${due}</div>
+      ${task.description ? `<div class="history-meta">${escapeText(task.description)}</div>` : ""}
+      <div class="hero-actions">
+        <button class="glass-btn btn-with-icon" type="button" data-task-action="prev" data-task-id="${task.id}">${iconSpan("minus")}<span>Назад</span></button>
+        <button class="secondary-btn btn-with-icon" type="button" data-task-action="next" data-task-id="${task.id}">${iconSpan("plus")}<span>Вперёд</span></button>
+        <button class="glass-btn btn-with-icon" type="button" data-task-action="comment" data-task-id="${task.id}">${iconSpan("message")}<span>Комментарий</span></button>
+        <button class="glass-btn btn-with-icon" type="button" data-task-action="edit" data-task-id="${task.id}">${iconSpan("edit")}<span>Изменить</span></button>
+        <button class="glass-btn btn-with-icon danger" type="button" data-task-action="delete" data-task-id="${task.id}">${iconSpan("trash")}<span>Удалить</span></button>
+      </div>
+    </article>
+  `;
+}
+
+function renderTaskColumn(container, tasks = []) {
+  if (!container) return;
+  container.innerHTML = "";
+  if (!tasks.length) {
+    container.innerHTML = '<p class="muted">Пусто.</p>';
+    return;
+  }
+  tasks.forEach((task) => {
+    container.insertAdjacentHTML("beforeend", taskCardHtml(task, true));
+  });
+}
+
+function renderTasksBoard(list = filteredTasks()) {
+  const todo = list.filter((task) => task.status === "todo");
+  const inProgress = list.filter((task) => task.status === "in_progress");
+  const review = list.filter((task) => task.status === "review");
+  const done = list.filter((task) => task.status === "done");
+  renderTaskColumn(refs.tasksTodoList, todo);
+  renderTaskColumn(refs.tasksInProgressList, inProgress);
+  renderTaskColumn(refs.tasksReviewList, review);
+  renderTaskColumn(refs.tasksDoneList, done);
+}
+
+function renderTasksList(list = filteredTasks()) {
+  if (!refs.tasksListContainer) return;
+  refs.tasksListContainer.innerHTML = "";
+  if (!list.length) {
+    refs.tasksListContainer.innerHTML = '<p class="muted">Задачи не найдены.</p>';
+    return;
+  }
+  list.forEach((task) => {
+    refs.tasksListContainer.insertAdjacentHTML(
+      "beforeend",
+      `<div class="history-meta">${statusLabel(task.status)}</div>${taskCardHtml(task)}`
+    );
+  });
+}
+
+function renderTasks() {
+  const list = filteredTasks();
+  renderTasksBoard(list);
+  renderTasksList(list);
+  if (refs.tasksBoard) refs.tasksBoard.classList.toggle("is-hidden", state.taskViewMode !== "board");
+  if (refs.tasksListContainer) refs.tasksListContainer.classList.toggle("is-hidden", state.taskViewMode === "board");
+  if (refs.tasksBoardBtn) refs.tasksBoardBtn.classList.toggle("secondary-btn", state.taskViewMode === "board");
+  if (refs.tasksBoardBtn) refs.tasksBoardBtn.classList.toggle("glass-btn", state.taskViewMode !== "board");
+  if (refs.tasksListBtn) refs.tasksListBtn.classList.toggle("secondary-btn", state.taskViewMode !== "list");
+  if (refs.tasksListBtn) refs.tasksListBtn.classList.toggle("glass-btn", state.taskViewMode === "list");
+}
+
+async function loadTasks() {
+  if (!state.token) {
+    state.tasks = [];
+    renderTasks();
+    return;
+  }
+  const search = String(refs.tasksSearchInput?.value || "").trim();
+  const data = await apiRequest(`/api/inventory/tasks-list?search=${encodeURIComponent(search)}`);
+  state.tasks = Array.isArray(data.tasks) ? data.tasks : [];
+  renderTasks();
+}
+
+async function createTaskFromPrompt() {
+  const title = window.prompt("Название задачи", "");
+  if (!title || !String(title).trim()) return;
+  const assignee = window.prompt("Email исполнителя (опционально)", String(state.user?.email || ""));
+  const dueDate = window.prompt("Дедлайн (YYYY-MM-DD, опционально)", "");
+  const priority = (window.prompt("Приоритет: low / medium / high / urgent", "medium") || "medium").trim().toLowerCase();
+  await apiRequest("/api/inventory/tasks-create", {
+    method: "POST",
+    body: {
+      title: String(title).trim(),
+      assigneeEmail: String(assignee || "").trim().toLowerCase(),
+      dueDate: String(dueDate || "").trim(),
+      priority,
+      status: "todo",
+    },
+  });
+  await loadTasks();
+  await loadHistory();
+}
+
+async function editTaskFromPrompt(taskId) {
+  const task = state.tasks.find((x) => String(x.id) === String(taskId));
+  if (!task) return;
+  const title = window.prompt("Название задачи", task.title || "");
+  if (!title || !String(title).trim()) return;
+  const description = window.prompt("Описание", task.description || "") || "";
+  const assignee = window.prompt("Email исполнителя", task.assignee_email || "") || "";
+  const dueDate = window.prompt("Дедлайн YYYY-MM-DD", task.due_date || "") || "";
+  const priority = (window.prompt("Приоритет: low / medium / high / urgent", task.priority || "medium") || task.priority || "medium").trim().toLowerCase();
+  await apiRequest("/api/inventory/tasks-update", {
+    method: "POST",
+    body: {
+      id: task.id,
+      title: String(title).trim(),
+      description,
+      assigneeEmail: String(assignee).trim().toLowerCase(),
+      dueDate: String(dueDate).trim(),
+      priority,
+      status: task.status,
+    },
+  });
+  await loadTasks();
+  await loadHistory();
+}
+
+async function updateTaskStatus(taskId, nextStatus) {
+  const task = state.tasks.find((x) => String(x.id) === String(taskId));
+  if (!task) return;
+  await apiRequest("/api/inventory/tasks-update", {
+    method: "POST",
+    body: {
+      id: task.id,
+      status: nextStatus,
+    },
+  });
+  await loadTasks();
+  await loadHistory();
+}
+
+async function deleteTaskById(taskId) {
+  await apiRequest("/api/inventory/tasks-delete", {
+    method: "POST",
+    body: { id: taskId },
+  });
+  await loadTasks();
+  await loadHistory();
+}
+
+async function addTaskCommentFromPrompt(taskId) {
+  const body = window.prompt("Комментарий к задаче", "");
+  if (!body || !String(body).trim()) return;
+  await apiRequest("/api/inventory/task-comment", {
+    method: "POST",
+    body: { taskId, body: String(body).trim() },
+  });
+  await loadTasks();
+  await loadHistory();
+}
+
 function formatHistoryDate(value) {
   if (!value) return "дата неизвестна";
   const dt = new Date(value);
@@ -1696,6 +2136,12 @@ function reasonLabel(reason) {
   if (reason === "film_delete") return "Пленки: удаление";
   if (reason === "box_create") return "Коробки: добавление";
   if (reason === "box_delete") return "Коробки: удаление";
+  if (reason === "chat_create") return "Чат: создание";
+  if (reason === "chat_message") return "Чат: сообщение";
+  if (reason === "task_create") return "Задача: создание";
+  if (reason === "task_update") return "Задача: обновление";
+  if (reason === "task_delete") return "Задача: удаление";
+  if (reason === "task_comment") return "Задача: комментарий";
   return reason || "Изменение";
 }
 
@@ -3534,6 +3980,9 @@ async function pollQrLoginStatus() {
         await loadItems();
         await loadHistory();
         await loadFilms();
+        await loadBoxSearchData();
+        await loadChatData();
+        await loadTasks();
       },
       { message: "Загружаем данные аккаунта..." }
     );
@@ -3922,6 +4371,26 @@ if (refs.homeNavBoxesBtn) refs.homeNavBoxesBtn.addEventListener("click", () => {
   setInventoryTab("box-search");
   setTimeout(() => refs.boxSearchInput?.focus(), 120);
 });
+if (refs.openChatHomeTile) refs.openChatHomeTile.addEventListener("click", () => {
+  setModuleView("inventory");
+  setInventoryTab("chat");
+  setTimeout(() => refs.chatSearchInput?.focus(), 120);
+});
+if (refs.homeNavChatBtn) refs.homeNavChatBtn.addEventListener("click", () => {
+  setModuleView("inventory");
+  setInventoryTab("chat");
+  setTimeout(() => refs.chatSearchInput?.focus(), 120);
+});
+if (refs.openTasksHomeTile) refs.openTasksHomeTile.addEventListener("click", () => {
+  setModuleView("inventory");
+  setInventoryTab("tasks");
+  setTimeout(() => refs.tasksSearchInput?.focus(), 120);
+});
+if (refs.homeNavTasksBtn) refs.homeNavTasksBtn.addEventListener("click", () => {
+  setModuleView("inventory");
+  setInventoryTab("tasks");
+  setTimeout(() => refs.tasksSearchInput?.focus(), 120);
+});
 if (refs.openHistoryHomeTile) refs.openHistoryHomeTile.addEventListener("click", () => {
   setModuleView("inventory");
   setInventoryTab("history");
@@ -3939,6 +4408,12 @@ if (refs.homeNavStatsBtn) refs.homeNavStatsBtn.addEventListener("click", () => {
   setInventoryTab("stats");
 });
 if (refs.openSettingsHomeTile) refs.openSettingsHomeTile.addEventListener("click", () => {
+  openSettingsView().catch((error) => {
+    showToast(error.message);
+    hapticWarning();
+  });
+});
+if (refs.homeBellBtn) refs.homeBellBtn.addEventListener("click", () => {
   openSettingsView().catch((error) => {
     showToast(error.message);
     hapticWarning();
@@ -3965,6 +4440,14 @@ if (refs.desktopNavBoxesBtn) refs.desktopNavBoxesBtn.addEventListener("click", (
   setModuleView("inventory");
   setInventoryTab("box-search");
 });
+if (refs.desktopNavChatBtn) refs.desktopNavChatBtn.addEventListener("click", () => {
+  setModuleView("inventory");
+  setInventoryTab("chat");
+});
+if (refs.desktopNavTasksBtn) refs.desktopNavTasksBtn.addEventListener("click", () => {
+  setModuleView("inventory");
+  setInventoryTab("tasks");
+});
 if (refs.desktopNavHistoryBtn) refs.desktopNavHistoryBtn.addEventListener("click", () => {
   setModuleView("inventory");
   setInventoryTab("history");
@@ -3988,6 +4471,8 @@ refs.homeBtn.addEventListener("click", () => setModuleView("home"));
 refs.mainTabBtn.addEventListener("click", () => setInventoryTab("main"));
 if (refs.filmsTabBtn) refs.filmsTabBtn.addEventListener("click", () => setInventoryTab("films"));
 if (refs.boxSearchTabBtn) refs.boxSearchTabBtn.addEventListener("click", () => setInventoryTab("box-search"));
+if (refs.chatTabBtn) refs.chatTabBtn.addEventListener("click", () => setInventoryTab("chat"));
+if (refs.tasksTabBtn) refs.tasksTabBtn.addEventListener("click", () => setInventoryTab("tasks"));
 refs.toolsTabBtn.addEventListener("click", () => setInventoryTab("tools"));
 refs.historyTabBtn.addEventListener("click", () => setInventoryTab("history"));
 if (refs.statsTabBtn) refs.statsTabBtn.addEventListener("click", () => setInventoryTab("stats"));
@@ -4733,6 +5218,169 @@ if (refs.filmsTableBody) refs.filmsTableBody.addEventListener("click", async (ev
     hapticWarning();
   }
 });
+if (refs.chatSearchInput) refs.chatSearchInput.addEventListener("input", () => {
+  renderChatThreads();
+});
+if (refs.chatList) refs.chatList.addEventListener("click", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const chatItem = target.closest("[data-chat-open]");
+  if (!(chatItem instanceof HTMLElement)) return;
+  const threadId = String(chatItem.getAttribute("data-chat-open") || "").trim();
+  if (!threadId) return;
+  try {
+    await runDbAction(() => openChatThread(threadId), { message: "Открываем чат..." });
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.chatMessageForm) refs.chatMessageForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!refs.chatMessageForm.reportValidity()) return;
+  const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : refs.chatSendBtn;
+  try {
+    await runDbAction(() => sendActiveChatMessage(), {
+      button: submitBtn,
+      message: "Отправляем сообщение...",
+    });
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.chatCreateBtn) refs.chatCreateBtn.addEventListener("click", async () => {
+  try {
+    const thread = await runDbAction(() => createChat("direct"), {
+      button: refs.chatCreateBtn,
+      message: "Создаем чат...",
+    });
+    if (thread?.id) {
+      await loadChatData();
+      await openChatThread(thread.id);
+      showToast("Чат создан");
+      hapticSuccess();
+    }
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.chatCreateGroupBtn) refs.chatCreateGroupBtn.addEventListener("click", async () => {
+  try {
+    const thread = await runDbAction(() => createChat("group"), {
+      button: refs.chatCreateGroupBtn,
+      message: "Создаем группу...",
+    });
+    if (thread?.id) {
+      await loadChatData();
+      await openChatThread(thread.id);
+      showToast("Группа создана");
+      hapticSuccess();
+    }
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.chatChannelsBtn) refs.chatChannelsBtn.addEventListener("click", async () => {
+  try {
+    const thread = await runDbAction(() => createChat("channel"), {
+      button: refs.chatChannelsBtn,
+      message: "Создаем канал...",
+    });
+    if (thread?.id) {
+      await loadChatData();
+      await openChatThread(thread.id);
+      showToast("Канал создан");
+      hapticSuccess();
+    }
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.taskCreateBtn) refs.taskCreateBtn.addEventListener("click", async () => {
+  try {
+    await runDbAction(() => createTaskFromPrompt(), {
+      button: refs.taskCreateBtn,
+      message: "Создаем задачу...",
+    });
+    showToast("Задача сохранена");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.tasksSearchInput) refs.tasksSearchInput.addEventListener("input", () => {
+  renderTasks();
+});
+if (refs.tasksBoardBtn) refs.tasksBoardBtn.addEventListener("click", () => {
+  state.taskViewMode = "board";
+  renderTasks();
+  hapticSelection();
+});
+if (refs.tasksListBtn) refs.tasksListBtn.addEventListener("click", () => {
+  state.taskViewMode = "list";
+  renderTasks();
+  hapticSelection();
+});
+
+async function onTaskAction(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const btn = target.closest("button[data-task-action][data-task-id]");
+  if (!(btn instanceof HTMLButtonElement)) return;
+  const action = String(btn.getAttribute("data-task-action") || "").trim();
+  const taskId = String(btn.getAttribute("data-task-id") || "").trim();
+  if (!action || !taskId) return;
+
+  if (action === "edit") {
+    await runDbAction(() => editTaskFromPrompt(taskId), { button: btn, message: "Сохраняем задачу..." });
+    return;
+  }
+  if (action === "comment") {
+    await runDbAction(() => addTaskCommentFromPrompt(taskId), { button: btn, message: "Добавляем комментарий..." });
+    return;
+  }
+  if (action === "delete") {
+    const ok = window.confirm("Удалить задачу?");
+    if (!ok) return;
+    await runDbAction(() => deleteTaskById(taskId), { button: btn, message: "Удаляем задачу..." });
+    return;
+  }
+
+  const task = state.tasks.find((row) => String(row.id) === taskId);
+  if (!task) return;
+  if (action === "next") {
+    await runDbAction(() => updateTaskStatus(taskId, statusNext(task.status)), {
+      button: btn,
+      message: "Перемещаем задачу...",
+    });
+    return;
+  }
+  if (action === "prev") {
+    await runDbAction(() => updateTaskStatus(taskId, statusPrev(task.status)), {
+      button: btn,
+      message: "Перемещаем задачу...",
+    });
+  }
+}
+
+if (refs.tasksBoard) refs.tasksBoard.addEventListener("click", (event) => {
+  onTaskAction(event).catch((error) => {
+    showToast(error.message);
+    hapticWarning();
+  });
+});
+if (refs.tasksListContainer) refs.tasksListContainer.addEventListener("click", (event) => {
+  onTaskAction(event).catch((error) => {
+    showToast(error.message);
+    hapticWarning();
+  });
+});
 
 if (refs.boxSearchBtn) refs.boxSearchBtn.addEventListener("click", () => {
   searchBoxesByInput().catch((error) => {
@@ -5262,6 +5910,8 @@ loadItems();
 loadHistory();
 loadFilms();
 loadBoxSearchData();
+loadChatData();
+loadTasks();
 initTelegram();
 updateMobileScanFab();
 

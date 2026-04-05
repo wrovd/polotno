@@ -1,4 +1,24 @@
-const { listItems, upsertItem, appendMovement, listUsers, deleteItemById, listGroups, createGroup, listMovements } = require("../lib/sheets");
+const {
+  listItems,
+  upsertItem,
+  appendMovement,
+  listUsers,
+  deleteItemById,
+  listGroups,
+  createGroup,
+  listMovements,
+  createChatThread,
+  listChatThreadsForUser,
+  listChatMessages,
+  sendChatMessage,
+  markChatThreadRead,
+  listTaskBoard,
+  createTask,
+  updateTaskById,
+  archiveTaskById,
+  listTaskComments,
+  addTaskComment,
+} = require("../lib/sheets");
 const { requireAuth, requireRole } = require("../lib/auth");
 const { send, methodNotAllowed, parseJsonBody } = require("../lib/http");
 const { lowStockTransition, notifyLowStockToUsers } = require("../lib/low-stock");
@@ -321,6 +341,200 @@ async function handleAdjust(req, res) {
   }
 }
 
+async function handleChat(req, res) {
+  const auth = requireAuth(req);
+  if (!auth.ok) return send(res, 401, { error: auth.error });
+  const action = actionFromReq(req);
+
+  try {
+    if (req.method === "GET" && action === "chat-list") {
+      const search = String(req.query.search || "");
+      const list = await listChatThreadsForUser(auth.user.email, {
+        search,
+        limit: Number(req.query.limit || 120),
+      });
+      return send(res, 200, { threads: list });
+    }
+
+    if (req.method === "GET" && action === "chat-messages") {
+      const threadId = String(req.query.thread_id || req.query.threadId || "");
+      if (!threadId) return send(res, 400, { error: "thread_id is required" });
+      const messages = await listChatMessages(threadId, auth.user.email, {
+        limit: Number(req.query.limit || 250),
+      });
+      await markChatThreadRead(threadId, auth.user.email);
+      return send(res, 200, { messages });
+    }
+
+    if (req.method === "POST" && action === "chat-create") {
+      const body = parseJsonBody(req);
+      const title = String(body.title || "").trim();
+      const kind = String(body.kind || "group").trim().toLowerCase();
+      const members = Array.isArray(body.memberEmails) ? body.memberEmails : [];
+      if (!title) return send(res, 400, { error: "title is required" });
+      const thread = await createChatThread({
+        title,
+        kind,
+        createdBy: auth.user.email,
+        memberEmails: members,
+      });
+      await appendMovement({
+        item_id: `CHAT:${thread.id}`,
+        delta: 0,
+        reason: "chat_create",
+        user_email: auth.user.email,
+        created_at: new Date().toISOString(),
+      });
+      return send(res, 200, { ok: true, thread });
+    }
+
+    if (req.method === "POST" && action === "chat-send") {
+      const body = parseJsonBody(req);
+      const threadId = String(body.threadId || body.thread_id || "").trim();
+      const text = String(body.body || body.text || "").trim();
+      if (!threadId) return send(res, 400, { error: "threadId is required" });
+      if (!text) return send(res, 400, { error: "Message is required" });
+      const message = await sendChatMessage({
+        threadId,
+        authorEmail: auth.user.email,
+        body: text,
+      });
+      await markChatThreadRead(threadId, auth.user.email);
+      await appendMovement({
+        item_id: `CHAT:${threadId}`,
+        delta: 0,
+        reason: "chat_message",
+        user_email: auth.user.email,
+        created_at: new Date().toISOString(),
+      });
+      return send(res, 200, { ok: true, message });
+    }
+
+    if (req.method === "POST" && action === "chat-read") {
+      const body = parseJsonBody(req);
+      const threadId = String(body.threadId || body.thread_id || "").trim();
+      if (!threadId) return send(res, 400, { error: "threadId is required" });
+      await markChatThreadRead(threadId, auth.user.email);
+      return send(res, 200, { ok: true });
+    }
+  } catch (error) {
+    return send(res, 500, { error: error.message || "Chat action failed" });
+  }
+
+  return send(res, 404, { error: "Unknown chat action" });
+}
+
+async function handleTasks(req, res) {
+  const auth = requireAuth(req);
+  if (!auth.ok) return send(res, 401, { error: auth.error });
+  const action = actionFromReq(req);
+
+  try {
+    if (req.method === "GET" && action === "tasks-list") {
+      const tasks = await listTaskBoard({
+        search: String(req.query.search || ""),
+        status: String(req.query.status || ""),
+        limit: Number(req.query.limit || 500),
+      });
+      return send(res, 200, { tasks });
+    }
+
+    if (req.method === "GET" && action === "task-comments") {
+      const taskId = String(req.query.task_id || req.query.taskId || "").trim();
+      if (!taskId) return send(res, 400, { error: "task_id is required" });
+      const comments = await listTaskComments(taskId, { limit: Number(req.query.limit || 300) });
+      return send(res, 200, { comments });
+    }
+
+    if (req.method === "POST" && action === "tasks-create") {
+      const body = parseJsonBody(req);
+      const title = String(body.title || "").trim();
+      if (!title) return send(res, 400, { error: "title is required" });
+      const task = await createTask({
+        title,
+        description: body.description || "",
+        status: body.status || "todo",
+        priority: body.priority || "medium",
+        assignee_email: body.assigneeEmail || body.assignee_email || "",
+        due_date: body.dueDate || body.due_date || "",
+        created_by: auth.user.email,
+      });
+      await appendMovement({
+        item_id: `TASK:${task.id}`,
+        delta: 0,
+        reason: "task_create",
+        user_email: auth.user.email,
+        created_at: new Date().toISOString(),
+      });
+      return send(res, 200, { ok: true, task });
+    }
+
+    if (req.method === "POST" && action === "tasks-update") {
+      const body = parseJsonBody(req);
+      const taskId = String(body.id || body.taskId || body.task_id || "").trim();
+      if (!taskId) return send(res, 400, { error: "Task id is required" });
+      const task = await updateTaskById(taskId, {
+        title: body.title,
+        description: body.description,
+        status: body.status,
+        priority: body.priority,
+        assignee_email: body.assigneeEmail ?? body.assignee_email,
+        due_date: body.dueDate ?? body.due_date,
+      });
+      if (!task) return send(res, 404, { error: "Task not found" });
+      await appendMovement({
+        item_id: `TASK:${taskId}`,
+        delta: 0,
+        reason: "task_update",
+        user_email: auth.user.email,
+        created_at: new Date().toISOString(),
+      });
+      return send(res, 200, { ok: true, task });
+    }
+
+    if (req.method === "POST" && action === "tasks-delete") {
+      const body = parseJsonBody(req);
+      const taskId = String(body.id || body.taskId || body.task_id || "").trim();
+      if (!taskId) return send(res, 400, { error: "Task id is required" });
+      const removed = await archiveTaskById(taskId);
+      if (!removed) return send(res, 404, { error: "Task not found" });
+      await appendMovement({
+        item_id: `TASK:${taskId}`,
+        delta: 0,
+        reason: "task_delete",
+        user_email: auth.user.email,
+        created_at: new Date().toISOString(),
+      });
+      return send(res, 200, { ok: true });
+    }
+
+    if (req.method === "POST" && action === "task-comment") {
+      const body = parseJsonBody(req);
+      const taskId = String(body.taskId || body.task_id || "").trim();
+      const commentBody = String(body.body || "").trim();
+      if (!taskId) return send(res, 400, { error: "taskId is required" });
+      if (!commentBody) return send(res, 400, { error: "Comment is required" });
+      const comment = await addTaskComment({
+        taskId,
+        authorEmail: auth.user.email,
+        body: commentBody,
+      });
+      await appendMovement({
+        item_id: `TASK:${taskId}`,
+        delta: 0,
+        reason: "task_comment",
+        user_email: auth.user.email,
+        created_at: new Date().toISOString(),
+      });
+      return send(res, 200, { ok: true, comment });
+    }
+  } catch (error) {
+    return send(res, 500, { error: error.message || "Tasks action failed" });
+  }
+
+  return send(res, 404, { error: "Unknown tasks action" });
+}
+
 module.exports = async function handler(req, res) {
   const action = actionFromReq(req);
   if (!action || action === "list") return handleList(req, res);
@@ -330,6 +544,7 @@ module.exports = async function handler(req, res) {
   if (action === "delete") return handleDelete(req, res);
   if (action === "consume") return handleConsume(req, res);
   if (action === "adjust") return handleAdjust(req, res);
+  if (action.startsWith("chat-")) return handleChat(req, res);
+  if (action.startsWith("task")) return handleTasks(req, res);
   return send(res, 404, { error: "Unknown inventory action" });
 };
-
