@@ -1589,7 +1589,7 @@ function renderTable(list = state.items) {
             <div class="consumable-stepper">
               <button class="consumable-step-btn" data-action="consume" data-id="${item.id}" type="button">−</button>
               <span class="consumable-qty ${low ? "is-low" : ""}">${qty}</span>
-              <button class="consumable-step-btn ${canAdmin() ? "" : "is-hidden"}" data-action="plus-one" data-id="${item.id}" type="button">+</button>
+              <button class="consumable-step-btn is-plus ${canAdmin() ? "" : "is-hidden"}" data-action="plus-one" data-id="${item.id}" type="button">+</button>
             </div>
           </div>
           <div class="consumable-actions-row">
