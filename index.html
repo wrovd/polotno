@@ -104,6 +104,13 @@
         <path d="M12 8.5A3.5 3.5 0 1 0 12 15.5A3.5 3.5 0 1 0 12 8.5Z" fill="none" stroke="currentColor" stroke-width="1.8" />
         <path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a1.2 1.2 0 0 1 0 1.7l-1.6 1.6a1.2 1.2 0 0 1-1.7 0l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a1.2 1.2 0 0 1-1.2 1.2h-2.2A1.2 1.2 0 0 1 10 20v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a1.2 1.2 0 0 1-1.7 0l-1.6-1.6a1.2 1.2 0 0 1 0-1.7l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a1.2 1.2 0 0 1-1.2-1.2v-2.2A1.2 1.2 0 0 1 4 9.8h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a1.2 1.2 0 0 1 0-1.7l1.6-1.6a1.2 1.2 0 0 1 1.7 0l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a1.2 1.2 0 0 1 1.2-1.2h2.2A1.2 1.2 0 0 1 14.4 4v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a1.2 1.2 0 0 1 1.7 0l1.6 1.6a1.2 1.2 0 0 1 0 1.7l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6h.2A1.2 1.2 0 0 1 21.2 11v2.2A1.2 1.2 0 0 1 20 14.4h-.2a1 1 0 0 0-.9.6z" fill="none" stroke="currentColor" stroke-width="1.2" />
       </symbol>
+      <symbol id="i-cube" viewBox="0 0 24 24">
+        <path d="M12 3l8 4.5-8 4.5-8-4.5 8-4.5zM4 7.5V16.5L12 21M20 7.5V16.5L12 21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-clock2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.7" />
+        <path d="M12 7.8v4.7l3 1.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
       <symbol id="i-warehouse" viewBox="0 0 24 24">
         <path d="M3.5 10.2L12 4l8.5 6.2V20h-17z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
         <path d="M8 20v-6h8v6M9 9h.01M12 9h.01M15 9h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
@@ -147,18 +154,21 @@
 
       <aside class="desktop-sidebar" id="desktopSidebar" aria-label="Основная навигация">
         <div class="desktop-sidebar-brand">
-          <h2>Polotno</h2>
-          <p>Система управления складом</p>
+          <div class="desktop-brand-top">
+            <span class="desktop-brand-mark">P</span>
+            <h2>Polotno</h2>
+          </div>
+          <p>Управление складом</p>
         </div>
         <nav class="desktop-sidebar-nav">
           <button class="desktop-sidebar-item is-active" id="desktopNavHomeBtn" type="button">
             <span class="btn-icon" aria-hidden="true"><svg><use href="#i-home"></use></svg></span><span>Главная</span>
           </button>
           <button class="desktop-sidebar-item" id="desktopNavInventoryBtn" type="button">
-            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span><span>Расходники</span>
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-cube"></use></svg></span><span>Расходники</span>
           </button>
           <button class="desktop-sidebar-item" id="desktopNavFilmsBtn" type="button">
-            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-warehouse"></use></svg></span><span>Пленки</span>
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span><span>Пленки</span>
           </button>
           <button class="desktop-sidebar-item" id="desktopNavBoxesBtn" type="button">
             <span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Коробки</span>
@@ -170,7 +180,7 @@
             <span class="btn-icon" aria-hidden="true"><svg><use href="#i-layout-list"></use></svg></span><span>Задачи</span>
           </button>
           <button class="desktop-sidebar-item" id="desktopNavHistoryBtn" type="button">
-            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-history"></use></svg></span><span>История</span>
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-clock2"></use></svg></span><span>История</span>
           </button>
           <button class="desktop-sidebar-item" id="desktopNavStatsBtn" type="button">
             <span class="btn-icon" aria-hidden="true"><svg><use href="#i-chart"></use></svg></span><span>Статистика</span>
@@ -179,6 +189,7 @@
             <span class="btn-icon" aria-hidden="true"><svg><use href="#i-settings"></use></svg></span><span>Настройки</span>
           </button>
         </nav>
+        <div class="desktop-sidebar-footer">Polotno v2.0 · Yandex Style</div>
       </aside>
 
       <section id="homeView" class="view active home-figma-view">

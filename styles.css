@@ -172,21 +172,21 @@ h1 {
 
 .desktop-sidebar-brand h2 {
   margin: 0;
-  font-size: 40px;
-  line-height: 1.1;
-  color: #3478f6;
+  font-size: 34px;
+  line-height: 1;
+  color: #1f2023;
   font-weight: 700;
 }
 
 .desktop-sidebar-brand p {
-  margin: 6px 0 0;
+  margin: 12px 0 0;
   font-size: 14px;
-  color: #8e8e93;
+  color: #9d9ea3;
   line-height: 1.2;
 }
 
 .desktop-sidebar-nav {
-  margin-top: 20px;
+  margin-top: 14px;
   display: grid;
   gap: 2px;
 }
@@ -196,7 +196,7 @@ h1 {
   border: 0;
   border-radius: 16px;
   background: transparent;
-  color: rgba(28, 28, 30, 0.7);
+  color: #6f7074;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -206,13 +206,64 @@ h1 {
 }
 
 .desktop-sidebar-item .btn-icon {
-  width: 18px;
-  height: 18px;
+  width: 19px;
+  height: 19px;
+  color: #7d7f86;
+}
+
+.desktop-sidebar-item:hover {
+  transform: none;
+  background: #f0f1f3;
+  color: #4b4d53;
+}
+
+.desktop-sidebar-item:hover .btn-icon {
+  color: #4b4d53;
 }
 
 .desktop-sidebar-item.is-active {
-  background: #4f7ee8;
+  background: #1f2023;
   color: #fff;
+}
+
+.desktop-sidebar-item.is-active .btn-icon {
+  color: #fff;
+}
+
+.desktop-sidebar-item.is-active:hover {
+  background: #1f2023;
+  color: #fff;
+}
+
+.desktop-sidebar-item.is-active:hover .btn-icon {
+  color: #fff;
+}
+
+.desktop-brand-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.desktop-brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: #1f2023;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.desktop-sidebar-footer {
+  margin-top: auto;
+  padding: 16px 4px 0;
+  border-top: 1px solid #e5e6e9;
+  font-size: 12px;
+  color: #9d9ea3;
 }
 
 .top-select {
@@ -2929,10 +2980,12 @@ button.is-loading::after {
     top: 0;
     width: var(--desktop-sidebar-w);
     height: 100vh;
-    background: #fff;
-    border-right: 1px solid rgba(0, 0, 0, 0.08);
+    background: #f7f7f8;
+    border-right: 1px solid #e4e5e8;
     padding: 20px 12px;
     z-index: 20;
+    display: flex;
+    flex-direction: column;
   }
 
   .view.active {
