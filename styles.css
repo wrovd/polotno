@@ -14,6 +14,7 @@
   --shadow-soft: 0 6px 24px rgba(28, 35, 48, 0.06);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --tg-top-offset: 0px;
+  --desktop-sidebar-w: 240px;
 }
 
 * {
@@ -171,7 +172,7 @@ h1 {
 
 .desktop-sidebar-brand h2 {
   margin: 0;
-  font-size: 46px;
+  font-size: 40px;
   line-height: 1.1;
   color: #3478f6;
   font-weight: 700;
@@ -179,7 +180,7 @@ h1 {
 
 .desktop-sidebar-brand p {
   margin: 6px 0 0;
-  font-size: 26px;
+  font-size: 14px;
   color: #8e8e93;
   line-height: 1.2;
 }
@@ -191,7 +192,7 @@ h1 {
 }
 
 .desktop-sidebar-item {
-  min-height: 43px;
+  min-height: 42px;
   border: 0;
   border-radius: 16px;
   background: transparent;
@@ -200,7 +201,7 @@ h1 {
   align-items: center;
   gap: 10px;
   padding: 0 12px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -2917,22 +2918,26 @@ button.is-loading::after {
     font-size: 18px;
   }
 
+  .app-shell {
+    padding-left: var(--desktop-sidebar-w);
+  }
+
   .desktop-sidebar {
     display: block;
     position: fixed;
     left: 0;
     top: 0;
-    width: 260px;
+    width: var(--desktop-sidebar-w);
     height: 100vh;
     background: #fff;
     border-right: 1px solid rgba(0, 0, 0, 0.08);
-    padding: 24px 12px;
+    padding: 20px 12px;
     z-index: 20;
   }
 
   .view.active {
-    margin-left: 276px;
-    width: calc(100% - 276px);
+    margin-left: 0;
+    width: 100%;
   }
 
   #homeView {
@@ -3002,6 +3007,7 @@ button.is-loading::after {
 
   .app-shell {
     padding-top: calc(env(safe-area-inset-top, 0px) + max(var(--tg-top-offset), 52px));
+    padding-left: 0;
   }
 
   #homeView {
@@ -4224,14 +4230,11 @@ button.is-loading::after {
 
 @media (min-width: 1024px) {
   #homeView.home-figma-view .home-dashboard {
-    grid-template-columns: 240px 1fr;
+    grid-template-columns: 1fr;
   }
 
   #homeView.home-figma-view .home-dashboard-sidebar {
-    display: block;
-    border-right: 1px solid #e5e7eb;
-    background: #ffffff;
-    padding: 20px 12px;
+    display: none !important;
   }
 
   #homeView.home-figma-view .home-dashboard-main {
