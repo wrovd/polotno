@@ -109,11 +109,26 @@ const refs = {
   openInventoryTile: document.getElementById("openInventoryTile"),
   openFilmsTile: document.getElementById("openFilmsTile"),
   openProductsSearchTile: document.getElementById("openProductsSearchTile"),
+  openHistoryHomeTile: document.getElementById("openHistoryHomeTile"),
+  openStatsHomeTile: document.getElementById("openStatsHomeTile"),
+  openSettingsHomeTile: document.getElementById("openSettingsHomeTile"),
+  homeNavInventoryBtn: document.getElementById("homeNavInventoryBtn"),
+  homeNavFilmsBtn: document.getElementById("homeNavFilmsBtn"),
+  homeNavBoxesBtn: document.getElementById("homeNavBoxesBtn"),
+  homeNavHistoryBtn: document.getElementById("homeNavHistoryBtn"),
+  homeNavStatsBtn: document.getElementById("homeNavStatsBtn"),
+  homeNavSettingsBtn: document.getElementById("homeNavSettingsBtn"),
   homeProfileBtn: document.getElementById("homeProfileBtn"),
   homeAuthCaption: document.getElementById("homeAuthCaption"),
   homeAuthEmail: document.getElementById("homeAuthEmail"),
   homeProcessSearch: document.getElementById("homeProcessSearch"),
   homeProcessGrid: document.getElementById("homeProcessGrid"),
+  homeProcessCounter: document.getElementById("homeProcessCounter"),
+  homeSummaryItems: document.getElementById("homeSummaryItems"),
+  homeSummaryLow: document.getElementById("homeSummaryLow"),
+  homeSummaryFilms: document.getElementById("homeSummaryFilms"),
+  homeSummaryDeleted: document.getElementById("homeSummaryDeleted"),
+  homeSummaryBoxes: document.getElementById("homeSummaryBoxes"),
   homeScanBtn: document.getElementById("homeScanBtn"),
   homeBtn: document.getElementById("homeBtn"),
   inventoryTabsRow: document.getElementById("inventoryTabsRow"),
@@ -712,7 +727,7 @@ function updateAuthButton() {
     refs.openAuthBtn.innerHTML = `${iconSpan("user")}<span>${state.user.email} • ${role}</span>`;
     refs.openAuthBtn.classList.remove("primary-btn");
     refs.openAuthBtn.classList.add("glass-btn");
-    if (refs.homeAuthCaption) refs.homeAuthCaption.textContent = "Вы вошли как";
+    if (refs.homeAuthCaption) refs.homeAuthCaption.textContent = "Добро пожаловать";
     if (refs.homeAuthEmail) refs.homeAuthEmail.textContent = state.user.email;
     void updateHomeProfilePhoto().catch(() => setHomeProfileButtonPhoto(""));
     return;
@@ -721,7 +736,7 @@ function updateAuthButton() {
   refs.openAuthBtn.innerHTML = `${iconSpan("lock")}<span>Войти</span>`;
   refs.openAuthBtn.classList.remove("glass-btn");
   refs.openAuthBtn.classList.add("primary-btn");
-  if (refs.homeAuthCaption) refs.homeAuthCaption.textContent = "Вы вошли как";
+  if (refs.homeAuthCaption) refs.homeAuthCaption.textContent = "Добро пожаловать";
   if (refs.homeAuthEmail) refs.homeAuthEmail.textContent = "Гость";
   setHomeProfileButtonPhoto("");
 }
@@ -729,10 +744,42 @@ function updateAuthButton() {
 function renderHomeProcessCards() {
   if (!refs.homeProcessGrid) return;
   const query = String(refs.homeProcessSearch?.value || "").trim().toLowerCase();
+  let visible = 0;
   refs.homeProcessGrid.querySelectorAll("[data-process-title]").forEach((node) => {
     const title = String(node.getAttribute("data-process-title") || "").toLowerCase();
-    node.hidden = Boolean(query) && !title.includes(query);
+    const isHidden = Boolean(query) && !title.includes(query);
+    node.hidden = isHidden;
+    if (!isHidden) visible += 1;
   });
+  if (refs.homeProcessCounter) {
+    refs.homeProcessCounter.textContent = `${visible} модулей`;
+  }
+}
+
+function renderHomeSummary() {
+  const itemsCount = Array.isArray(state.items) ? state.items.length : 0;
+  const lowCount = Array.isArray(state.items)
+    ? state.items.filter((item) => Number(item.qty || 0) <= Number(item.threshold || 0)).length
+    : 0;
+  const filmsCount = Array.isArray(state.films)
+    ? state.films.filter((film) => String(film.cell_no || "").trim() !== "").length
+    : 0;
+  const deletedCount = Array.isArray(state.history)
+    ? state.history.filter((row) => String(row.reason || "") === "film_delete").length
+    : 0;
+  const boxesCount = Array.isArray(state.boxTrackingEntries)
+    ? new Set(
+        state.boxTrackingEntries
+          .map((entry) => String(entry.box_code || "").trim())
+          .filter(Boolean)
+      ).size
+    : 0;
+
+  if (refs.homeSummaryItems) refs.homeSummaryItems.textContent = String(itemsCount);
+  if (refs.homeSummaryLow) refs.homeSummaryLow.textContent = `${lowCount} ниже лимита`;
+  if (refs.homeSummaryFilms) refs.homeSummaryFilms.textContent = String(filmsCount);
+  if (refs.homeSummaryDeleted) refs.homeSummaryDeleted.textContent = `${deletedCount} удалено`;
+  if (refs.homeSummaryBoxes) refs.homeSummaryBoxes.textContent = String(boxesCount);
 }
 
 function setHomeProfileButtonPhoto(dataUrl = "") {
@@ -2291,6 +2338,7 @@ async function loadItems() {
     renderAlerts();
     renderGroupOptions();
     refreshAdjustItemOptions();
+    renderHomeSummary();
     return;
   }
 
@@ -2321,6 +2369,7 @@ async function loadItems() {
   renderMainByFilters();
   renderAlerts();
   refreshAdjustItemOptions();
+  renderHomeSummary();
 }
 
 async function loadFilms() {
@@ -2328,6 +2377,7 @@ async function loadFilms() {
     state.films = [];
     state.pages.films = 1;
     renderFilmsTable([]);
+    renderHomeSummary();
     return;
   }
 
@@ -2359,6 +2409,7 @@ async function loadFilms() {
   state.pages.films = 1;
   renderFilmsTable(filteredFilms());
   renderQuickFilmBatch();
+  renderHomeSummary();
 }
 
 function boxCatalogColumns() {
@@ -2789,6 +2840,7 @@ async function loadBoxSearchData() {
     renderBoxTrackedList();
     renderBoxScanResult();
     renderBoxDraftItems();
+    renderHomeSummary();
     return;
   }
 
@@ -2803,6 +2855,7 @@ async function loadBoxSearchData() {
   renderBoxTrackedList();
   renderBoxScanResult(state.boxSearchResult);
   renderBoxDraftItems();
+  renderHomeSummary();
 }
 
 async function createTrackedBox() {
@@ -3104,6 +3157,7 @@ async function loadHistory() {
     applyHistoryFilters(state.history);
     state.pages.history = 1;
     renderHistory();
+    renderHomeSummary();
     return;
   }
 
@@ -3117,6 +3171,7 @@ async function loadHistory() {
   applyHistoryFilters(state.history);
   state.pages.history = 1;
   renderHistory();
+  renderHomeSummary();
 }
 
 function handleSearch() {
@@ -3783,7 +3838,17 @@ refs.openInventoryTile.addEventListener("click", () => {
   setInventoryTab("main");
   setTimeout(() => refs.searchInput.focus(), 120);
 });
+if (refs.homeNavInventoryBtn) refs.homeNavInventoryBtn.addEventListener("click", () => {
+  setModuleView("inventory");
+  setInventoryTab("main");
+  setTimeout(() => refs.searchInput.focus(), 120);
+});
 if (refs.openFilmsTile) refs.openFilmsTile.addEventListener("click", () => {
+  setModuleView("inventory");
+  setInventoryTab("films");
+  setTimeout(() => refs.filmsSearchInput?.focus(), 120);
+});
+if (refs.homeNavFilmsBtn) refs.homeNavFilmsBtn.addEventListener("click", () => {
   setModuleView("inventory");
   setInventoryTab("films");
   setTimeout(() => refs.filmsSearchInput?.focus(), 120);
@@ -3792,6 +3857,39 @@ if (refs.openProductsSearchTile) refs.openProductsSearchTile.addEventListener("c
   setModuleView("inventory");
   setInventoryTab("box-search");
   setTimeout(() => refs.boxSearchInput?.focus(), 120);
+});
+if (refs.homeNavBoxesBtn) refs.homeNavBoxesBtn.addEventListener("click", () => {
+  setModuleView("inventory");
+  setInventoryTab("box-search");
+  setTimeout(() => refs.boxSearchInput?.focus(), 120);
+});
+if (refs.openHistoryHomeTile) refs.openHistoryHomeTile.addEventListener("click", () => {
+  setModuleView("inventory");
+  setInventoryTab("history");
+});
+if (refs.homeNavHistoryBtn) refs.homeNavHistoryBtn.addEventListener("click", () => {
+  setModuleView("inventory");
+  setInventoryTab("history");
+});
+if (refs.openStatsHomeTile) refs.openStatsHomeTile.addEventListener("click", () => {
+  setModuleView("inventory");
+  setInventoryTab("stats");
+});
+if (refs.homeNavStatsBtn) refs.homeNavStatsBtn.addEventListener("click", () => {
+  setModuleView("inventory");
+  setInventoryTab("stats");
+});
+if (refs.openSettingsHomeTile) refs.openSettingsHomeTile.addEventListener("click", () => {
+  openSettingsView().catch((error) => {
+    showToast(error.message);
+    hapticWarning();
+  });
+});
+if (refs.homeNavSettingsBtn) refs.homeNavSettingsBtn.addEventListener("click", () => {
+  openSettingsView().catch((error) => {
+    showToast(error.message);
+    hapticWarning();
+  });
 });
 if (refs.homeScanBtn) refs.homeScanBtn.addEventListener("click", async () => {
   openScanModal();
@@ -5005,6 +5103,7 @@ applyPrintAccess();
 initCollapsiblePanels();
 fillDisplayPrefsForm();
 renderHomeProcessCards();
+renderHomeSummary();
 initStatsFilters();
 renderQuickFilmBatch();
 loadItems();

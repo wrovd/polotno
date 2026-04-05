@@ -133,78 +133,123 @@
       </header>
 
       <section id="homeView" class="view active">
-        <section class="home-hero">
-          <section class="home-auth">
-            <div>
-              <p class="home-auth-caption" id="homeAuthCaption">Вы вошли как</p>
-              <p class="home-auth-email" id="homeAuthEmail">Гость</p>
+        <div class="home-dashboard">
+          <aside class="home-dashboard-sidebar">
+            <div class="home-dashboard-brand">
+              <h2>Polotno</h2>
+              <p>Система управления складом</p>
             </div>
-            <button class="home-profile-btn" id="homeProfileBtn" type="button" aria-label="Профиль">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
-                <circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.9" />
-                <path d="M5.2 19a6.8 6.8 0 0 1 13.6 0" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
-              </svg>
+            <nav class="home-dashboard-nav">
+              <button class="home-dashboard-nav-item is-active" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-home"></use></svg></span><span>Главная</span>
+              </button>
+              <button class="home-dashboard-nav-item" id="homeNavInventoryBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span><span>Расходники</span>
+              </button>
+              <button class="home-dashboard-nav-item" id="homeNavFilmsBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-warehouse"></use></svg></span><span>Пленки</span>
+              </button>
+              <button class="home-dashboard-nav-item" id="homeNavBoxesBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Коробки</span>
+              </button>
+              <button class="home-dashboard-nav-item" id="homeNavHistoryBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-history"></use></svg></span><span>История</span>
+              </button>
+              <button class="home-dashboard-nav-item" id="homeNavStatsBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-chart"></use></svg></span><span>Статистика</span>
+              </button>
+              <button class="home-dashboard-nav-item" id="homeNavSettingsBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-settings"></use></svg></span><span>Настройки</span>
+              </button>
+            </nav>
+          </aside>
+
+          <section class="home-dashboard-main">
+            <header class="home-dashboard-top">
+              <div>
+                <p class="home-auth-caption" id="homeAuthCaption">Добро пожаловать</p>
+                <p class="home-auth-email" id="homeAuthEmail">Гость</p>
+              </div>
+              <div class="home-dashboard-top-actions">
+                <button class="home-bell-btn" type="button" aria-label="Уведомления">
+                  <span class="btn-icon" aria-hidden="true"><svg><use href="#i-bell"></use></svg></span>
+                </button>
+                <button class="home-profile-btn home-profile-chip" id="homeProfileBtn" type="button" aria-label="Профиль">
+                  <span>A</span>
+                </button>
+              </div>
+            </header>
+
+            <button class="home-quick-scan" id="homeScanBtn" type="button" data-process-title="Быстрый скан">
+              <span class="home-quick-scan-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span>
+              <span class="home-quick-scan-copy">
+                <strong>Быстрый скан</strong>
+                <small>Сканируйте QR или штрихкод</small>
+              </span>
+              <span class="home-quick-scan-arrow" aria-hidden="true">›</span>
             </button>
+
+            <section class="home-process-wrap">
+              <div class="home-process-headline">
+                <h3>Модули</h3>
+                <span class="home-process-counter" id="homeProcessCounter">6 модулей</span>
+              </div>
+              <section class="home-process-grid" id="homeProcessGrid">
+                <button class="home-module-card" id="openInventoryTile" type="button" data-process-title="Учет расходников">
+                  <span class="home-module-icon is-blue"><svg><use href="#i-grid"></use></svg></span>
+                  <strong>Учет расходников</strong>
+                  <small>Остатки, лимиты, QR-этикетки</small>
+                </button>
+                <button class="home-module-card" id="openFilmsTile" type="button" data-process-title="Склад пленок">
+                  <span class="home-module-icon is-green"><svg><use href="#i-warehouse"></use></svg></span>
+                  <strong>Склад пленок</strong>
+                  <small>Ячейки, штрихкоды, импорт</small>
+                </button>
+                <button class="home-module-card" id="openProductsSearchTile" type="button" data-process-title="Поиск по коробкам">
+                  <span class="home-module-icon is-orange"><svg><use href="#i-search"></use></svg></span>
+                  <strong>Поиск по коробкам</strong>
+                  <small>Коробки, товары, сканер</small>
+                </button>
+                <button class="home-module-card" id="openHistoryHomeTile" type="button" data-process-title="История">
+                  <span class="home-module-icon is-purple"><svg><use href="#i-history"></use></svg></span>
+                  <strong>История</strong>
+                  <small>Все действия в системе</small>
+                </button>
+                <button class="home-module-card" id="openStatsHomeTile" type="button" data-process-title="Статистика">
+                  <span class="home-module-icon is-pink"><svg><use href="#i-chart"></use></svg></span>
+                  <strong>Статистика</strong>
+                  <small>Графики и аналитика</small>
+                </button>
+                <button class="home-module-card" id="openSettingsHomeTile" type="button" data-process-title="Настройки">
+                  <span class="home-module-icon is-gray"><svg><use href="#i-settings"></use></svg></span>
+                  <strong>Настройки</strong>
+                  <small>Профиль, уведомления</small>
+                </button>
+              </section>
+            </section>
+
+            <section class="home-summary-card">
+              <h4>Сводка за сегодня</h4>
+              <div class="home-summary-grid">
+                <article>
+                  <strong id="homeSummaryItems">0</strong>
+                  <p>Расходников</p>
+                  <small id="homeSummaryLow">0 ниже лимита</small>
+                </article>
+                <article>
+                  <strong id="homeSummaryFilms">0</strong>
+                  <p>Пленок</p>
+                  <small id="homeSummaryDeleted">0 удалено</small>
+                </article>
+                <article>
+                  <strong id="homeSummaryBoxes">0</strong>
+                  <p>Коробок</p>
+                  <small>В отслеживании</small>
+                </article>
+              </div>
+            </section>
           </section>
-
-          <h2 class="home-title">Рабочее пространство Polotno</h2>
-          <p class="home-subtitle">Выберите процесс и начните работу. Все действия синхронизируются в системе.</p>
-
-          <label class="home-search" aria-label="Поиск процессов">
-            <span class="home-search-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span>
-            <input id="homeProcessSearch" type="search" placeholder="Поиск процессов" autocomplete="off" />
-          </label>
-        </section>
-
-        <section class="home-process-wrap">
-          <div class="home-process-headline">
-            <h3>Доступные процессы</h3>
-            <span class="home-process-counter">3 процесса</span>
-          </div>
-          <section class="home-process-grid" id="homeProcessGrid">
-            <button class="home-process-card home-process-card-blue" id="openInventoryTile" type="button" data-process-title="Учет расходников">
-              <div class="home-process-head">
-                <span class="home-process-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
-                    <path d="M12 3L20 7V17L12 21L4 17V7L12 3Z" stroke="currentColor" stroke-width="1.8" />
-                    <path d="M4 7L12 11L20 7" stroke="currentColor" stroke-width="1.8" />
-                    <path d="M12 11V21" stroke="currentColor" stroke-width="1.8" />
-                  </svg>
-                </span>
-                <span class="home-process-dots" aria-hidden="true">•••</span>
-              </div>
-              <span class="home-process-name">Учет расходников</span>
-            </button>
-            <button class="home-process-card home-process-card-gold" id="openFilmsTile" type="button" data-process-title="Готовые пленки">
-              <div class="home-process-head">
-                <span class="home-process-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
-                    <rect x="5" y="5" width="14" height="14" rx="3" stroke="currentColor" stroke-width="1.8" />
-                    <path d="M8.2 12.2l2.4 2.3 5.2-5.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                </span>
-                <span class="home-process-dots" aria-hidden="true">•••</span>
-              </div>
-              <span class="home-process-name">Готовые пленки</span>
-            </button>
-            <button class="home-process-card home-process-card-neutral" id="openProductsSearchTile" type="button" data-process-title="Поиск товаров (по коробкам)">
-              <div class="home-process-head">
-                <span class="home-process-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
-                    <circle cx="11" cy="11" r="5.5" stroke="currentColor" stroke-width="1.8" />
-                    <path d="M15.5 15.5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-                  </svg>
-                </span>
-                <span class="home-process-dots" aria-hidden="true">•••</span>
-              </div>
-              <span class="home-process-name">Поиск товаров (по коробкам)</span>
-            </button>
-          </section>
-        </section>
-
-        <button class="home-scan-btn" id="homeScanBtn" type="button">
-          <span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span><span>Сканирование</span>
-        </button>
+        </div>
       </section>
 
       <section id="inventoryView" class="view">
