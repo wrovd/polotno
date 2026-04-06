@@ -48,6 +48,9 @@ const state = {
   chatMessageActionsForId: "",
   chatPollTimer: null,
   chatPollingBusy: false,
+  homeNotifications: [],
+  homeNotificationsUnread: 0,
+  homeNotificationsPollTimer: null,
   tasks: [],
   taskViewMode: "board",
   boxCatalog: [],
@@ -102,6 +105,11 @@ const state = {
 const ONBOARDING_KEY = "polotno_onboarding_seen_v1";
 const DISPLAY_PREFS_KEY = "polotno_display_prefs_v1";
 
+function homeNotificationsSeenKey() {
+  const email = String(state.user?.email || "guest").trim().toLowerCase() || "guest";
+  return `polotno_home_notifications_seen_${email}`;
+}
+
 const refs = {
   openAuthBtn: document.getElementById("openAuthBtn"),
   accountMenu: document.getElementById("accountMenu"),
@@ -138,6 +146,11 @@ const refs = {
   homeNavSettingsBtn: document.getElementById("homeNavSettingsBtn"),
   homeProfileBtn: document.getElementById("homeProfileBtn"),
   homeBellBtn: document.getElementById("homeBellBtn"),
+  homeBellBadge: document.getElementById("homeBellBadge"),
+  homeNotificationsPopover: document.getElementById("homeNotificationsPopover"),
+  homeNotificationsList: document.getElementById("homeNotificationsList"),
+  homeNotificationsMarkReadBtn: document.getElementById("homeNotificationsMarkReadBtn"),
+  homeNotificationsCloseBtn: document.getElementById("homeNotificationsCloseBtn"),
   homeAuthCaption: document.getElementById("homeAuthCaption"),
   homeAuthEmail: document.getElementById("homeAuthEmail"),
   homeProcessSearch: document.getElementById("homeProcessSearch"),
@@ -826,6 +839,7 @@ function setModuleView(view) {
     stopChatPolling();
   }
   closeAccountMenu();
+  closeHomeNotificationsPopover();
   updateMobileScanFab();
   updateDesktopSidebarActive();
   hapticSelection();
@@ -965,6 +979,11 @@ function updateAuthButton() {
   refs.openAuthBtn.classList.add("primary-btn");
   if (refs.homeAuthCaption) refs.homeAuthCaption.textContent = "Добро пожаловать";
   if (refs.homeAuthEmail) refs.homeAuthEmail.textContent = "Гость";
+  state.homeNotifications = [];
+  state.homeNotificationsUnread = 0;
+  renderHomeNotificationsBadge();
+  renderHomeNotificationsPopover();
+  closeHomeNotificationsPopover();
   setHomeProfileButtonPhoto("");
 }
 
@@ -1007,6 +1026,164 @@ function renderHomeSummary() {
   if (refs.homeSummaryFilms) refs.homeSummaryFilms.textContent = String(filmsCount);
   if (refs.homeSummaryDeleted) refs.homeSummaryDeleted.textContent = `${deletedCount} удалено`;
   if (refs.homeSummaryBoxes) refs.homeSummaryBoxes.textContent = String(boxesCount);
+}
+
+function notificationTimeAgo(value) {
+  if (!value) return "";
+  const ts = new Date(value).getTime();
+  if (!Number.isFinite(ts) || ts <= 0) return "";
+  const diffMs = Date.now() - ts;
+  if (diffMs < 60 * 1000) return "только что";
+  const min = Math.floor(diffMs / (60 * 1000));
+  if (min < 60) return `${min} мин`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h} ч`;
+  const d = Math.floor(h / 24);
+  return `${d} д`;
+}
+
+function getHomeNotificationsSeenAt() {
+  const raw = localStorage.getItem(homeNotificationsSeenKey()) || "";
+  const parsed = new Date(raw).getTime();
+  if (!Number.isFinite(parsed) || parsed <= 0) return new Date(0).toISOString();
+  return new Date(parsed).toISOString();
+}
+
+function setHomeNotificationsSeenNow() {
+  const nowIso = new Date().toISOString();
+  localStorage.setItem(homeNotificationsSeenKey(), nowIso);
+}
+
+function closeHomeNotificationsPopover() {
+  if (!refs.homeNotificationsPopover) return;
+  refs.homeNotificationsPopover.hidden = true;
+}
+
+function renderHomeNotificationsPopover() {
+  if (!refs.homeNotificationsList) return;
+  const list = Array.isArray(state.homeNotifications) ? state.homeNotifications : [];
+  if (!list.length) {
+    refs.homeNotificationsList.innerHTML = '<p class="muted">Уведомлений пока нет.</p>';
+    return;
+  }
+  refs.homeNotificationsList.innerHTML = list
+    .map((item) => `
+      <button type="button" class="home-notification-item${item.unread ? " is-unread" : ""}" data-home-notif-id="${escapeText(item.id)}">
+        <span class="home-notification-icon ${item.type === "task" ? "is-task" : "is-chat"}">
+          ${iconSpan(item.type === "task" ? "layout-list" : "message")}
+        </span>
+        <span class="home-notification-copy">
+          <span class="home-notification-title-row">
+            <strong>${escapeText(item.title || "Уведомление")}</strong>
+            <small>${escapeText(notificationTimeAgo(item.time))}</small>
+          </span>
+          <span class="home-notification-subtitle">${escapeText(item.subtitle || "")}</span>
+        </span>
+        ${item.unread ? '<span class="home-notification-dot" aria-hidden="true"></span>' : ""}
+      </button>
+    `)
+    .join("");
+}
+
+function renderHomeNotificationsBadge() {
+  if (!refs.homeBellBadge || !refs.homeBellBtn) return;
+  const count = Number(state.homeNotificationsUnread || 0);
+  refs.homeBellBadge.textContent = String(Math.min(99, count));
+  refs.homeBellBadge.classList.toggle("is-hidden", count <= 0);
+  refs.homeBellBtn.classList.toggle("has-unread", count > 0);
+}
+
+function openHomeNotificationsPopover() {
+  if (!refs.homeNotificationsPopover) return;
+  refs.homeNotificationsPopover.hidden = false;
+}
+
+function toggleHomeNotificationsPopover(forceOpen = null) {
+  if (!refs.homeNotificationsPopover) return;
+  const shouldOpen = forceOpen === null ? refs.homeNotificationsPopover.hidden : Boolean(forceOpen);
+  if (shouldOpen) {
+    openHomeNotificationsPopover();
+  } else {
+    closeHomeNotificationsPopover();
+  }
+}
+
+function stopHomeNotificationsPolling() {
+  if (state.homeNotificationsPollTimer) {
+    clearInterval(state.homeNotificationsPollTimer);
+    state.homeNotificationsPollTimer = null;
+  }
+}
+
+function startHomeNotificationsPolling() {
+  stopHomeNotificationsPolling();
+  if (!state.token || !state.user?.email) return;
+  state.homeNotificationsPollTimer = setInterval(() => {
+    refreshHomeNotifications(false).catch(() => {});
+  }, 30000);
+}
+
+async function refreshHomeNotifications(force = false) {
+  if (!state.token || !state.user?.email) {
+    state.homeNotifications = [];
+    state.homeNotificationsUnread = 0;
+    renderHomeNotificationsBadge();
+    renderHomeNotificationsPopover();
+    closeHomeNotificationsPopover();
+    return;
+  }
+  if (!force && state.moduleView !== "home" && state.moduleView !== "inventory") return;
+  const seenAtTs = new Date(getHomeNotificationsSeenAt()).getTime();
+  const [chatData, tasksData] = await Promise.all([
+    apiRequest("/api/inventory/chat-list?limit=20").catch(() => ({ threads: [] })),
+    apiRequest("/api/inventory/tasks-list?limit=50").catch(() => ({ tasks: [] })),
+  ]);
+  const threads = Array.isArray(chatData?.threads) ? chatData.threads : [];
+  const tasks = Array.isArray(tasksData?.tasks) ? tasksData.tasks : [];
+  const me = String(state.user?.email || "").trim().toLowerCase();
+
+  const chatItems = threads
+    .filter((t) => Number(t.unread_count || 0) > 0)
+    .map((t) => ({
+      id: `chat:${String(t.id || "")}`,
+      type: "chat",
+      title: String(t.title || "Чат"),
+      subtitle: String(t.last_message_preview || "Новое сообщение"),
+      time: t.last_message_at || t.updated_at || new Date().toISOString(),
+      unread: true,
+      threadId: String(t.id || ""),
+    }));
+
+  const taskItems = tasks
+    .filter((task) => {
+      const status = String(task.status || "").toLowerCase();
+      if (status === "done") return false;
+      const assignee = String(task.assignee_email || "").toLowerCase();
+      return !assignee || assignee === me;
+    })
+    .map((task) => {
+      const time = task.updated_at || task.created_at || new Date().toISOString();
+      const ts = new Date(time).getTime();
+      const unread = Number.isFinite(ts) && ts > seenAtTs;
+      return {
+        id: `task:${String(task.id || "")}`,
+        type: "task",
+        title: String(task.title || "Новая задача"),
+        subtitle: task.description ? String(task.description) : `Статус: ${statusLabel(task.status || "todo")}`,
+        time,
+        unread,
+        taskId: String(task.id || ""),
+      };
+    });
+
+  const merged = [...chatItems, ...taskItems]
+    .sort((a, b) => new Date(b.time || 0).getTime() - new Date(a.time || 0).getTime())
+    .slice(0, 12);
+
+  state.homeNotifications = merged;
+  state.homeNotificationsUnread = merged.filter((x) => x.unread).length;
+  renderHomeNotificationsBadge();
+  renderHomeNotificationsPopover();
 }
 
 function setHomeProfileButtonPhoto(dataUrl = "") {
@@ -1070,8 +1247,13 @@ function applyUserFromServer(nextUser, nextToken = "") {
     localStorage.setItem("sf_token", nextToken);
   }
   localStorage.setItem("sf_user", JSON.stringify(state.user));
+  if (!localStorage.getItem(homeNotificationsSeenKey())) {
+    setHomeNotificationsSeenNow();
+  }
+  startHomeNotificationsPolling();
   updateAuthButton();
   applyRoleAccess();
+  void refreshHomeNotifications(true).catch(() => {});
 }
 
 function fillSettingsForm() {
@@ -1270,10 +1452,16 @@ function clearSession() {
   state.token = "";
   state.user = null;
   stopChatPolling();
+  stopHomeNotificationsPolling();
   clearQrLoginPolling();
   state.homeProfilePhotoChatId = "";
+  state.homeNotifications = [];
+  state.homeNotificationsUnread = 0;
   state.profileLoaded = false;
   updateAuthButton();
+  renderHomeNotificationsBadge();
+  renderHomeNotificationsPopover();
+  closeHomeNotificationsPopover();
   applyRoleAccess();
 }
 
@@ -5194,11 +5382,65 @@ if (refs.openSettingsHomeTile) refs.openSettingsHomeTile.addEventListener("click
     hapticWarning();
   });
 });
-if (refs.homeBellBtn) refs.homeBellBtn.addEventListener("click", () => {
-  openSettingsView().catch((error) => {
-    showToast(error.message);
-    hapticWarning();
-  });
+if (refs.homeBellBtn) refs.homeBellBtn.addEventListener("click", async () => {
+  hapticSelection();
+  if (!state.user?.email || !state.token) {
+    openAuthModal();
+    return;
+  }
+  await refreshHomeNotifications(true).catch(() => {});
+  toggleHomeNotificationsPopover();
+});
+if (refs.homeNotificationsCloseBtn) refs.homeNotificationsCloseBtn.addEventListener("click", () => {
+  closeHomeNotificationsPopover();
+});
+if (refs.homeNotificationsMarkReadBtn) refs.homeNotificationsMarkReadBtn.addEventListener("click", () => {
+  setHomeNotificationsSeenNow();
+  state.homeNotifications = state.homeNotifications.map((item) => ({ ...item, unread: false }));
+  state.homeNotificationsUnread = 0;
+  renderHomeNotificationsBadge();
+  renderHomeNotificationsPopover();
+  hapticSuccess();
+});
+if (refs.homeNotificationsList) refs.homeNotificationsList.addEventListener("click", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const btn = target.closest("button[data-home-notif-id]");
+  if (!(btn instanceof HTMLButtonElement)) return;
+  const id = String(btn.getAttribute("data-home-notif-id") || "").trim();
+  if (!id) return;
+  const item = state.homeNotifications.find((x) => String(x.id) === id);
+  if (!item) return;
+  setHomeNotificationsSeenNow();
+  state.homeNotifications = state.homeNotifications.map((x) => (x.id === id ? { ...x, unread: false } : x));
+  state.homeNotificationsUnread = state.homeNotifications.filter((x) => x.unread).length;
+  renderHomeNotificationsBadge();
+  renderHomeNotificationsPopover();
+  closeHomeNotificationsPopover();
+
+  if (item.type === "chat" && item.threadId) {
+    setModuleView("inventory");
+    setInventoryTab("chat");
+    try {
+      await openChatThread(item.threadId);
+    } catch {
+      // ignore
+    }
+    return;
+  }
+
+  if (item.type === "task") {
+    setModuleView("inventory");
+    setInventoryTab("tasks");
+    if (item.taskId) {
+      try {
+        await loadTasks();
+        await openTaskDetails(item.taskId);
+      } catch {
+        // ignore
+      }
+    }
+  }
 });
 if (refs.homeNavSettingsBtn) refs.homeNavSettingsBtn.addEventListener("click", () => {
   openSettingsView().catch((error) => {
@@ -6981,12 +7223,20 @@ if (refs.mobileScanFab) {
 document.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
-  if (refs.accountMenu.hidden) return;
-  const insideButton = refs.openAuthBtn.contains(target);
-  const insideHomeProfile = refs.homeProfileBtn?.contains(target);
-  const insideMenu = refs.accountMenu.contains(target);
-  if (!insideButton && !insideHomeProfile && !insideMenu) {
-    closeAccountMenu();
+  if (!refs.accountMenu.hidden) {
+    const insideButton = refs.openAuthBtn.contains(target);
+    const insideHomeProfile = refs.homeProfileBtn?.contains(target);
+    const insideMenu = refs.accountMenu.contains(target);
+    if (!insideButton && !insideHomeProfile && !insideMenu) {
+      closeAccountMenu();
+    }
+  }
+  if (refs.homeNotificationsPopover && !refs.homeNotificationsPopover.hidden) {
+    const inBell = refs.homeBellBtn?.contains(target);
+    const inPopup = refs.homeNotificationsPopover.contains(target);
+    if (!inBell && !inPopup) {
+      closeHomeNotificationsPopover();
+    }
   }
 });
 
@@ -7007,6 +7257,7 @@ document.addEventListener("keydown", (event) => {
     closeChatForwardModal();
     closeChatReadStatusModal();
     closeChatMessageActionsPopover();
+    closeHomeNotificationsPopover();
     setChatMenuOpen(false);
     closeAccountMenu();
     stopScanner();
@@ -7043,6 +7294,8 @@ loadChatData();
 loadTasks();
 initTelegram();
 updateMobileScanFab();
+startHomeNotificationsPolling();
+refreshHomeNotifications(true).catch(() => {});
 
 if (!localStorage.getItem(ONBOARDING_KEY)) {
   openOnboarding();
