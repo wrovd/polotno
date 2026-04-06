@@ -1519,7 +1519,18 @@
           </div>
           <div class="task-modal-grid">
             <label>Исполнитель
-              <input type="email" id="taskEditAssignee" placeholder="Не назначен" />
+              <div class="task-assignees-picker" id="taskAssigneesPicker">
+                <button class="task-assignees-trigger" id="taskAssigneesTrigger" type="button" aria-expanded="false">
+                  Выбрать исполнителей
+                </button>
+                <div class="task-assignees-chips" id="taskAssigneesChips">
+                  <span class="task-assignees-empty">Не назначен</span>
+                </div>
+                <div class="task-assignees-popover" id="taskAssigneesPopover" hidden>
+                  <div class="task-assignees-list" id="taskAssigneesList"></div>
+                </div>
+              </div>
+              <input type="hidden" id="taskEditAssignee" />
             </label>
             <label>Дедлайн
               <input type="date" id="taskEditDueDate" />

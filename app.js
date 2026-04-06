@@ -434,6 +434,11 @@ const refs = {
   taskEditPriority: document.getElementById("taskEditPriority"),
   taskEditStatus: document.getElementById("taskEditStatus"),
   taskEditAssignee: document.getElementById("taskEditAssignee"),
+  taskAssigneesPicker: document.getElementById("taskAssigneesPicker"),
+  taskAssigneesTrigger: document.getElementById("taskAssigneesTrigger"),
+  taskAssigneesChips: document.getElementById("taskAssigneesChips"),
+  taskAssigneesPopover: document.getElementById("taskAssigneesPopover"),
+  taskAssigneesList: document.getElementById("taskAssigneesList"),
   taskEditDueDate: document.getElementById("taskEditDueDate"),
   taskDetailModal: document.getElementById("taskDetailModal"),
   taskDetailBackdrop: document.getElementById("taskDetailBackdrop"),
@@ -1379,8 +1384,8 @@ async function refreshHomeNotifications(force = false) {
     .filter((task) => {
       const status = String(task.status || "").toLowerCase();
       if (status === "done") return false;
-      const assignee = String(task.assignee_email || "").toLowerCase();
-      return !assignee || assignee === me;
+      const assignees = parseAssigneeEmails(task.assignee_email || "");
+      return !assignees.length || assignees.includes(me);
     })
     .map((task) => {
       const time = task.updated_at || task.created_at || new Date().toISOString();
@@ -3363,6 +3368,87 @@ function extractTaskTags(task) {
   return tags.slice(0, 2);
 }
 
+function parseAssigneeEmails(raw = "") {
+  return [...new Set(
+    String(raw || "")
+      .split(/[,\n;]+/)
+      .map((x) => x.trim().toLowerCase())
+      .filter(Boolean)
+  )];
+}
+
+function taskAssigneeLabels(raw = "") {
+  return parseAssigneeEmails(raw)
+    .map((email) => taskUserLabel(email))
+    .filter(Boolean);
+}
+
+function taskUserLabel(email = "") {
+  const normalized = String(email || "").trim().toLowerCase();
+  if (!normalized) return "";
+  const row = (state.chatUsers || []).find((user) => String(user.email || "").trim().toLowerCase() === normalized);
+  return String(row?.name || normalized);
+}
+
+function closeTaskAssigneesPopover() {
+  if (refs.taskAssigneesPopover) refs.taskAssigneesPopover.hidden = true;
+  if (refs.taskAssigneesTrigger) refs.taskAssigneesTrigger.setAttribute("aria-expanded", "false");
+}
+
+function renderTaskAssigneesUi() {
+  const selected = parseAssigneeEmails(refs.taskEditAssignee?.value || "");
+  if (refs.taskAssigneesTrigger) {
+    refs.taskAssigneesTrigger.textContent = selected.length ? `Выбрано: ${selected.length}` : "Выбрать исполнителей";
+  }
+  if (refs.taskAssigneesChips) {
+    refs.taskAssigneesChips.innerHTML = selected.length
+      ? selected
+          .map((email) => `<span class="task-assignee-chip" data-assignee-email="${escapeText(email)}">${escapeText(taskUserLabel(email))}</span>`)
+          .join("")
+      : '<span class="task-assignees-empty">Не назначен</span>';
+  }
+  if (refs.taskAssigneesList) {
+    const users = Array.isArray(state.chatUsers) ? state.chatUsers : [];
+    if (!users.length) {
+      refs.taskAssigneesList.innerHTML = '<p class="muted">Сотрудники загружаются...</p>';
+      return;
+    }
+    const selectedSet = new Set(selected);
+    refs.taskAssigneesList.innerHTML = users
+      .map((user) => {
+        const email = String(user.email || "").trim().toLowerCase();
+        const name = String(user.name || user.email || email);
+        const checked = selectedSet.has(email);
+        return `
+          <button type="button" class="task-assignee-option${checked ? " is-selected" : ""}" data-assignee-email="${escapeText(email)}">
+            <span class="task-assignee-check" aria-hidden="true">${checked ? "✓" : ""}</span>
+            <span class="task-assignee-meta">
+              <strong>${escapeText(name)}</strong>
+              <small>${escapeText(email)}</small>
+            </span>
+          </button>
+        `;
+      })
+      .join("");
+  }
+}
+
+function setTaskAssignees(emails = []) {
+  if (refs.taskEditAssignee) {
+    refs.taskEditAssignee.value = [...new Set((Array.isArray(emails) ? emails : []).map((x) => String(x || "").trim().toLowerCase()).filter(Boolean))].join(", ");
+  }
+  renderTaskAssigneesUi();
+}
+
+function toggleTaskAssignee(email = "") {
+  const normalized = String(email || "").trim().toLowerCase();
+  if (!normalized) return;
+  const selected = parseAssigneeEmails(refs.taskEditAssignee?.value || "");
+  const has = selected.includes(normalized);
+  const next = has ? selected.filter((x) => x !== normalized) : [...selected, normalized];
+  setTaskAssignees(next);
+}
+
 function selectedTaskModalTags() {
   const nodes = Array.from(document.querySelectorAll(".task-modal-tag.is-active"));
   return nodes
@@ -3406,8 +3492,8 @@ function isOverdue(dateString) {
 function taskCardHtml(task, compact = false) {
   const tags = extractTaskTags(task);
   const overdue = isOverdue(task.due_date);
-  const assignee = String(task.assignee_email || "").trim();
-  const assigneeInitial = initialFromName(assignee || "A");
+  const assignees = taskAssigneeLabels(task.assignee_email || "");
+  const assigneeInitial = initialFromName(assignees[0] || "A");
   const dueText = task.due_date ? formatShortDate(task.due_date) : "";
   const priority = taskPriorityClass(task.priority);
   const priorityText = taskPriorityUiLabel(task.priority);
@@ -3452,8 +3538,8 @@ function taskCardHtml(task, compact = false) {
 
 function taskListRowHtml(task) {
   const tags = extractTaskTags(task);
-  const assignee = String(task.assignee_email || "").trim();
-  const assigneeInitial = initialFromName(assignee || "A");
+  const assignees = taskAssigneeLabels(task.assignee_email || "");
+  const assigneeInitial = initialFromName(assignees[0] || "A");
   const dueText = task.due_date ? formatShortDate(task.due_date) : "";
   const priority = taskPriorityClass(task.priority);
   return `
@@ -3564,31 +3650,36 @@ function populateTaskForm(task = null, status = "todo") {
   if (refs.taskEditDescription) refs.taskEditDescription.value = String(task?.description || "");
   if (refs.taskEditPriority) refs.taskEditPriority.value = String(task?.priority || "medium");
   if (refs.taskEditStatus) refs.taskEditStatus.value = String(task?.status || status || "todo");
-  if (refs.taskEditAssignee) refs.taskEditAssignee.value = String(task?.assignee_email || "");
+  setTaskAssignees(parseAssigneeEmails(task?.assignee_email || ""));
   if (refs.taskEditDueDate) refs.taskEditDueDate.value = String(task?.due_date || "");
   setTaskModalTags(Array.isArray(task?.tags) ? task.tags : []);
 }
 
 function openTaskEditor(task = null, status = "todo") {
   populateTaskForm(task, status);
+  void loadChatUsers()
+    .then(() => renderTaskAssigneesUi())
+    .catch(() => renderTaskAssigneesUi());
   openSimpleModal(refs.taskEditModal);
   setTimeout(() => refs.taskEditTitle?.focus(), 50);
 }
 
 function closeTaskEditor() {
+  closeTaskAssigneesPopover();
   closeSimpleModal(refs.taskEditModal);
 }
 
 async function saveTaskFromForm() {
   if (!refs.taskEditForm?.reportValidity()) return;
   const id = String(refs.taskEditId?.value || "").trim();
+  const selectedAssignees = parseAssigneeEmails(refs.taskEditAssignee?.value || "");
   const payload = {
     title: String(refs.taskEditTitle?.value || "").trim(),
     description: String(refs.taskEditDescription?.value || "").trim(),
     tags: selectedTaskModalTags(),
     priority: String(refs.taskEditPriority?.value || "medium"),
     status: String(refs.taskEditStatus?.value || "todo"),
-    assigneeEmail: String(refs.taskEditAssignee?.value || "").trim().toLowerCase(),
+    assigneeEmail: selectedAssignees.join(", "),
     dueDate: String(refs.taskEditDueDate?.value || "").trim(),
   };
   if (!payload.title) return;
@@ -3653,7 +3744,8 @@ async function openTaskDetails(taskId) {
   if (!task) return;
   if (refs.taskDetailTitle) refs.taskDetailTitle.textContent = String(task.title || "Задача");
   if (refs.taskDetailMeta) {
-    refs.taskDetailMeta.textContent = `${statusLabel(task.status)} • ${priorityLabel(task.priority)} • ${task.assignee_email || "без исполнителя"}`;
+    const assignees = taskAssigneeLabels(task.assignee_email || "");
+    refs.taskDetailMeta.textContent = `${statusLabel(task.status)} • ${priorityLabel(task.priority)} • ${assignees.join(", ") || "без исполнителя"}`;
   }
   if (refs.taskDetailDescription) refs.taskDetailDescription.textContent = String(task.description || "Описание отсутствует.");
   if (refs.taskCommentsList) refs.taskCommentsList.innerHTML = '<p class="muted">Загрузка комментариев...</p>';
@@ -7246,6 +7338,10 @@ document.addEventListener("click", (event) => {
       closeChatMessageActionsPopover();
     }
   }
+  if (refs.taskAssigneesPopover && !refs.taskAssigneesPopover.hidden && refs.taskAssigneesPicker) {
+    const inTaskAssignee = refs.taskAssigneesPicker.contains(target);
+    if (!inTaskAssignee) closeTaskAssigneesPopover();
+  }
 });
 if (refs.taskCreateBtn) refs.taskCreateBtn.addEventListener("click", async () => {
   try {
@@ -7275,6 +7371,21 @@ if (refs.tasksListBtn) refs.tasksListBtn.addEventListener("click", () => {
 });
 if (refs.tasksFilterBtn) refs.tasksFilterBtn.addEventListener("click", () => {
   showToast("Фильтры задач будут в следующем шаге");
+  hapticSelection();
+});
+if (refs.taskAssigneesTrigger) refs.taskAssigneesTrigger.addEventListener("click", () => {
+  const nextOpen = Boolean(refs.taskAssigneesPopover?.hidden);
+  if (refs.taskAssigneesPopover) refs.taskAssigneesPopover.hidden = !nextOpen;
+  refs.taskAssigneesTrigger?.setAttribute("aria-expanded", nextOpen ? "true" : "false");
+  hapticSelection();
+});
+if (refs.taskAssigneesList) refs.taskAssigneesList.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const option = target.closest(".task-assignee-option[data-assignee-email]");
+  if (!(option instanceof HTMLButtonElement)) return;
+  const email = String(option.getAttribute("data-assignee-email") || "").trim();
+  toggleTaskAssignee(email);
   hapticSelection();
 });
 document.querySelectorAll(".task-modal-tag").forEach((node) => {
