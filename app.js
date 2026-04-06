@@ -3412,9 +3412,9 @@ function taskCardHtml(task, compact = false) {
     ? `
       <div class="task-card-meta-line">
         <span class="task-avatar">${escapeText(assigneeInitial)}</span>
-        ${dueText ? `<span class="task-due${overdue ? " overdue" : ""}">${iconSpan("clock2")}${escapeText(dueText)}</span>` : '<span class="task-due">${iconSpan("clock2")}—</span>'}
-        <span class="task-count-chip">${iconSpan("message")}<strong>${commentsCount}</strong></span>
-        <span class="task-count-chip">${iconSpan("paperclip")}<strong>${attachCount}</strong></span>
+        ${dueText ? `<span class="task-due${overdue ? " overdue" : ""}">${iconSpan("clock2")}${escapeText(dueText)}</span>` : `<span class="task-due">${iconSpan("clock2")}—</span>`}
+        <button type="button" class="task-count-chip" aria-label="Комментарии" data-task-action="comment" data-task-id="${task.id}">${iconSpan("message")}<strong>${commentsCount}</strong></button>
+        <button type="button" class="task-count-chip" aria-label="Детали задачи" data-task-action="open" data-task-id="${task.id}">${iconSpan("paperclip")}<strong>${attachCount}</strong></button>
       </div>
     `
     : `
