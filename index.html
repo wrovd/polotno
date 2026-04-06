@@ -1011,7 +1011,7 @@
               <article class="tasks-column-figma">
                 <header class="tasks-column-head">
                   <span class="tasks-dot dot-gray"></span>
-                  <h4>К выполнению</h4>
+                  <h4>Бэклог</h4>
                   <span class="tasks-count-pill" id="tasksTodoCount">0</span>
                   <button class="tasks-col-add" type="button" data-task-add-status="todo">+</button>
                 </header>
@@ -1020,10 +1020,10 @@
                 </div>
               </article>
 
-              <article class="tasks-column-figma">
+              <article class="tasks-column-figma tasks-done-col">
                 <header class="tasks-column-head">
-                  <span class="tasks-dot dot-blue"></span>
-                  <h4>В работе</h4>
+                  <span class="tasks-dot dot-yellow"></span>
+                  <h4>К выполнению</h4>
                   <span class="tasks-count-pill" id="tasksInProgressCount">0</span>
                   <button class="tasks-col-add" type="button" data-task-add-status="in_progress">+</button>
                 </header>
@@ -1035,7 +1035,7 @@
               <article class="tasks-column-figma">
                 <header class="tasks-column-head">
                   <span class="tasks-dot dot-orange"></span>
-                  <h4>На проверке</h4>
+                  <h4>В работе</h4>
                   <span class="tasks-count-pill" id="tasksReviewCount">0</span>
                   <button class="tasks-col-add" type="button" data-task-add-status="review">+</button>
                 </header>
@@ -1047,7 +1047,7 @@
               <article class="tasks-column-figma">
                 <header class="tasks-column-head">
                   <span class="tasks-dot dot-purple"></span>
-                  <h4>Готово</h4>
+                  <h4 class="visually-hidden">Готово</h4>
                   <span class="tasks-count-pill" id="tasksDoneCount">0</span>
                   <button class="tasks-col-add" type="button" data-task-add-status="done">+</button>
                 </header>
@@ -1489,17 +1489,25 @@
     <div class="auth-modal" id="taskEditModal" hidden>
       <div class="auth-backdrop" id="taskEditBackdrop"></div>
       <section class="auth-card task-modal-card" role="dialog" aria-modal="true" aria-label="Редактирование задачи">
-        <button class="close-btn" id="closeTaskEditBtn" type="button" aria-label="Закрыть">×</button>
+        <button class="close-btn task-modal-close" id="closeTaskEditBtn" type="button" aria-label="Закрыть">×</button>
         <h3 id="taskModalTitle">Новая задача</h3>
         <form class="stock-form" id="taskEditForm" novalidate>
           <input type="hidden" id="taskEditId" />
-          <label>Заголовок
-            <input type="text" id="taskEditTitle" required />
+          <label>Название задачи
+            <input type="text" id="taskEditTitle" placeholder="Что нужно сделать?" required />
           </label>
           <label>Описание
-            <textarea id="taskEditDescription" rows="4"></textarea>
+            <textarea id="taskEditDescription" rows="4" placeholder="Подробности, контекст, ссылки..."></textarea>
           </label>
           <div class="task-modal-grid">
+            <label>Статус
+              <select id="taskEditStatus">
+                <option value="todo">Бэклог</option>
+                <option value="in_progress">К выполнению</option>
+                <option value="review">В работе</option>
+                <option value="done">Готово</option>
+              </select>
+            </label>
             <label>Приоритет
               <select id="taskEditPriority">
                 <option value="low">Низкий</option>
@@ -1508,26 +1516,31 @@
                 <option value="urgent">Срочный</option>
               </select>
             </label>
-            <label>Колонка
-              <select id="taskEditStatus">
-                <option value="todo">К выполнению</option>
-                <option value="in_progress">В работе</option>
-                <option value="review">На проверке</option>
-                <option value="done">Готово</option>
-              </select>
-            </label>
           </div>
           <div class="task-modal-grid">
-            <label>Исполнитель (email)
-              <input type="email" id="taskEditAssignee" placeholder="user@company.com" />
+            <label>Исполнитель
+              <input type="email" id="taskEditAssignee" placeholder="Не назначен" />
             </label>
             <label>Дедлайн
               <input type="date" id="taskEditDueDate" />
             </label>
           </div>
+          <label>Теги
+            <div class="task-modal-tags">
+              <button type="button" class="task-modal-tag">Закупка</button>
+              <button type="button" class="task-modal-tag">Склад</button>
+              <button type="button" class="task-modal-tag">Срочно</button>
+              <button type="button" class="task-modal-tag">Импорт</button>
+              <button type="button" class="task-modal-tag">QR</button>
+              <button type="button" class="task-modal-tag">Коробки</button>
+              <button type="button" class="task-modal-tag">Расходники</button>
+              <button type="button" class="task-modal-tag">Оборудование</button>
+              <button type="button" class="task-modal-tag">Настройки</button>
+            </div>
+          </label>
           <div class="hero-actions">
             <button class="glass-btn full" id="cancelTaskEditBtn" type="button">Отмена</button>
-            <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить</span></button>
+            <button class="primary-btn full btn-with-icon task-modal-submit" type="submit"><span>Создать</span></button>
           </div>
         </form>
       </section>

@@ -3352,6 +3352,20 @@ function extractTaskTags(task) {
   return tags.slice(0, 2);
 }
 
+function tasksStatusUiTitle(status) {
+  if (status === "todo") return "Бэклог";
+  if (status === "in_progress") return "К выполнению";
+  if (status === "review") return "В работе";
+  return "Готово";
+}
+
+function tasksStatusDotClass(status) {
+  if (status === "todo") return "dot-gray";
+  if (status === "in_progress") return "dot-yellow";
+  if (status === "review") return "dot-orange";
+  return "dot-purple";
+}
+
 function isOverdue(dateString) {
   if (!dateString) return false;
   const value = new Date(dateString);
@@ -3370,6 +3384,8 @@ function taskCardHtml(task, compact = false) {
   const dueText = task.due_date ? formatShortDate(task.due_date) : "";
   const priority = taskPriorityClass(task.priority);
   const priorityText = taskPriorityUiLabel(task.priority);
+  const commentsCount = Math.max(0, Number(task.comments_count || 0));
+  const attachCount = Math.max(0, Number(task.attachments_count || 0));
   return `
     <article class="task-card-figma${compact ? " compact" : ""}" data-task-id="${task.id}" draggable="true">
       <div class="task-card-top">
@@ -3382,14 +3398,37 @@ function taskCardHtml(task, compact = false) {
       <div class="task-card-footer">
         <div class="task-assignee">
           <span class="task-avatar">${escapeText(assigneeInitial)}</span>
-          ${dueText ? `<span class="task-due${overdue ? " overdue" : ""}">${iconSpan("history")}${escapeText(dueText)}</span>` : ""}
+          ${dueText ? `<span class="task-due${overdue ? " overdue" : ""}">${iconSpan("clock2")}${escapeText(dueText)}</span>` : ""}
         </div>
         <div class="task-mini-actions">
-          <button type="button" aria-label="Открыть" data-task-action="open" data-task-id="${task.id}">${iconSpan("message")}</button>
+          <button type="button" aria-label="Комментарии" data-task-action="comment" data-task-id="${task.id}">${iconSpan("message")}<span>${commentsCount}</span></button>
+          <button type="button" aria-label="Вложения" data-task-action="open" data-task-id="${task.id}">${iconSpan("paperclip")}<span>${attachCount}</span></button>
           <button type="button" aria-label="Изменить" data-task-action="edit" data-task-id="${task.id}">${iconSpan("edit")}</button>
-          <button type="button" aria-label="Вперёд" data-task-action="next" data-task-id="${task.id}">${iconSpan("plus")}</button>
           <button type="button" aria-label="Удалить" data-task-action="delete" data-task-id="${task.id}">${iconSpan("trash")}</button>
         </div>
+      </div>
+    </article>
+  `;
+}
+
+function taskListRowHtml(task) {
+  const tags = extractTaskTags(task);
+  const assignee = String(task.assignee_email || "").trim();
+  const assigneeInitial = initialFromName(assignee || "A");
+  const dueText = task.due_date ? formatShortDate(task.due_date) : "";
+  const priority = taskPriorityClass(task.priority);
+  return `
+    <article class="task-list-row" data-task-open-id="${task.id}">
+      <div class="task-list-row-main">
+        <h5 class="task-list-row-title">
+          <span class="task-priority ${priority}">${iconSpan("flag")}</span>
+          <span>${escapeText(task.title || "Без названия")}</span>
+        </h5>
+        <div class="task-list-row-meta">${tags.map((tag) => `<span>${escapeText(tag)}</span>`).join("<span>•</span>") || "<span>Без тега</span>"}</div>
+      </div>
+      <div class="task-list-row-side">
+        ${dueText ? `<span>${escapeText(dueText)}</span>` : ""}
+        <span class="task-avatar">${escapeText(assigneeInitial)}</span>
       </div>
     </article>
   `;
@@ -3429,10 +3468,25 @@ function renderTasksList(list = filteredTasks()) {
     refs.tasksListContainer.innerHTML = '<p class="muted">Задачи не найдены.</p>';
     return;
   }
-  list.forEach((task) => {
+  const groups = [
+    { status: "todo", list: list.filter((task) => task.status === "todo") },
+    { status: "in_progress", list: list.filter((task) => task.status === "in_progress") },
+    { status: "review", list: list.filter((task) => task.status === "review") },
+    { status: "done", list: list.filter((task) => task.status === "done") },
+  ].filter((group) => group.list.length);
+  groups.forEach((group) => {
     refs.tasksListContainer.insertAdjacentHTML(
       "beforeend",
-      `<div class="history-meta">${statusLabel(task.status)}</div>${taskCardHtml(task, false)}`
+      `
+      <section class="tasks-list-group">
+        <header class="tasks-list-group-head">
+          <span class="tasks-dot ${tasksStatusDotClass(group.status)}"></span>
+          <h4 class="tasks-list-group-title">${escapeText(tasksStatusUiTitle(group.status))}</h4>
+          <span class="tasks-list-group-count">(${group.list.length})</span>
+        </header>
+        ${group.list.map((task) => taskListRowHtml(task)).join("")}
+      </section>
+      `
     );
   });
 }
@@ -3463,6 +3517,9 @@ async function loadTasks() {
 function populateTaskForm(task = null, status = "todo") {
   if (!refs.taskModalTitle) return;
   refs.taskModalTitle.textContent = task ? "Редактировать задачу" : "Новая задача";
+  const submitLabel = task ? "Сохранить" : "Создать";
+  const submitLabelNode = refs.taskEditForm?.querySelector(".task-modal-submit span:last-child");
+  if (submitLabelNode) submitLabelNode.textContent = submitLabel;
   if (refs.taskEditId) refs.taskEditId.value = task ? String(task.id || "") : "";
   if (refs.taskEditTitle) refs.taskEditTitle.value = String(task?.title || "");
   if (refs.taskEditDescription) refs.taskEditDescription.value = String(task?.description || "");
@@ -7231,6 +7288,14 @@ document.querySelectorAll("button[data-task-add-status]").forEach((node) => {
 async function onTaskAction(event) {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
+  const row = target.closest("[data-task-open-id]");
+  if (row instanceof HTMLElement && !target.closest("button[data-task-action]")) {
+    const taskId = String(row.getAttribute("data-task-open-id") || "").trim();
+    if (taskId) {
+      await runDbAction(() => openTaskDetails(taskId), { message: "Открываем детали..." });
+    }
+    return;
+  }
   const btn = target.closest("button[data-task-action][data-task-id]");
   if (!(btn instanceof HTMLButtonElement)) return;
   const action = String(btn.getAttribute("data-task-action") || "").trim();
