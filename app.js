@@ -1021,11 +1021,12 @@ function updateAuthButton() {
 
   if (state.user?.email) {
     const role = String(state.user.role || "staff").toLowerCase();
-    refs.openAuthBtn.innerHTML = `${iconSpan("user")}<span>${state.user.email} • ${role}</span>`;
+    const displayName = composeUserDisplayName(state.user) || state.user.email;
+    refs.openAuthBtn.innerHTML = `${iconSpan("user")}<span>${displayName} • ${role}</span>`;
     refs.openAuthBtn.classList.remove("primary-btn");
     refs.openAuthBtn.classList.add("glass-btn");
     if (refs.homeAuthCaption) refs.homeAuthCaption.textContent = "Добро пожаловать";
-    if (refs.homeAuthEmail) refs.homeAuthEmail.textContent = state.user.name || state.user.email;
+    if (refs.homeAuthEmail) refs.homeAuthEmail.textContent = composeUserDisplayName(state.user) || state.user.email;
     void updateHomeProfilePhoto().catch(() => setHomeProfileButtonPhoto(""));
     return;
   }
@@ -1521,6 +1522,7 @@ function applyUserFromServer(nextUser, nextToken = "") {
     setHomeNotificationsSeenNow();
   }
   startHomeNotificationsPolling();
+  void loadChatUsers(true).catch(() => {});
   updateAuthButton();
   applyRoleAccess();
   void refreshHomeNotifications(true).catch(() => {});
@@ -1763,6 +1765,49 @@ function canDesktopPrint() {
 
 function iconSpan(name) {
   return `<span class="btn-icon" aria-hidden="true"><svg><use href="#i-${name}"></use></svg></span>`;
+}
+
+function composeUserDisplayName(user = null) {
+  if (!user || typeof user !== "object") return "";
+  const first = String(user.first_name || "").trim();
+  const last = String(user.last_name || "").trim();
+  const full = [first, last].filter(Boolean).join(" ").trim();
+  if (full) return full;
+  const name = String(user.name || "").trim();
+  if (name && !name.includes("@")) return name;
+  return "";
+}
+
+function userRecordByEmail(email = "") {
+  const needle = String(email || "").trim().toLowerCase();
+  if (!needle) return null;
+  const me = String(state.user?.email || "").trim().toLowerCase();
+  if (needle === me && state.user) return state.user;
+  const fromChat = (state.chatUsers || []).find((row) => String(row.email || "").trim().toLowerCase() === needle);
+  if (fromChat) return fromChat;
+  const fromAdmin = (state.adminUsers || []).find((row) => String(row.email || "").trim().toLowerCase() === needle);
+  if (fromAdmin) return fromAdmin;
+  return null;
+}
+
+function userDisplayNameByEmail(email = "", fallback = "Пользователь") {
+  const normalized = String(email || "").trim().toLowerCase();
+  if (!normalized) return fallback;
+  const row = userRecordByEmail(normalized);
+  const byName = composeUserDisplayName(row);
+  if (byName) return byName;
+  if (row?.name && !String(row.name).includes("@")) return String(row.name);
+  return fallback || normalized;
+}
+
+function mapAuthorPrefix(text = "") {
+  const raw = String(text || "").trim();
+  const [head, ...tail] = raw.split(":");
+  if (!tail.length) return raw;
+  const maybeEmail = String(head || "").trim().toLowerCase();
+  if (!maybeEmail.includes("@")) return raw;
+  const display = userDisplayNameByEmail(maybeEmail, maybeEmail);
+  return `${display}: ${tail.join(":").trim()}`;
 }
 
 function initialFromName(name) {
@@ -2701,7 +2746,7 @@ function renderChatUsersOptions() {
     users.forEach((user) => {
       const option = document.createElement("option");
       option.value = String(user.email || "");
-      option.textContent = String(user.name || user.email || "");
+      option.textContent = composeUserDisplayName(user) || String(user.name || user.email || "");
       refs.chatCreateMemberSelect.appendChild(option);
     });
     refs.chatCreateMemberSelect.value = users.some((u) => String(u.email) === current) ? current : "";
@@ -2712,7 +2757,7 @@ function renderChatUsersOptions() {
     users.forEach((user) => {
       const option = document.createElement("option");
       option.value = String(user.email || "");
-      option.textContent = String(user.name || user.email || "");
+      option.textContent = composeUserDisplayName(user) || String(user.name || user.email || "");
       if (selected.has(option.value)) option.selected = true;
       refs.chatCreateMembersSelect.appendChild(option);
     });
@@ -2732,7 +2777,9 @@ async function loadChatUsers(force = false) {
   state.chatUsers = rows
     .map((row) => ({
       email: String(row.email || "").trim().toLowerCase(),
-      name: String(row.name || row.email || "").trim(),
+      name: composeUserDisplayName(row) || String(row.name || "").trim(),
+      first_name: String(row.first_name || "").trim(),
+      last_name: String(row.last_name || "").trim(),
       role: String(row.role || "staff").trim().toLowerCase(),
     }))
     .filter((row) => row.email && row.email !== me);
@@ -2797,7 +2844,12 @@ function chatThreadPreviewText(rawPreview = "") {
   const pollPayload = pollPayloadFromMessage(raw);
   if (pollPayload) return `Голосование: ${pollPayload.question}`;
   if (pollVotePayloadFromMessage(raw)) return "Новый голос в опросе";
-  return raw;
+  const forwarded = parseChatMessageBody(raw).forwarded;
+  if (forwarded) {
+    const mappedForwarded = mapAuthorPrefix(forwarded);
+    return `↗ ${mappedForwarded}`;
+  }
+  return mapAuthorPrefix(raw);
 }
 
 function renderChatReplyPreview() {
@@ -2862,7 +2914,7 @@ async function openChatReadStatus(message) {
     } else {
       refs.chatReadStatusList.innerHTML = readers
         .map((row) => {
-          const who = String(row.name || row.email || "Пользователь");
+          const who = composeUserDisplayName(row) || userDisplayNameByEmail(row.email || "", "Пользователь");
           const at = row.read_at ? formatHistoryDate(row.read_at) : "—";
           return `<article class="history-item"><strong>${escapeText(who)}</strong><div class="history-meta">${escapeText(at)}</div></article>`;
         })
@@ -2940,9 +2992,10 @@ async function performChatMessageAction(action, message, messageId) {
   const mine = String(message.author_email || "").toLowerCase() === String(state.user?.email || "").toLowerCase();
   const parsed = parseChatMessageBody(message.body || "");
   if (action === "reply") {
+    const authorEmail = String(message.author_email || "").trim().toLowerCase();
     state.chatReplyTo = {
       id: messageId,
-      author: mine ? "Вы" : String(message.author_email || "Пользователь"),
+      author: mine ? "Вы" : userDisplayNameByEmail(authorEmail, "Пользователь"),
       text: parsed.text || "",
     };
     renderChatReplyPreview();
@@ -3140,12 +3193,16 @@ function renderChatMessages(options = {}) {
     const statusIcon = buildMessageStatus(message, mine);
     const key = chatMessageKey(message);
     const row = document.createElement("article");
+    const authorEmail = String(message.author_email || "").trim().toLowerCase();
+    const authorName = mine ? "Вы" : userDisplayNameByEmail(authorEmail, "Пользователь");
+    const replyText = mapAuthorPrefix(parsed.reply || "");
+    const forwardedText = mapAuthorPrefix(parsed.forwarded || "");
     row.className = `chat-message${mine ? " is-mine" : ""}`;
     row.setAttribute("data-chat-message-id", key);
     row.innerHTML = `
-      <div class="chat-message-author">${escapeText(mine ? "Вы" : message.author_email || "Пользователь")}</div>
-      ${parsed.forwarded ? `<div class="chat-message-forwarded">↗ ${escapeText(parsed.forwarded)}</div>` : ""}
-      ${parsed.reply ? `<div class="chat-message-reply">${escapeText(parsed.reply)}</div>` : ""}
+      <div class="chat-message-author">${escapeText(authorName)}</div>
+      ${forwardedText ? `<div class="chat-message-forwarded">↗ ${escapeText(forwardedText)}</div>` : ""}
+      ${replyText ? `<div class="chat-message-reply">${escapeText(replyText)}</div>` : ""}
       <div class="chat-message-body${structured ? " is-structured" : ""}">${finalBody}</div>
       <div class="chat-message-foot">
         <div class="chat-message-time">${formatHistoryDate(message.created_at)}</div>
@@ -3448,9 +3505,8 @@ function taskAssigneeLabels(raw = "") {
 
 function taskUserLabel(email = "") {
   const normalized = String(email || "").trim().toLowerCase();
-  if (!normalized) return "";
-  const row = (state.chatUsers || []).find((user) => String(user.email || "").trim().toLowerCase() === normalized);
-  return String(row?.name || normalized);
+  if (!normalized) return "Пользователь";
+  return userDisplayNameByEmail(normalized, "Пользователь");
 }
 
 function closeTaskAssigneesPopover() {
@@ -3480,7 +3536,7 @@ function renderTaskAssigneesUi() {
     refs.taskAssigneesList.innerHTML = users
       .map((user) => {
         const email = String(user.email || "").trim().toLowerCase();
-        const name = String(user.name || user.email || email);
+        const name = composeUserDisplayName(user) || userDisplayNameByEmail(email, "Пользователь");
         const checked = selectedSet.has(email);
         return `
           <button type="button" class="task-assignee-option${checked ? " is-selected" : ""}" data-assignee-email="${escapeText(email)}">
@@ -3822,7 +3878,7 @@ async function renderTaskComments(taskId) {
       .map((row) => `
         <article class="task-comment-item">
           <header>
-            <strong>${escapeText(taskUserLabel(row.author_email || "") || row.author_email || "Пользователь")}</strong>
+            <strong>${escapeText(userDisplayNameByEmail(row.author_email || "", "Пользователь"))}</strong>
             <time>${formatHistoryDate(row.created_at)}</time>
           </header>
           <p>${escapeText(row.body || "")}</p>
@@ -3908,7 +3964,7 @@ function renderAdminUsers(users = state.adminUsers) {
   users.forEach((user) => {
     const option = document.createElement("option");
     option.value = user.email;
-    option.textContent = `${user.email} (${user.role})`;
+    option.textContent = `${composeUserDisplayName(user) || user.email} (${user.role})`;
     refs.adminHistoryUser.appendChild(option);
   });
 
@@ -3916,7 +3972,7 @@ function renderAdminUsers(users = state.adminUsers) {
     const item = document.createElement("article");
     item.className = "history-item";
     item.innerHTML = `
-      <div><strong>${user.name || user.email}</strong> <span class="history-reason">${user.role}</span></div>
+      <div><strong>${composeUserDisplayName(user) || user.email}</strong> <span class="history-reason">${user.role}</span></div>
       <div class="history-meta">${user.email}</div>
       <div class="history-meta">Chat ID: ${user.telegram_chat_id || "не указан"}</div>
     `;
@@ -3944,7 +4000,7 @@ function renderAdminHistory(movements = state.adminHistory) {
     block.innerHTML = `
       <div><strong>${row.item_id || "Без ID"}</strong> <span class="history-reason">${reasonLabel(row.reason)}</span></div>
       <div class="history-meta">Изменение: ${Number(row.delta || 0)}</div>
-      <div class="history-meta">${row.user_email || "-"}</div>
+      <div class="history-meta">${userDisplayNameByEmail(row.user_email || "", row.user_email || "-")}</div>
       <div class="history-meta">${formatHistoryDate(row.created_at)}</div>
     `;
     refs.adminHistoryList.appendChild(block);
@@ -4000,7 +4056,11 @@ function applyHistoryFilters(list = state.history) {
 
   state.historyFiltered = list.filter((row) => {
     if (itemId && !String(row.item_id || "").toUpperCase().includes(itemId)) return false;
-    if (userEmail && !String(row.user_email || "").toLowerCase().includes(userEmail)) return false;
+    if (userEmail) {
+      const rawEmail = String(row.user_email || "").toLowerCase();
+      const display = userDisplayNameByEmail(rawEmail, "").toLowerCase();
+      if (!rawEmail.includes(userEmail) && !display.includes(userEmail)) return false;
+    }
     if (reason && String(row.reason || "").toLowerCase() !== reason) return false;
     if (fromIso || toDate) {
       const dt = new Date(row.created_at || "");
@@ -4059,7 +4119,7 @@ function renderHistory(list = state.historyFiltered) {
     block.innerHTML = `
       <div><strong>${itemName}</strong> <span class="history-reason">${reasonLabel(row.reason)}</span></div>
       <div class="history-meta">ID: ${row.item_id || "-"} • Изменение: ${Number(row.delta || 0)}</div>
-      <div class="history-meta">Пользователь: ${row.user_email || "-"}</div>
+      <div class="history-meta">Пользователь: ${userDisplayNameByEmail(row.user_email || "", row.user_email || "-")}</div>
       <div class="history-meta">${formatHistoryDate(row.created_at)}</div>
     `;
     refs.historyList.appendChild(block);
@@ -4133,7 +4193,7 @@ function renderFilmDeleteStats() {
         const card = document.createElement("article");
         card.className = "history-item";
         card.innerHTML = `
-          <div><strong>#${idx + 1} ${row.user_email || "Неизвестный пользователь"}</strong></div>
+          <div><strong>#${idx + 1} ${userDisplayNameByEmail(row.user_email || "", row.user_email || "Неизвестный пользователь")}</strong></div>
           <div class="history-meta">Удалил пленок: ${Number(row.total || 0)}</div>
         `;
         refs.statsUsersList.appendChild(card);
@@ -7319,7 +7379,8 @@ if (refs.chatForwardList) refs.chatForwardList.addEventListener("click", async (
   const toThreadId = String(btn.getAttribute("data-chat-forward-to") || "").trim();
   if (!toThreadId || !state.chatForwardMessage) return;
   const parsed = parseChatMessageBody(state.chatForwardMessage.body || "");
-  const forwardHeader = `↗ Переслано от: ${state.chatForwardMessage.author_email || "Пользователь"}`;
+  const forwardAuthor = userDisplayNameByEmail(String(state.chatForwardMessage.author_email || "").trim().toLowerCase(), "Пользователь");
+  const forwardHeader = `↗ Переслано от: ${forwardAuthor}`;
   const forwardBody = `${forwardHeader}\n${parsed.text || state.chatForwardMessage.body || ""}`.trim();
   try {
     await apiRequest("/api/inventory/chat-send", {
