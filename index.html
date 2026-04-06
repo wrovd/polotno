@@ -1640,12 +1640,10 @@
             Варианты (каждый с новой строки)
             <textarea id="chatPollOptions" rows="5" placeholder="До обеда&#10;После обеда&#10;Завтра утром" required></textarea>
           </label>
-          <label class="toggle-row">
+          <label class="toggle-row" for="chatPollAllowMulti">
             <span>Разрешить несколько ответов</span>
-            <span>
-              <input class="toggle-input" id="chatPollAllowMulti" type="checkbox" />
-              <span class="toggle-switch"></span>
-            </span>
+            <input class="toggle-input" id="chatPollAllowMulti" type="checkbox" />
+            <span class="toggle-switch" aria-hidden="true"></span>
           </label>
           <button class="primary-btn full btn-with-icon" id="chatPollSubmitBtn" type="submit">
             <span class="btn-icon" aria-hidden="true"><svg><use href="#i-send"></use></svg></span><span>Отправить в чат</span>

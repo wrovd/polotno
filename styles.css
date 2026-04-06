@@ -3206,9 +3206,9 @@ button.is-loading::after {
   border-radius: 16px 16px 16px 10px;
   background: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.1);
-  padding: 10px 16px;
+  padding: 8px 12px;
   display: grid;
-  gap: 4px;
+  gap: 3px;
   cursor: pointer;
 }
 
@@ -3478,10 +3478,10 @@ button.is-loading::after {
   bottom: calc(100% - 6px);
   z-index: 8;
   min-width: 220px;
-  border: 1px solid #dfe3ec;
+  border: 1px solid #2d3342;
   border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 14px 36px rgba(20, 28, 43, 0.18);
+  background: #1e222d;
+  box-shadow: 0 14px 36px rgba(10, 13, 20, 0.45);
   padding: 8px;
   display: grid;
   gap: 6px;
@@ -3489,12 +3489,12 @@ button.is-loading::after {
 
 .chat-extensions-popover button {
   min-height: 38px;
-  border: 0;
+  border: 1px solid #2f3648;
   border-radius: 10px;
-  background: transparent;
+  background: #252b39;
   font-size: 14px;
   font-weight: 600;
-  color: #1f2a3d;
+  color: #f3f6ff;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -3505,11 +3505,11 @@ button.is-loading::after {
 .chat-extensions-popover button .btn-icon {
   width: 16px;
   height: 16px;
-  color: #5a6e94;
+  color: #88a9ff;
 }
 
 .chat-extensions-popover button:hover {
-  background: #f3f5fb;
+  background: #2d3548;
 }
 
 .chat-composer-figma input {
@@ -3537,12 +3537,12 @@ button.is-loading::after {
 
 .chat-poll-card,
 .chat-task-link-card {
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   background: rgba(255, 255, 255, 0.06);
-  padding: 10px;
+  padding: 8px;
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .chat-message:not(.is-mine) .chat-poll-card,
@@ -3553,7 +3553,7 @@ button.is-loading::after {
 
 .chat-poll-title,
 .chat-task-link-title {
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.35;
   font-weight: 700;
   display: inline-flex;
@@ -3563,7 +3563,7 @@ button.is-loading::after {
 
 .chat-poll-meta,
 .chat-task-link-meta {
-  font-size: 12px;
+  font-size: 11px;
   color: rgba(255, 255, 255, 0.72);
 }
 
@@ -3574,13 +3574,13 @@ button.is-loading::after {
 
 .chat-poll-options {
   display: grid;
-  gap: 6px;
+  gap: 5px;
 }
 
 .chat-poll-option {
-  min-height: 32px;
+  min-height: 30px;
   border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 10px;
+  border-radius: 9px;
   background: rgba(255, 255, 255, 0.06);
   color: inherit;
   display: flex;
@@ -3588,7 +3588,7 @@ button.is-loading::after {
   justify-content: space-between;
   gap: 8px;
   padding: 0 10px;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .chat-message:not(.is-mine) .chat-poll-option {
@@ -3597,7 +3597,7 @@ button.is-loading::after {
 }
 
 .chat-poll-option strong {
-  font-size: 12px;
+  font-size: 11px;
   color: #76a1ff;
 }
 
@@ -3612,20 +3612,33 @@ button.is-loading::after {
 
 .chat-task-link-note {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.35;
 }
 
 .chat-task-link-open-btn {
-  min-height: 32px;
+  min-height: 30px;
   border: 0;
-  border-radius: 10px;
-  background: #3478f6;
+  border-radius: 9px;
+  background: #1f2023;
   color: #fff;
-  padding: 0 12px;
+  padding: 0 10px;
   justify-self: start;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
+}
+
+#chatPollSubmitBtn,
+#chatTaskLinkSubmitBtn {
+  background: #1f2023;
+  border-color: #1f2023;
+  color: #fff;
+}
+
+#chatPollSubmitBtn:hover,
+#chatTaskLinkSubmitBtn:hover {
+  background: #15171b;
+  border-color: #15171b;
 }
 
 .chat-drawer.is-hidden {

@@ -2360,9 +2360,10 @@ function filteredChatThreads() {
   const search = String(refs.chatSearchInput?.value || "").trim().toLowerCase();
   if (!search) return state.chatThreads;
   return state.chatThreads.filter((thread) => {
+    const preview = chatThreadPreviewText(thread.last_message_preview || "");
     return (
       String(thread.title || "").toLowerCase().includes(search) ||
-      String(thread.last_message_preview || "").toLowerCase().includes(search)
+      preview.toLowerCase().includes(search)
     );
   });
 }
@@ -2743,6 +2744,9 @@ function chatMessageKey(message) {
 
 function parseChatMessageBody(rawBody = "") {
   const raw = String(rawBody || "");
+  if (raw.startsWith("[[POLL]]") || raw.startsWith("[[TASK_LINK]]") || raw.startsWith("[[POLL_VOTE]]")) {
+    return { reply: "", forwarded: "", text: "" };
+  }
   const lines = raw.split("\n");
   const first = String(lines[0] || "").trim();
   if (first.startsWith("↪ Ответ на:")) {
@@ -2760,6 +2764,17 @@ function parseChatMessageBody(rawBody = "") {
     };
   }
   return { reply: "", forwarded: "", text: raw };
+}
+
+function chatThreadPreviewText(rawPreview = "") {
+  const raw = String(rawPreview || "").trim();
+  if (!raw) return "";
+  const taskPayload = taskLinkPayloadFromMessage(raw);
+  if (taskPayload) return `Задача: ${taskPayload.title}${taskPayload.note ? ` • ${taskPayload.note}` : ""}`;
+  const pollPayload = pollPayloadFromMessage(raw);
+  if (pollPayload) return `Голосование: ${pollPayload.question}`;
+  if (pollVotePayloadFromMessage(raw)) return "Новый голос в опросе";
+  return raw;
 }
 
 function renderChatReplyPreview() {
@@ -2953,7 +2968,7 @@ function renderChatThreads(list = filteredChatThreads()) {
     card.className = `chat-thread-item${active ? " is-active" : ""}`;
     card.setAttribute("data-chat-open", String(thread.id));
     const unread = Number(thread.unread_count || 0);
-    const preview = String(thread.last_message_preview || "").trim();
+    const preview = chatThreadPreviewText(thread.last_message_preview || "");
     const isOnline = Boolean(thread.is_online);
     const firstLetter = (String(thread.title || "Ч").trim().charAt(0) || "Ч").toUpperCase();
     card.innerHTML = `
