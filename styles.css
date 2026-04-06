@@ -5324,43 +5324,43 @@ button.is-loading::after {
 
 .tasks-filters-panel {
   border: 1px solid #d6dbe5;
-  border-radius: 28px;
+  border-radius: 22px;
   background: #fff;
-  padding: 18px 20px;
+  padding: 16px 18px;
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
 .tasks-filters-group {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .tasks-filters-group h4 {
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.15;
   letter-spacing: 0;
-  font-weight: 600;
+  font-weight: 700;
   color: #9b9b9b;
 }
 
 .tasks-filter-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .tasks-filter-chip {
-  min-height: 58px;
-  border-radius: 16px;
+  min-height: 44px;
+  border-radius: 14px;
   border: 1px solid transparent;
   background: #f1f2f6;
   color: #5f636c;
-  padding: 0 22px;
-  font-size: 15px;
+  padding: 0 16px;
+  font-size: 13px;
   line-height: 1;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: transform 0.16s ease, background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
 }
@@ -6214,10 +6214,10 @@ button.is-loading::after {
   }
 
   .tasks-filter-chip {
-    min-height: 38px;
+    min-height: 36px;
     border-radius: 12px;
-    padding: 0 12px;
-    font-size: 13px;
+    padding: 0 11px;
+    font-size: 12px;
     font-weight: 600;
   }
 
