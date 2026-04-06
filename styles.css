@@ -3648,9 +3648,9 @@ button.is-loading::after {
   }
 
   #inventoryView.is-main-ios-mode .inventory-ios {
-    max-width: 860px;
+    max-width: 1120px;
     margin: 0 auto;
-    padding: 0 4px;
+    padding: 0 8px;
     gap: 12px;
   }
 
