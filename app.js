@@ -656,18 +656,22 @@ function setButtonLoading(button, isLoading) {
 }
 
 async function runDbAction(task, options = {}) {
-  const { button = null, message = "Сохраняем данные..." } = options;
-  state.loadingDepth += 1;
-  setLoadingOverlay(true, message);
+  const { button = null, message = "Сохраняем данные...", showOverlay = true } = options;
+  if (showOverlay) {
+    state.loadingDepth += 1;
+    setLoadingOverlay(true, message);
+  }
   setButtonLoading(button, true);
 
   try {
     return await task();
   } finally {
     setButtonLoading(button, false);
-    state.loadingDepth = Math.max(0, state.loadingDepth - 1);
-    if (state.loadingDepth === 0) {
-      setLoadingOverlay(false, message);
+    if (showOverlay) {
+      state.loadingDepth = Math.max(0, state.loadingDepth - 1);
+      if (state.loadingDepth === 0) {
+        setLoadingOverlay(false, message);
+      }
     }
   }
 }
@@ -7429,7 +7433,7 @@ if (refs.tasksBoard) {
     const taskId = String(event.dataTransfer.getData("text/task-id") || "").trim();
     const status = String(drop.getAttribute("data-task-status") || "").trim();
     if (!taskId || !status) return;
-    runDbAction(() => updateTaskStatus(taskId, status), { message: "Перемещаем задачу..." })
+    runDbAction(() => updateTaskStatus(taskId, status), { message: "Перемещаем задачу...", showOverlay: false })
       .then(() => {
         showToast("Задача перемещена");
         hapticSuccess();
