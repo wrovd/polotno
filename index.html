@@ -1531,9 +1531,16 @@
             Название
             <input type="text" id="chatCreateTitleInput" placeholder="Например, Склад #1" required />
           </label>
+          <label id="chatCreateMemberSingleWrap">
+            Сотрудник
+            <select id="chatCreateMemberSelect">
+              <option value="">Выберите сотрудника</option>
+            </select>
+          </label>
           <label id="chatCreateMembersWrap">
-            Email участника (опционально)
-            <input type="email" id="chatCreateMemberInput" placeholder="user@company.com" />
+            Участники группы
+            <select id="chatCreateMembersSelect" multiple size="7"></select>
+            <span class="helper">Для выбора нескольких: `Ctrl` / `Cmd` + клик.</span>
           </label>
           <button class="primary-btn full btn-with-icon" id="chatCreateSubmitBtn" type="submit">
             <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Создать</span>

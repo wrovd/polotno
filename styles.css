@@ -3168,6 +3168,10 @@ button.is-loading::after {
   margin-bottom: 10px;
 }
 
+.chat-create-card select[multiple] {
+  min-height: 152px;
+}
+
 .chat-forward-item {
   width: 100%;
   border: 1px solid var(--line);

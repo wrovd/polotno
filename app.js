@@ -41,6 +41,7 @@ const state = {
   chatActiveThreadId: "",
   chatDraftFiles: [],
   chatCreateKind: "direct",
+  chatUsers: [],
   chatReplyTo: null,
   chatForwardMessage: null,
   chatLocalMessageMeta: {},
@@ -344,7 +345,9 @@ const refs = {
   chatCreateModalTitle: document.getElementById("chatCreateModalTitle"),
   chatCreateKind: document.getElementById("chatCreateKind"),
   chatCreateTitleInput: document.getElementById("chatCreateTitleInput"),
-  chatCreateMemberInput: document.getElementById("chatCreateMemberInput"),
+  chatCreateMemberSelect: document.getElementById("chatCreateMemberSelect"),
+  chatCreateMembersSelect: document.getElementById("chatCreateMembersSelect"),
+  chatCreateMemberSingleWrap: document.getElementById("chatCreateMemberSingleWrap"),
   chatCreateMembersWrap: document.getElementById("chatCreateMembersWrap"),
   chatCreateSubmitBtn: document.getElementById("chatCreateSubmitBtn"),
   chatForwardModal: document.getElementById("chatForwardModal"),
@@ -910,6 +913,7 @@ function setInventoryTab(tab) {
     loadChatData().catch((error) => {
       showToast(error.message || "Не удалось загрузить чаты");
     });
+    loadChatUsers().catch(() => {});
     syncChatLayoutMode();
   }
   if (isTasks) {
@@ -1978,14 +1982,63 @@ function setChatCreateKind(kind = "direct") {
           ? "Например, Анонсы склада"
           : "Например, Личный чат";
   }
-  const showMemberField = normalized === "direct";
-  if (refs.chatCreateMembersWrap) refs.chatCreateMembersWrap.hidden = !showMemberField;
+  const isDirect = normalized === "direct";
+  if (refs.chatCreateMemberSingleWrap) refs.chatCreateMemberSingleWrap.hidden = !isDirect;
+  if (refs.chatCreateMembersWrap) refs.chatCreateMembersWrap.hidden = isDirect;
+}
+
+function renderChatUsersOptions() {
+  const users = Array.isArray(state.chatUsers) ? state.chatUsers : [];
+  if (refs.chatCreateMemberSelect) {
+    const current = String(refs.chatCreateMemberSelect.value || "");
+    refs.chatCreateMemberSelect.innerHTML = '<option value="">Выберите сотрудника</option>';
+    users.forEach((user) => {
+      const option = document.createElement("option");
+      option.value = String(user.email || "");
+      option.textContent = String(user.name || user.email || "");
+      refs.chatCreateMemberSelect.appendChild(option);
+    });
+    refs.chatCreateMemberSelect.value = users.some((u) => String(u.email) === current) ? current : "";
+  }
+  if (refs.chatCreateMembersSelect) {
+    const selected = new Set(Array.from(refs.chatCreateMembersSelect.selectedOptions).map((x) => String(x.value || "")));
+    refs.chatCreateMembersSelect.innerHTML = "";
+    users.forEach((user) => {
+      const option = document.createElement("option");
+      option.value = String(user.email || "");
+      option.textContent = String(user.name || user.email || "");
+      if (selected.has(option.value)) option.selected = true;
+      refs.chatCreateMembersSelect.appendChild(option);
+    });
+  }
+}
+
+async function loadChatUsers(force = false) {
+  if (!state.token) {
+    state.chatUsers = [];
+    renderChatUsersOptions();
+    return;
+  }
+  if (!force && state.chatUsers.length) return;
+  const data = await apiRequest("/api/inventory/chat-users");
+  const rows = Array.isArray(data.users) ? data.users : [];
+  const me = String(state.user?.email || "").toLowerCase();
+  state.chatUsers = rows
+    .map((row) => ({
+      email: String(row.email || "").trim().toLowerCase(),
+      name: String(row.name || row.email || "").trim(),
+      role: String(row.role || "staff").trim().toLowerCase(),
+    }))
+    .filter((row) => row.email && row.email !== me);
+  renderChatUsersOptions();
 }
 
 function openChatCreateModal(kind = "direct") {
   setChatMenuOpen(false);
   setChatCreateKind(kind);
   if (refs.chatCreateForm) refs.chatCreateForm.reset();
+  renderChatUsersOptions();
+  void loadChatUsers().catch(() => {});
   openSimpleModal(refs.chatCreateModal);
   setTimeout(() => refs.chatCreateTitleInput?.focus(), 40);
 }
@@ -2253,9 +2306,14 @@ async function createChat(kind = "direct") {
     kind: chatKind,
     memberEmails: [],
   };
-  const target = String(payload.memberEmail || "").trim().toLowerCase();
-  if (chatKind === "direct" && target) {
-    threadPayload.memberEmails = [target];
+  const singleTarget = String(payload.memberEmail || "").trim().toLowerCase();
+  const manyTargets = Array.isArray(payload.memberEmails)
+    ? payload.memberEmails.map((x) => String(x || "").trim().toLowerCase()).filter(Boolean)
+    : [];
+  if (chatKind === "direct" && singleTarget) {
+    threadPayload.memberEmails = [singleTarget];
+  } else if (chatKind !== "direct" && manyTargets.length) {
+    threadPayload.memberEmails = manyTargets;
   }
   const result = await apiRequest("/api/inventory/chat-create", {
     method: "POST",
@@ -5973,9 +6031,18 @@ if (refs.chatCreateForm) refs.chatCreateForm.addEventListener("submit", async (e
   if (!refs.chatCreateForm.reportValidity()) return;
   const kind = String(refs.chatCreateKind?.value || state.chatCreateKind || "direct");
   const title = String(refs.chatCreateTitleInput?.value || "").trim();
-  const memberEmail = String(refs.chatCreateMemberInput?.value || "").trim();
+  const memberEmail = String(refs.chatCreateMemberSelect?.value || "").trim();
+  const memberEmails =
+    refs.chatCreateMembersSelect
+      ? Array.from(refs.chatCreateMembersSelect.selectedOptions).map((x) => String(x.value || "").trim()).filter(Boolean)
+      : [];
+  if (kind === "direct" && !memberEmail) {
+    showToast("Выберите сотрудника");
+    refs.chatCreateMemberSelect?.focus();
+    return;
+  }
   try {
-    const thread = await runDbAction(() => createChat({ kind, title, memberEmail }), {
+    const thread = await runDbAction(() => createChat({ kind, title, memberEmail, memberEmails }), {
       button: refs.chatCreateSubmitBtn,
       message: "Создаем чат...",
     });

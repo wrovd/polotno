@@ -9,6 +9,7 @@ const {
   listMovements,
   createChatThread,
   listChatThreadsForUser,
+  listChatUsers,
   listChatMessages,
   sendChatMessage,
   markChatThreadRead,
@@ -349,6 +350,11 @@ async function handleChat(req, res) {
   const action = actionFromReq(req);
 
   try {
+    if (req.method === "GET" && action === "chat-users") {
+      const users = await listChatUsers();
+      return send(res, 200, { users });
+    }
+
     if (req.method === "GET" && action === "chat-list") {
       const search = String(req.query.search || "");
       const list = await listChatThreadsForUser(auth.user.email, {
