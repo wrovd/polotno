@@ -445,8 +445,13 @@ const refs = {
   closeTaskDetailBtn: document.getElementById("closeTaskDetailBtn"),
   taskDetailTitle: document.getElementById("taskDetailTitle"),
   taskDetailMeta: document.getElementById("taskDetailMeta"),
+  taskDetailStatusValue: document.getElementById("taskDetailStatusValue"),
+  taskDetailPriorityValue: document.getElementById("taskDetailPriorityValue"),
+  taskDetailAssigneesValue: document.getElementById("taskDetailAssigneesValue"),
+  taskDetailDueDateValue: document.getElementById("taskDetailDueDateValue"),
   taskDetailDescription: document.getElementById("taskDetailDescription"),
   taskCommentsList: document.getElementById("taskCommentsList"),
+  taskDetailCommentBtn: document.getElementById("taskDetailCommentBtn"),
   taskDetailEditBtn: document.getElementById("taskDetailEditBtn"),
   taskDetailDeleteBtn: document.getElementById("taskDetailDeleteBtn"),
   toToolsBtn: document.getElementById("toToolsBtn"),
@@ -3739,21 +3744,10 @@ async function addTaskCommentFromPrompt(taskId) {
   await loadHistory();
 }
 
-async function openTaskDetails(taskId) {
-  const task = state.tasks.find((x) => String(x.id) === String(taskId));
-  if (!task) return;
-  if (refs.taskDetailTitle) refs.taskDetailTitle.textContent = String(task.title || "Задача");
-  if (refs.taskDetailMeta) {
-    const assignees = taskAssigneeLabels(task.assignee_email || "");
-    refs.taskDetailMeta.textContent = `${statusLabel(task.status)} • ${priorityLabel(task.priority)} • ${assignees.join(", ") || "без исполнителя"}`;
-  }
-  if (refs.taskDetailDescription) refs.taskDetailDescription.textContent = String(task.description || "Описание отсутствует.");
+async function renderTaskComments(taskId) {
   if (refs.taskCommentsList) refs.taskCommentsList.innerHTML = '<p class="muted">Загрузка комментариев...</p>';
-  refs.taskDetailEditBtn?.setAttribute("data-task-id", String(task.id));
-  refs.taskDetailDeleteBtn?.setAttribute("data-task-id", String(task.id));
-  openSimpleModal(refs.taskDetailModal);
   try {
-    const data = await apiRequest(`/api/inventory/task-comments?task_id=${encodeURIComponent(String(task.id))}`);
+    const data = await apiRequest(`/api/inventory/task-comments?task_id=${encodeURIComponent(String(taskId))}`);
     const list = Array.isArray(data.comments) ? data.comments : [];
     if (!refs.taskCommentsList) return;
     if (!list.length) {
@@ -3761,11 +3755,36 @@ async function openTaskDetails(taskId) {
       return;
     }
     refs.taskCommentsList.innerHTML = list
-      .map((row) => `<article class="history-item"><strong>${escapeText(row.author_email || "Пользователь")}</strong><div class="history-meta">${escapeText(row.body || "")}</div><div class="history-meta">${formatHistoryDate(row.created_at)}</div></article>`)
+      .map((row) => `
+        <article class="task-comment-item">
+          <header>
+            <strong>${escapeText(taskUserLabel(row.author_email || "") || row.author_email || "Пользователь")}</strong>
+            <time>${formatHistoryDate(row.created_at)}</time>
+          </header>
+          <p>${escapeText(row.body || "")}</p>
+        </article>
+      `)
       .join("");
   } catch (error) {
     if (refs.taskCommentsList) refs.taskCommentsList.innerHTML = `<p class="muted">${escapeText(error.message || "Ошибка загрузки комментариев")}</p>`;
   }
+}
+
+async function openTaskDetails(taskId) {
+  const task = state.tasks.find((x) => String(x.id) === String(taskId));
+  if (!task) return;
+  const assignees = taskAssigneeLabels(task.assignee_email || "");
+  if (refs.taskDetailTitle) refs.taskDetailTitle.textContent = String(task.title || "Задача");
+  if (refs.taskDetailStatusValue) refs.taskDetailStatusValue.textContent = statusLabel(task.status);
+  if (refs.taskDetailPriorityValue) refs.taskDetailPriorityValue.textContent = priorityLabel(task.priority);
+  if (refs.taskDetailAssigneesValue) refs.taskDetailAssigneesValue.textContent = assignees.join(", ") || "без исполнителя";
+  if (refs.taskDetailDueDateValue) refs.taskDetailDueDateValue.textContent = task.due_date ? formatShortDate(task.due_date) : "без даты";
+  if (refs.taskDetailDescription) refs.taskDetailDescription.textContent = String(task.description || "Описание отсутствует.");
+  refs.taskDetailEditBtn?.setAttribute("data-task-id", String(task.id));
+  refs.taskDetailDeleteBtn?.setAttribute("data-task-id", String(task.id));
+  refs.taskDetailCommentBtn?.setAttribute("data-task-id", String(task.id));
+  openSimpleModal(refs.taskDetailModal);
+  await renderTaskComments(task.id);
 }
 
 function formatHistoryDate(value) {
@@ -7419,6 +7438,19 @@ if (refs.taskDetailEditBtn) refs.taskDetailEditBtn.addEventListener("click", asy
   if (!taskId) return;
   closeSimpleModal(refs.taskDetailModal);
   await editTaskFromPrompt(taskId);
+});
+if (refs.taskDetailCommentBtn) refs.taskDetailCommentBtn.addEventListener("click", async () => {
+  const taskId = String(refs.taskDetailCommentBtn.getAttribute("data-task-id") || "").trim();
+  if (!taskId) return;
+  try {
+    await runDbAction(() => addTaskCommentFromPrompt(taskId), { button: refs.taskDetailCommentBtn, message: "Добавляем комментарий..." });
+    await renderTaskComments(taskId);
+    showToast("Комментарий добавлен");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message || "Не удалось добавить комментарий");
+    hapticWarning();
+  }
 });
 if (refs.taskDetailDeleteBtn) refs.taskDetailDeleteBtn.addEventListener("click", async () => {
   const taskId = String(refs.taskDetailDeleteBtn.getAttribute("data-task-id") || "").trim();

@@ -1562,12 +1562,45 @@
       <section class="auth-card task-detail-card" role="dialog" aria-modal="true" aria-label="Детали задачи">
         <button class="close-btn" id="closeTaskDetailBtn" type="button" aria-label="Закрыть">×</button>
         <h3 id="taskDetailTitle">Задача</h3>
-        <p class="helper" id="taskDetailMeta">Статус и приоритет</p>
-        <p id="taskDetailDescription" class="task-detail-description"></p>
-        <div class="history-list" id="taskCommentsList">
-          <p class="muted">Комментарии загрузятся...</p>
+        <p class="helper" id="taskDetailMeta" hidden>Статус и приоритет</p>
+
+        <div class="task-detail-meta-grid">
+          <article class="task-detail-meta-item">
+            <span class="task-detail-meta-label"><svg><use href="#i-layout-list"></use></svg>Статус</span>
+            <strong id="taskDetailStatusValue">—</strong>
+          </article>
+          <article class="task-detail-meta-item">
+            <span class="task-detail-meta-label"><svg><use href="#i-flag"></use></svg>Приоритет</span>
+            <strong id="taskDetailPriorityValue">—</strong>
+          </article>
+          <article class="task-detail-meta-item task-detail-meta-item-wide">
+            <span class="task-detail-meta-label"><svg><use href="#i-user"></use></svg>Исполнители</span>
+            <strong id="taskDetailAssigneesValue">без исполнителя</strong>
+          </article>
+          <article class="task-detail-meta-item">
+            <span class="task-detail-meta-label"><svg><use href="#i-clock2"></use></svg>Дедлайн</span>
+            <strong id="taskDetailDueDateValue">—</strong>
+          </article>
         </div>
-        <div class="hero-actions">
+
+        <article class="task-detail-description-card">
+          <h4><svg><use href="#i-message"></use></svg>Описание</h4>
+          <p id="taskDetailDescription" class="task-detail-description"></p>
+        </article>
+
+        <section class="task-detail-comments-section">
+          <header class="task-detail-comments-head">
+            <h4><svg><use href="#i-message"></use></svg>Комментарии</h4>
+            <button class="glass-btn btn-with-icon" id="taskDetailCommentBtn" type="button">
+              <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Добавить</span>
+            </button>
+          </header>
+          <div class="history-list task-comments-list" id="taskCommentsList">
+            <p class="muted">Комментарии загрузятся...</p>
+          </div>
+        </section>
+
+        <div class="hero-actions task-detail-actions">
           <button class="glass-btn btn-with-icon" id="taskDetailEditBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-edit"></use></svg></span><span>Изменить</span></button>
           <button class="glass-btn btn-with-icon danger" id="taskDetailDeleteBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-trash"></use></svg></span><span>Удалить</span></button>
         </div>
