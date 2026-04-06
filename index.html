@@ -846,16 +846,22 @@
             <aside class="chat-drawer is-hidden" id="chatDrawer">
               <header class="chat-drawer-head">
                 <h4>Чаты</h4>
-                <button class="glass-btn chat-drawer-close" id="chatCloseListBtn" type="button" aria-label="Закрыть">×</button>
+                <div class="chat-drawer-head-actions">
+                  <button class="chat-round-btn" id="chatListSearchBtn" type="button" aria-label="Поиск чатов">
+                    <svg><use href="#i-search"></use></svg>
+                  </button>
+                  <button class="chat-round-btn chat-round-btn-dark" id="chatListCreateBtn" type="button" aria-label="Новый чат">
+                    <svg><use href="#i-plus"></use></svg>
+                  </button>
+                </div>
               </header>
               <div class="chat-search-wrap">
                 <span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span>
                 <input type="search" id="chatSearchInput" placeholder="Поиск чатов..." autocomplete="off" />
               </div>
               <div class="chat-quick-actions">
-                <button class="primary-btn btn-with-icon" id="chatCreateBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Новый</span></button>
-                <button class="secondary-btn btn-with-icon" id="chatCreateGroupBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-user"></use></svg></span><span>Группа</span></button>
-                <button class="glass-btn btn-with-icon" id="chatChannelsBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-message"></use></svg></span><span>Канал</span></button>
+                <button class="secondary-btn btn-with-icon" id="chatCreateGroupBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-user"></use></svg></span><span>Создать группу</span></button>
+                <button class="secondary-btn btn-with-icon" id="chatChannelsBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-layout-list"></use></svg></span><span>Каналы</span></button>
               </div>
               <div class="history-list chat-threads" id="chatList">
                 <p class="muted">Чаты загружаются...</p>
@@ -875,7 +881,7 @@
                   </div>
                 </div>
                 <div class="chat-top-actions">
-                  <button class="chat-round-btn" id="chatToggleListBtn" type="button" aria-label="Список чатов">
+                  <button class="chat-round-btn" id="chatTopSearchBtn" type="button" aria-label="Поиск">
                     <svg><use href="#i-search"></use></svg>
                   </button>
                   <button class="chat-round-btn" id="chatTopMenuBtn" type="button" aria-label="Меню">

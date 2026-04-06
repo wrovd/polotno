@@ -307,6 +307,8 @@ const refs = {
   boxFoundList: document.getElementById("boxFoundList"),
   chatSearchInput: document.getElementById("chatSearchInput"),
   chatCreateBtn: document.getElementById("chatCreateBtn"),
+  chatListCreateBtn: document.getElementById("chatListCreateBtn"),
+  chatListSearchBtn: document.getElementById("chatListSearchBtn"),
   chatCreateGroupBtn: document.getElementById("chatCreateGroupBtn"),
   chatChannelsBtn: document.getElementById("chatChannelsBtn"),
   chatMenuPopover: document.getElementById("chatMenuPopover"),
@@ -317,6 +319,7 @@ const refs = {
   chatToggleListBtn: document.getElementById("chatToggleListBtn"),
   chatCloseListBtn: document.getElementById("chatCloseListBtn"),
   chatBackBtn: document.getElementById("chatBackBtn"),
+  chatTopSearchBtn: document.getElementById("chatTopSearchBtn"),
   chatTopMenuBtn: document.getElementById("chatTopMenuBtn"),
   chatThreadAvatarLetter: document.getElementById("chatThreadAvatarLetter"),
   chatList: document.getElementById("chatList"),
@@ -866,6 +869,7 @@ function setInventoryTab(tab) {
   if (refs.inventoryView) refs.inventoryView.classList.toggle("is-main-ios-mode", isMain);
   if (refs.inventoryView) refs.inventoryView.classList.toggle("is-films-mode", isFilms);
   if (refs.inventoryView) refs.inventoryView.classList.toggle("is-boxes-mode", isBoxSearch);
+  if (refs.inventoryView) refs.inventoryView.classList.toggle("is-chat-mode", isChat);
   if (refs.mainBottomMainBtn) refs.mainBottomMainBtn.classList.toggle("is-active", isMain);
   if (refs.mainBottomToolsBtn) refs.mainBottomToolsBtn.classList.toggle("is-active", isTools);
   if (refs.mainBottomHistoryBtn) refs.mainBottomHistoryBtn.classList.toggle("is-active", isHistory);
@@ -886,9 +890,14 @@ function setInventoryTab(tab) {
     stopScanner();
   }
   if (isChat) {
+    state.chatActiveThreadId = "";
+    state.chatMessages = [];
+    syncChatHeader(null);
+    renderChatMessages();
     loadChatData().catch((error) => {
       showToast(error.message || "Не удалось загрузить чаты");
     });
+    syncChatLayoutMode();
   }
   if (isTasks) {
     loadTasks().catch((error) => {
@@ -905,6 +914,7 @@ function setInventoryTab(tab) {
   }
   updateMobileScanFab();
   updateDesktopSidebarActive();
+  syncChatLayoutMode();
   hapticSelection();
 }
 
@@ -1839,6 +1849,13 @@ function chatThreadById(threadId) {
   return state.chatThreads.find((row) => String(row.id) === String(threadId)) || null;
 }
 
+function syncChatLayoutMode() {
+  if (!refs.chatTab) return;
+  const hasActive = Boolean(String(state.chatActiveThreadId || "").trim());
+  refs.chatTab.classList.toggle("chat-mode-list", !hasActive);
+  refs.chatTab.classList.toggle("chat-mode-room", hasActive);
+}
+
 function setChatDrawerOpen(open) {
   if (!refs.chatDrawer) return;
   refs.chatDrawer.classList.toggle("is-hidden", !open);
@@ -1979,13 +1996,20 @@ function renderChatThreads(list = filteredChatThreads()) {
     card.setAttribute("data-chat-open", String(thread.id));
     const unread = Number(thread.unread_count || 0);
     const preview = String(thread.last_message_preview || "").trim();
+    const isOnline = Boolean(thread.is_online);
+    const firstLetter = (String(thread.title || "Ч").trim().charAt(0) || "Ч").toUpperCase();
     card.innerHTML = `
       <div class="chat-thread-title">
-        <strong>${escapeText(thread.title || "Без названия")}</strong>
-        ${unread > 0 ? `<span class="history-reason">${unread} новых</span>` : ""}
+        <div class="chat-thread-avatar">${escapeText(firstLetter)}</div>
+        <div class="chat-thread-main">
+          <strong>${escapeText(thread.title || "Без названия")}</strong>
+          <div class="chat-thread-meta">${escapeText(preview || "Нет сообщений")}</div>
+        </div>
+        <div class="chat-thread-right">
+          <div class="chat-thread-time">${thread.last_message_at ? formatHistoryDate(thread.last_message_at) : ""}</div>
+          ${unread > 0 ? `<span class="chat-unread-badge">${unread}</span>` : (isOnline ? '<span class="chat-online-dot" aria-label="Онлайн"></span>' : "")}
+        </div>
       </div>
-      <div class="chat-thread-meta">${escapeText(preview || "Нет сообщений")}</div>
-      <div class="chat-thread-time">${thread.last_message_at ? formatHistoryDate(thread.last_message_at) : ""}</div>
     `;
     refs.chatList.appendChild(card);
   });
@@ -2027,6 +2051,7 @@ async function openChatThread(threadId) {
   const thread = chatThreadById(id);
   syncChatHeader(thread);
   renderChatMessages();
+  syncChatLayoutMode();
   state.chatThreads = state.chatThreads.map((row) =>
     String(row.id) === id
       ? { ...row, unread_count: 0 }
@@ -2049,20 +2074,17 @@ async function loadChatData() {
   const data = await apiRequest(`/api/inventory/chat-list?search=${encodeURIComponent(search)}`);
   state.chatThreads = Array.isArray(data.threads) ? data.threads : [];
   renderChatThreads();
-  const activeStillExists = state.chatThreads.some((row) => String(row.id) === String(state.chatActiveThreadId));
+  const activeId = String(state.chatActiveThreadId || "").trim();
+  const activeStillExists = activeId && state.chatThreads.some((row) => String(row.id) === activeId);
   if (activeStillExists) {
     await openChatThread(state.chatActiveThreadId);
-    return;
-  }
-  const first = state.chatThreads[0];
-  if (first?.id) {
-    await openChatThread(first.id);
     return;
   }
   state.chatMessages = [];
   state.chatActiveThreadId = "";
   syncChatHeader(null);
   renderChatMessages();
+  syncChatLayoutMode();
 }
 
 async function createChat(kind = "direct") {
@@ -5571,7 +5593,18 @@ if (refs.chatCloseListBtn) refs.chatCloseListBtn.addEventListener("click", () =>
   hapticSelection();
 });
 if (refs.chatBackBtn) refs.chatBackBtn.addEventListener("click", () => {
-  setInventoryTab("main");
+  state.chatActiveThreadId = "";
+  state.chatMessages = [];
+  syncChatHeader(null);
+  renderChatMessages();
+  syncChatLayoutMode();
+  setChatDrawerOpen(false);
+  hapticSelection();
+});
+if (refs.chatTopSearchBtn) refs.chatTopSearchBtn.addEventListener("click", () => {
+  state.chatActiveThreadId = "";
+  syncChatLayoutMode();
+  refs.chatSearchInput?.focus();
   hapticSelection();
 });
 if (refs.chatTopMenuBtn) refs.chatTopMenuBtn.addEventListener("click", async () => {
@@ -5609,6 +5642,15 @@ if (refs.chatMessageForm) refs.chatMessageForm.addEventListener("submit", async 
 });
 if (refs.chatCreateBtn) refs.chatCreateBtn.addEventListener("click", async () => {
   openChatCreateModal("direct");
+  hapticSelection();
+});
+if (refs.chatListCreateBtn) refs.chatListCreateBtn.addEventListener("click", () => {
+  openChatCreateModal("direct");
+  hapticSelection();
+});
+if (refs.chatListSearchBtn) refs.chatListSearchBtn.addEventListener("click", () => {
+  refs.chatSearchInput?.focus();
+  refs.chatSearchInput?.scrollIntoView({ block: "nearest" });
   hapticSelection();
 });
 if (refs.chatCreateGroupBtn) refs.chatCreateGroupBtn.addEventListener("click", async () => {
