@@ -2548,7 +2548,7 @@ function renderPollMessageHtml(message, pollState) {
       <div class="chat-poll-meta">${payload.multiple ? "Можно выбрать несколько вариантов" : "Один вариант ответа"} · Проголосовало: ${totalVotes}</div>
       <div class="chat-poll-options">${optionsHtml}</div>
     </div>
-  `;
+  `.trim();
 }
 
 function renderTaskLinkMessageHtml(message) {
@@ -2561,7 +2561,7 @@ function renderTaskLinkMessageHtml(message) {
       ${payload.note ? `<p class="chat-task-link-note">${escapeText(payload.note)}</p>` : ""}
       <button type="button" class="chat-task-link-open-btn" data-chat-task-open="${escapeText(payload.taskId)}">Открыть задачу</button>
     </div>
-  `;
+  `.trim();
 }
 
 function fillChatTaskLinkSelect() {
@@ -3112,7 +3112,8 @@ function renderChatMessages(options = {}) {
     const pollHtml = renderPollMessageHtml(message, pollState);
     const taskLinkHtml = renderTaskLinkMessageHtml(message);
     const defaultBody = renderChatTextWithLinks(parsed.text || "");
-    const finalBody = pollHtml || taskLinkHtml || defaultBody;
+    const structured = Boolean(pollHtml || taskLinkHtml);
+    const finalBody = (pollHtml || taskLinkHtml || defaultBody).trim();
     const statusIcon = buildMessageStatus(message, mine);
     const key = chatMessageKey(message);
     const row = document.createElement("article");
@@ -3122,7 +3123,7 @@ function renderChatMessages(options = {}) {
       <div class="chat-message-author">${escapeText(mine ? "Вы" : message.author_email || "Пользователь")}</div>
       ${parsed.forwarded ? `<div class="chat-message-forwarded">↗ ${escapeText(parsed.forwarded)}</div>` : ""}
       ${parsed.reply ? `<div class="chat-message-reply">${escapeText(parsed.reply)}</div>` : ""}
-      <div class="chat-message-body">${finalBody}</div>
+      <div class="chat-message-body${structured ? " is-structured" : ""}">${finalBody}</div>
       <div class="chat-message-foot">
         <div class="chat-message-time">${formatHistoryDate(message.created_at)}</div>
         ${mine ? `<button type="button" class="chat-status-btn" data-chat-status-id="${key}" title="Статус">${escapeText(statusIcon)}</button>` : ""}

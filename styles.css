@@ -3193,7 +3193,7 @@ button.is-loading::after {
 .chat-messages {
   overflow: auto;
   display: grid;
-  gap: 12px;
+  gap: 10px;
   align-content: start;
   padding-right: 4px;
   padding-bottom: 8px;
@@ -3206,7 +3206,7 @@ button.is-loading::after {
   border-radius: 16px 16px 16px 10px;
   background: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.1);
-  padding: 8px 12px;
+  padding: 7px 11px;
   display: grid;
   gap: 3px;
   cursor: pointer;
@@ -3237,6 +3237,10 @@ button.is-loading::after {
   line-height: 1.45;
   color: #1c1c1e;
   white-space: pre-wrap;
+}
+
+.chat-message-body.is-structured {
+  white-space: normal;
 }
 
 .chat-message-body a {
@@ -3478,10 +3482,10 @@ button.is-loading::after {
   bottom: calc(100% - 6px);
   z-index: 8;
   min-width: 220px;
-  border: 1px solid #2d3342;
+  border: 1px solid #dfe3ec;
   border-radius: 14px;
-  background: #1e222d;
-  box-shadow: 0 14px 36px rgba(10, 13, 20, 0.45);
+  background: #fff;
+  box-shadow: 0 14px 36px rgba(20, 28, 43, 0.18);
   padding: 8px;
   display: grid;
   gap: 6px;
@@ -3489,12 +3493,12 @@ button.is-loading::after {
 
 .chat-extensions-popover button {
   min-height: 38px;
-  border: 1px solid #2f3648;
+  border: 0;
   border-radius: 10px;
-  background: #252b39;
+  background: transparent;
   font-size: 14px;
   font-weight: 600;
-  color: #f3f6ff;
+  color: #1f2a3d;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -3505,11 +3509,11 @@ button.is-loading::after {
 .chat-extensions-popover button .btn-icon {
   width: 16px;
   height: 16px;
-  color: #88a9ff;
+  color: #5a6e94;
 }
 
 .chat-extensions-popover button:hover {
-  background: #2d3548;
+  background: #f3f5fb;
 }
 
 .chat-composer-figma input {
@@ -3540,9 +3544,9 @@ button.is-loading::after {
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   background: rgba(255, 255, 255, 0.06);
-  padding: 8px;
+  padding: 7px;
   display: grid;
-  gap: 6px;
+  gap: 5px;
 }
 
 .chat-message:not(.is-mine) .chat-poll-card,
@@ -3578,7 +3582,7 @@ button.is-loading::after {
 }
 
 .chat-poll-option {
-  min-height: 30px;
+  min-height: 28px;
   border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: 9px;
   background: rgba(255, 255, 255, 0.06);
