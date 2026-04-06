@@ -227,6 +227,10 @@
             <span class="btn-icon" aria-hidden="true"><svg><use href="#i-settings"></use></svg></span><span>Настройки</span>
           </button>
         </nav>
+        <button class="desktop-sidebar-bonus" id="desktopBonusBtn" type="button" aria-label="Открыть бонусную систему">
+          <span class="desktop-sidebar-bonus-value">150</span>
+          <span class="desktop-sidebar-bonus-label">Бонусов</span>
+        </button>
         <div class="desktop-sidebar-footer">Polotno v2.0 · Yandex Style</div>
       </aside>
 
@@ -1648,6 +1652,35 @@
           </label>
           <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-trash"></use></svg></span><span>Удалить из ячейки</span></button>
         </form>
+      </section>
+    </div>
+
+    <div class="auth-modal" id="bonusInfoModal" hidden>
+      <div class="auth-backdrop" id="bonusInfoBackdrop"></div>
+      <section class="auth-card bonus-info-card" role="dialog" aria-modal="true" aria-label="Бонусная система">
+        <button class="close-btn" id="closeBonusInfoBtn" type="button" aria-label="Закрыть">×</button>
+        <div class="bonus-info-bg" aria-hidden="true"></div>
+        <h3>Бонусная система</h3>
+        <p class="helper">Информационный режим: позже подключим реальные начисления и списания автоматически.</p>
+
+        <section class="bonus-info-section">
+          <h4>Начисляем бонусы за:</h4>
+          <ul class="bonus-info-list">
+            <li><span>Проверки, есть ли готовые пленки</span><strong>+1</strong></li>
+            <li><span>Удаление пленки</span><strong>+15</strong></li>
+            <li><span>Активность в системе (вход минимум 1 раз в день)</span><strong>+10</strong></li>
+            <li><span>Быстрое закрытие задач во вкладке «Задачи»</span><strong>+10</strong></li>
+          </ul>
+        </section>
+
+        <section class="bonus-info-section is-negative">
+          <h4>Списываем бонусы (можно обжаловать):</h4>
+          <ul class="bonus-info-list">
+            <li><span>Просроченные задания</span><strong>-15</strong></li>
+            <li><span>Не проверял пленки за день ни разу</span><strong>-5</strong></li>
+            <li><span>Не заходил в систему в этот день</span><strong>-5</strong></li>
+          </ul>
+        </section>
       </section>
     </div>
 

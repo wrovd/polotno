@@ -181,6 +181,7 @@ const refs = {
   desktopNavHistoryBtn: document.getElementById("desktopNavHistoryBtn"),
   desktopNavStatsBtn: document.getElementById("desktopNavStatsBtn"),
   desktopNavSettingsBtn: document.getElementById("desktopNavSettingsBtn"),
+  desktopBonusBtn: document.getElementById("desktopBonusBtn"),
   homeBtn: document.getElementById("homeBtn"),
   inventoryTabsRow: document.getElementById("inventoryTabsRow"),
   mainTabBtn: document.getElementById("mainTabBtn"),
@@ -525,6 +526,9 @@ const refs = {
   closeFilmDeleteBtn: document.getElementById("closeFilmDeleteBtn"),
   filmDeleteForm: document.getElementById("filmDeleteForm"),
   filmDeleteCellSelect: document.getElementById("filmDeleteCellSelect"),
+  bonusInfoModal: document.getElementById("bonusInfoModal"),
+  bonusInfoBackdrop: document.getElementById("bonusInfoBackdrop"),
+  closeBonusInfoBtn: document.getElementById("closeBonusInfoBtn"),
 };
 
 function safeParse(text) {
@@ -5692,6 +5696,10 @@ if (refs.desktopNavSettingsBtn) refs.desktopNavSettingsBtn.addEventListener("cli
     hapticWarning();
   });
 });
+if (refs.desktopBonusBtn) refs.desktopBonusBtn.addEventListener("click", () => {
+  hapticSelection();
+  openSimpleModal(refs.bonusInfoModal);
+});
 if (refs.homeScanBtn) refs.homeScanBtn.addEventListener("click", async () => {
   openScanModal();
   await startScanner();
@@ -5738,6 +5746,8 @@ if (refs.closeRemindersSettingsBtn) refs.closeRemindersSettingsBtn.addEventListe
 if (refs.remindersSettingsBackdrop) refs.remindersSettingsBackdrop.addEventListener("click", () => closeSimpleModal(refs.remindersSettingsModal));
 if (refs.closeDisplaySettingsBtn) refs.closeDisplaySettingsBtn.addEventListener("click", () => closeSimpleModal(refs.displaySettingsModal));
 if (refs.displaySettingsBackdrop) refs.displaySettingsBackdrop.addEventListener("click", () => closeSimpleModal(refs.displaySettingsModal));
+if (refs.closeBonusInfoBtn) refs.closeBonusInfoBtn.addEventListener("click", () => closeSimpleModal(refs.bonusInfoModal));
+if (refs.bonusInfoBackdrop) refs.bonusInfoBackdrop.addEventListener("click", () => closeSimpleModal(refs.bonusInfoModal));
 refs.requestLogoutBtn.addEventListener("click", () => {
   closeAccountMenu();
   openLogoutModal();
@@ -7455,6 +7465,7 @@ document.addEventListener("keydown", (event) => {
     closeLogoutModal();
     closeSimpleModal(refs.remindersSettingsModal);
     closeSimpleModal(refs.displaySettingsModal);
+    closeSimpleModal(refs.bonusInfoModal);
     closeQrLoginModal();
     closeFilmFoundModal();
     closeBoxFoundModal();
