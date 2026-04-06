@@ -362,6 +362,10 @@ const refs = {
   chatMessageInput: document.getElementById("chatMessageInput"),
   chatFileInput: document.getElementById("chatFileInput"),
   chatAttachBtn: document.getElementById("chatAttachBtn"),
+  chatExtensionsBtn: document.getElementById("chatExtensionsBtn"),
+  chatExtensionsPopover: document.getElementById("chatExtensionsPopover"),
+  chatExtPollBtn: document.getElementById("chatExtPollBtn"),
+  chatExtTaskBtn: document.getElementById("chatExtTaskBtn"),
   chatDropZone: document.getElementById("chatDropZone"),
   chatFilePreviewList: document.getElementById("chatFilePreviewList"),
   chatReplyPreview: document.getElementById("chatReplyPreview"),
@@ -387,6 +391,21 @@ const refs = {
   closeChatReadStatusBtn: document.getElementById("closeChatReadStatusBtn"),
   chatReadStatusSummary: document.getElementById("chatReadStatusSummary"),
   chatReadStatusList: document.getElementById("chatReadStatusList"),
+  chatPollModal: document.getElementById("chatPollModal"),
+  chatPollBackdrop: document.getElementById("chatPollBackdrop"),
+  closeChatPollBtn: document.getElementById("closeChatPollBtn"),
+  chatPollForm: document.getElementById("chatPollForm"),
+  chatPollQuestion: document.getElementById("chatPollQuestion"),
+  chatPollOptions: document.getElementById("chatPollOptions"),
+  chatPollAllowMulti: document.getElementById("chatPollAllowMulti"),
+  chatPollSubmitBtn: document.getElementById("chatPollSubmitBtn"),
+  chatTaskLinkModal: document.getElementById("chatTaskLinkModal"),
+  chatTaskLinkBackdrop: document.getElementById("chatTaskLinkBackdrop"),
+  closeChatTaskLinkBtn: document.getElementById("closeChatTaskLinkBtn"),
+  chatTaskLinkForm: document.getElementById("chatTaskLinkForm"),
+  chatTaskLinkSelect: document.getElementById("chatTaskLinkSelect"),
+  chatTaskLinkNote: document.getElementById("chatTaskLinkNote"),
+  chatTaskLinkSubmitBtn: document.getElementById("chatTaskLinkSubmitBtn"),
   tasksSearchInput: document.getElementById("tasksSearchInput"),
   taskCreateBtn: document.getElementById("taskCreateBtn"),
   tasksBoardBtn: document.getElementById("tasksBoardBtn"),
@@ -2408,6 +2427,223 @@ function setChatMenuOpen(open) {
   refs.chatMenuPopover.hidden = !open;
 }
 
+function setChatExtensionsPopoverOpen(open) {
+  if (!refs.chatExtensionsPopover) return;
+  refs.chatExtensionsPopover.hidden = !open;
+}
+
+function pollPayloadFromMessage(rawBody = "") {
+  const raw = String(rawBody || "").trim();
+  if (!raw.startsWith("[[POLL]]")) return null;
+  try {
+    const payload = JSON.parse(raw.slice(8));
+    const question = String(payload?.question || "").trim();
+    const options = Array.isArray(payload?.options)
+      ? payload.options.map((x) => String(x || "").trim()).filter(Boolean)
+      : [];
+    if (!question || !options.length) return null;
+    return {
+      id: String(payload.id || ""),
+      question,
+      multiple: Boolean(payload.multiple),
+      options,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function pollVotePayloadFromMessage(rawBody = "") {
+  const raw = String(rawBody || "").trim();
+  if (!raw.startsWith("[[POLL_VOTE]]")) return null;
+  try {
+    const payload = JSON.parse(raw.slice(13));
+    const pollId = String(payload?.pollId || "").trim();
+    const selected = Array.isArray(payload?.selected)
+      ? payload.selected.map((x) => Number(x)).filter((x) => Number.isInteger(x) && x >= 0)
+      : [];
+    if (!pollId) return null;
+    return { pollId, selected };
+  } catch {
+    return null;
+  }
+}
+
+function taskLinkPayloadFromMessage(rawBody = "") {
+  const raw = String(rawBody || "").trim();
+  if (!raw.startsWith("[[TASK_LINK]]")) return null;
+  try {
+    const payload = JSON.parse(raw.slice(13));
+    const taskId = String(payload?.taskId || "").trim();
+    const title = String(payload?.title || "").trim();
+    if (!taskId || !title) return null;
+    return {
+      taskId,
+      title,
+      status: String(payload?.status || "todo"),
+      dueDate: String(payload?.dueDate || ""),
+      note: String(payload?.note || ""),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function buildPollStateForThread(messages = []) {
+  const result = {};
+  const byThread = Array.isArray(messages) ? messages : [];
+  byThread.forEach((msg) => {
+    const poll = pollPayloadFromMessage(msg.body || "");
+    if (!poll?.id) return;
+    result[poll.id] = {
+      poll,
+      votesByAuthor: {},
+      totals: new Array(poll.options.length).fill(0),
+    };
+  });
+  byThread.forEach((msg) => {
+    const vote = pollVotePayloadFromMessage(msg.body || "");
+    if (!vote) return;
+    const bucket = result[vote.pollId];
+    if (!bucket) return;
+    const author = String(msg.author_email || "").trim().toLowerCase();
+    if (!author) return;
+    const valid = vote.selected.filter((i) => i >= 0 && i < bucket.poll.options.length);
+    bucket.votesByAuthor[author] = valid;
+  });
+  Object.values(result).forEach((bucket) => {
+    const totals = new Array(bucket.poll.options.length).fill(0);
+    Object.values(bucket.votesByAuthor).forEach((indices) => {
+      (indices || []).forEach((idx) => {
+        totals[idx] += 1;
+      });
+    });
+    bucket.totals = totals;
+  });
+  return result;
+}
+
+function renderPollMessageHtml(message, pollState) {
+  const payload = pollPayloadFromMessage(message.body || "");
+  if (!payload) return "";
+  const bucket = pollState?.[payload.id];
+  const totals = Array.isArray(bucket?.totals) ? bucket.totals : new Array(payload.options.length).fill(0);
+  const me = String(state.user?.email || "").trim().toLowerCase();
+  const myVote = Array.isArray(bucket?.votesByAuthor?.[me]) ? bucket.votesByAuthor[me] : [];
+  const totalVotes = Object.keys(bucket?.votesByAuthor || {}).length;
+  const optionsHtml = payload.options
+    .map((opt, idx) => {
+      const selected = myVote.includes(idx);
+      const count = Number(totals[idx] || 0);
+      return `<button type="button" class="chat-poll-option${selected ? " is-selected" : ""}" data-chat-poll-id="${escapeText(payload.id)}" data-chat-poll-option="${idx}" data-chat-poll-multi="${payload.multiple ? "1" : "0"}">
+        <span>${escapeText(opt)}</span>
+        <strong>${count}</strong>
+      </button>`;
+    })
+    .join("");
+  return `
+    <div class="chat-poll-card">
+      <div class="chat-poll-title">🗳 ${escapeText(payload.question)}</div>
+      <div class="chat-poll-meta">${payload.multiple ? "Можно выбрать несколько вариантов" : "Один вариант ответа"} · Проголосовало: ${totalVotes}</div>
+      <div class="chat-poll-options">${optionsHtml}</div>
+    </div>
+  `;
+}
+
+function renderTaskLinkMessageHtml(message) {
+  const payload = taskLinkPayloadFromMessage(message.body || "");
+  if (!payload) return "";
+  return `
+    <div class="chat-task-link-card">
+      <div class="chat-task-link-title">${iconSpan("layout-list")} ${escapeText(payload.title)}</div>
+      <div class="chat-task-link-meta">${escapeText(statusLabel(payload.status))}${payload.dueDate ? ` · до ${escapeText(formatShortDate(payload.dueDate))}` : ""}</div>
+      ${payload.note ? `<p class="chat-task-link-note">${escapeText(payload.note)}</p>` : ""}
+      <button type="button" class="chat-task-link-open-btn" data-chat-task-open="${escapeText(payload.taskId)}">Открыть задачу</button>
+    </div>
+  `;
+}
+
+function fillChatTaskLinkSelect() {
+  if (!refs.chatTaskLinkSelect) return;
+  const current = String(refs.chatTaskLinkSelect.value || "");
+  refs.chatTaskLinkSelect.innerHTML = '<option value="">Выберите задачу</option>';
+  const list = filteredTasks();
+  list.forEach((task) => {
+    const opt = document.createElement("option");
+    opt.value = String(task.id || "");
+    opt.textContent = `${taskCode(task)} · ${String(task.title || "Без названия")}`;
+    refs.chatTaskLinkSelect.appendChild(opt);
+  });
+  refs.chatTaskLinkSelect.value = current;
+}
+
+async function sendStructuredChatBody(bodyText, button = null) {
+  const body = String(bodyText || "").trim();
+  if (!body) return;
+  const prevText = refs.chatMessageInput ? refs.chatMessageInput.value : "";
+  const prevReply = state.chatReplyTo;
+  if (refs.chatMessageInput) refs.chatMessageInput.value = body;
+  state.chatReplyTo = null;
+  renderChatReplyPreview();
+  try {
+    await runDbAction(() => sendActiveChatMessage(), {
+      button,
+      message: "Отправляем в чат...",
+    });
+  } finally {
+    if (refs.chatMessageInput && !String(refs.chatMessageInput.value || "").trim()) {
+      refs.chatMessageInput.value = prevText;
+    }
+    state.chatReplyTo = prevReply;
+    renderChatReplyPreview();
+  }
+}
+
+function closeChatPollModal() {
+  closeSimpleModal(refs.chatPollModal);
+}
+
+function closeChatTaskLinkModal() {
+  closeSimpleModal(refs.chatTaskLinkModal);
+}
+
+function openChatPollModal() {
+  setChatExtensionsPopoverOpen(false);
+  if (refs.chatPollForm) refs.chatPollForm.reset();
+  openSimpleModal(refs.chatPollModal);
+  setTimeout(() => refs.chatPollQuestion?.focus(), 40);
+}
+
+function openChatTaskLinkModal() {
+  setChatExtensionsPopoverOpen(false);
+  fillChatTaskLinkSelect();
+  if (refs.chatTaskLinkForm) refs.chatTaskLinkForm.reset();
+  openSimpleModal(refs.chatTaskLinkModal);
+  setTimeout(() => refs.chatTaskLinkSelect?.focus(), 40);
+}
+
+async function sendPollVoteFromButton(button) {
+  if (!(button instanceof HTMLButtonElement)) return;
+  const pollId = String(button.getAttribute("data-chat-poll-id") || "").trim();
+  const optionIdx = Number(button.getAttribute("data-chat-poll-option"));
+  const multi = String(button.getAttribute("data-chat-poll-multi") || "0") === "1";
+  if (!pollId || !Number.isInteger(optionIdx) || optionIdx < 0) return;
+  const activeId = String(state.chatActiveThreadId || "").trim();
+  if (!activeId) return;
+  const pollState = buildPollStateForThread(state.chatMessages);
+  const payload = pollState[pollId]?.poll;
+  if (!payload) return;
+  const me = String(state.user?.email || "").trim().toLowerCase();
+  const current = Array.isArray(pollState[pollId]?.votesByAuthor?.[me]) ? [...pollState[pollId].votesByAuthor[me]] : [];
+  let next = [];
+  if (multi) {
+    next = current.includes(optionIdx) ? current.filter((x) => x !== optionIdx) : [...current, optionIdx];
+  } else {
+    next = current.includes(optionIdx) ? [] : [optionIdx];
+  }
+  const body = `[[POLL_VOTE]]${JSON.stringify({ pollId, selected: next })}`;
+  await sendStructuredChatBody(body, button);
+}
 function setChatCreateKind(kind = "direct") {
   const normalized = kind === "group" || kind === "channel" ? kind : "direct";
   state.chatCreateKind = normalized;
@@ -2852,9 +3088,16 @@ function renderChatMessages(options = {}) {
     return;
   }
 
+  const pollState = buildPollStateForThread(state.chatMessages);
+
   state.chatMessages.forEach((message) => {
+    if (pollVotePayloadFromMessage(message.body || "")) return;
     const mine = String(message.author_email || "").toLowerCase() === String(state.user?.email || "").toLowerCase();
     const parsed = parseChatMessageBody(message.body || "");
+    const pollHtml = renderPollMessageHtml(message, pollState);
+    const taskLinkHtml = renderTaskLinkMessageHtml(message);
+    const defaultBody = renderChatTextWithLinks(parsed.text || "");
+    const finalBody = pollHtml || taskLinkHtml || defaultBody;
     const statusIcon = buildMessageStatus(message, mine);
     const key = chatMessageKey(message);
     const row = document.createElement("article");
@@ -2864,7 +3107,7 @@ function renderChatMessages(options = {}) {
       <div class="chat-message-author">${escapeText(mine ? "Вы" : message.author_email || "Пользователь")}</div>
       ${parsed.forwarded ? `<div class="chat-message-forwarded">↗ ${escapeText(parsed.forwarded)}</div>` : ""}
       ${parsed.reply ? `<div class="chat-message-reply">${escapeText(parsed.reply)}</div>` : ""}
-      <div class="chat-message-body">${renderChatTextWithLinks(parsed.text || "")}</div>
+      <div class="chat-message-body">${finalBody}</div>
       <div class="chat-message-foot">
         <div class="chat-message-time">${formatHistoryDate(message.created_at)}</div>
         ${mine ? `<button type="button" class="chat-status-btn" data-chat-status-id="${key}" title="Статус">${escapeText(statusIcon)}</button>` : ""}
@@ -2897,6 +3140,7 @@ async function openChatThread(threadId) {
   state.chatActiveThreadId = id;
   state.chatMessages = Array.isArray(data.messages) ? data.messages : [];
   state.chatReplyTo = null;
+  setChatExtensionsPopoverOpen(false);
   renderChatReplyPreview();
   const thread = chatThreadById(id);
   syncChatHeader(thread);
@@ -2917,6 +3161,7 @@ async function loadChatData() {
     state.chatMessages = [];
     state.chatActiveThreadId = "";
     state.chatReplyTo = null;
+    setChatExtensionsPopoverOpen(false);
     renderChatReplyPreview();
     renderChatThreads([]);
     renderChatMessages();
@@ -6562,6 +6807,34 @@ if (refs.chatMessages) refs.chatMessages.addEventListener("click", async (event)
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
 
+  const pollBtn = target.closest("button[data-chat-poll-id][data-chat-poll-option]");
+  if (pollBtn instanceof HTMLButtonElement) {
+    try {
+      await sendPollVoteFromButton(pollBtn);
+      hapticSuccess();
+    } catch (error) {
+      showToast(error.message || "Не удалось отправить голос");
+      hapticWarning();
+    }
+    return;
+  }
+
+  const openTaskBtn = target.closest("button[data-chat-task-open]");
+  if (openTaskBtn instanceof HTMLButtonElement) {
+    const taskId = String(openTaskBtn.getAttribute("data-chat-task-open") || "").trim();
+    if (!taskId) return;
+    try {
+      setInventoryTab("tasks");
+      await loadTasks();
+      await openTaskDetails(taskId);
+      hapticSelection();
+    } catch (error) {
+      showToast(error.message || "Не удалось открыть задачу");
+      hapticWarning();
+    }
+    return;
+  }
+
   const statusBtn = target.closest("button[data-chat-status-id]");
   if (statusBtn instanceof HTMLButtonElement) {
     const messageId = String(statusBtn.getAttribute("data-chat-status-id") || "").trim();
@@ -6609,6 +6882,7 @@ if (refs.chatMessages) refs.chatMessages.addEventListener("click", async (event)
 });
 if (refs.chatMessages) refs.chatMessages.addEventListener("scroll", () => {
   closeChatMessageActionsPopover();
+  setChatExtensionsPopoverOpen(false);
 });
 if (refs.chatMessageForm) refs.chatMessageForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -6657,7 +6931,24 @@ if (refs.chatMenuNewChannelBtn) refs.chatMenuNewChannelBtn.addEventListener("cli
   hapticSelection();
 });
 if (refs.chatAttachBtn) refs.chatAttachBtn.addEventListener("click", () => {
+  setChatExtensionsPopoverOpen(false);
   refs.chatFileInput?.click();
+  hapticSelection();
+});
+if (refs.chatExtensionsBtn) refs.chatExtensionsBtn.addEventListener("click", () => {
+  const shouldOpen = refs.chatExtensionsPopover?.hidden !== false;
+  setChatExtensionsPopoverOpen(shouldOpen);
+  hapticSelection();
+});
+if (refs.chatExtPollBtn) refs.chatExtPollBtn.addEventListener("click", () => {
+  openChatPollModal();
+  hapticSelection();
+});
+if (refs.chatExtTaskBtn) refs.chatExtTaskBtn.addEventListener("click", async () => {
+  if (!state.tasks.length) {
+    await loadTasks().catch(() => {});
+  }
+  openChatTaskLinkModal();
   hapticSelection();
 });
 if (refs.chatFileInput) refs.chatFileInput.addEventListener("change", () => {
@@ -6756,9 +7047,77 @@ if (refs.chatForwardList) refs.chatForwardList.addEventListener("click", async (
 });
 if (refs.closeChatReadStatusBtn) refs.closeChatReadStatusBtn.addEventListener("click", closeChatReadStatusModal);
 if (refs.chatReadStatusBackdrop) refs.chatReadStatusBackdrop.addEventListener("click", closeChatReadStatusModal);
+if (refs.closeChatPollBtn) refs.closeChatPollBtn.addEventListener("click", closeChatPollModal);
+if (refs.chatPollBackdrop) refs.chatPollBackdrop.addEventListener("click", closeChatPollModal);
+if (refs.chatPollForm) refs.chatPollForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!refs.chatPollForm.reportValidity()) return;
+  const question = String(refs.chatPollQuestion?.value || "").trim();
+  const options = String(refs.chatPollOptions?.value || "")
+    .split("\n")
+    .map((x) => x.trim())
+    .filter(Boolean);
+  if (options.length < 2) {
+    showToast("Нужно минимум 2 варианта ответа");
+    refs.chatPollOptions?.focus();
+    return;
+  }
+  const multiple = Boolean(refs.chatPollAllowMulti?.checked);
+  const payload = {
+    id: `poll_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    question,
+    options,
+    multiple,
+  };
+  try {
+    await sendStructuredChatBody(`[[POLL]]${JSON.stringify(payload)}`, refs.chatPollSubmitBtn);
+    closeChatPollModal();
+    showToast("Голосование отправлено");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message || "Не удалось отправить голосование");
+    hapticWarning();
+  }
+});
+if (refs.closeChatTaskLinkBtn) refs.closeChatTaskLinkBtn.addEventListener("click", closeChatTaskLinkModal);
+if (refs.chatTaskLinkBackdrop) refs.chatTaskLinkBackdrop.addEventListener("click", closeChatTaskLinkModal);
+if (refs.chatTaskLinkForm) refs.chatTaskLinkForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!refs.chatTaskLinkForm.reportValidity()) return;
+  const taskId = String(refs.chatTaskLinkSelect?.value || "").trim();
+  const task = state.tasks.find((x) => String(x.id) === taskId);
+  if (!task) {
+    showToast("Задача не найдена");
+    return;
+  }
+  const note = String(refs.chatTaskLinkNote?.value || "").trim();
+  const payload = {
+    taskId: String(task.id || ""),
+    title: String(task.title || "Задача"),
+    status: String(task.status || "todo"),
+    dueDate: String(task.due_date || ""),
+    note,
+  };
+  try {
+    await sendStructuredChatBody(`[[TASK_LINK]]${JSON.stringify(payload)}`, refs.chatTaskLinkSubmitBtn);
+    closeChatTaskLinkModal();
+    showToast("Задача отправлена в чат");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message || "Не удалось отправить задачу");
+    hapticWarning();
+  }
+});
 document.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Node)) return;
+  if (refs.chatExtensionsBtn && refs.chatExtensionsPopover && !refs.chatExtensionsPopover.hidden) {
+    const inExtToggle = refs.chatExtensionsBtn.contains(target);
+    const inExtMenu = refs.chatExtensionsPopover.contains(target);
+    if (!inExtToggle && !inExtMenu) {
+      setChatExtensionsPopoverOpen(false);
+    }
+  }
   if (refs.chatTopMenuBtn && refs.chatMenuPopover && !refs.chatMenuPopover.hidden) {
     const inMenuToggle = refs.chatTopMenuBtn.contains(target);
     const inMenu = refs.chatMenuPopover.contains(target);
@@ -7474,7 +7833,10 @@ document.addEventListener("keydown", (event) => {
     closeChatCreateModal();
     closeChatForwardModal();
     closeChatReadStatusModal();
+    closeChatPollModal();
+    closeChatTaskLinkModal();
     closeChatMessageActionsPopover();
+    setChatExtensionsPopoverOpen(false);
     closeHomeNotificationsPopover();
     setChatMenuOpen(false);
     closeAccountMenu();

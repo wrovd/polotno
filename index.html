@@ -162,6 +162,13 @@
         <path d="M21 3L10 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
         <path d="M21 3L14 21l-4-7-7-4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
       </symbol>
+      <symbol id="i-puzzle" viewBox="0 0 24 24">
+        <path d="M9 4h3a2.5 2.5 0 1 1 5 0h3v5a2.5 2.5 0 1 0 0 5v5h-5a2.5 2.5 0 1 1-5 0H4v-5a2.5 2.5 0 1 0 0-5V4h5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-check-circle" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <path d="M8.2 12.3l2.4 2.4 5.1-5.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
     </svg>
 
     <div class="bg-shape bg-shape-top" aria-hidden="true"></div>
@@ -950,6 +957,19 @@
                 <button class="chat-round-btn" id="chatAttachBtn" type="button" aria-label="Вложение">
                   <svg><use href="#i-paperclip"></use></svg>
                 </button>
+                <button class="chat-round-btn" id="chatExtensionsBtn" type="button" aria-label="Дополнения">
+                  <svg><use href="#i-puzzle"></use></svg>
+                </button>
+                <div class="chat-extensions-popover" id="chatExtensionsPopover" hidden>
+                  <button type="button" id="chatExtPollBtn">
+                    <span class="btn-icon" aria-hidden="true"><svg><use href="#i-check-circle"></use></svg></span>
+                    <span>Создать голосование</span>
+                  </button>
+                  <button type="button" id="chatExtTaskBtn">
+                    <span class="btn-icon" aria-hidden="true"><svg><use href="#i-layout-list"></use></svg></span>
+                    <span>Отправить задачу</span>
+                  </button>
+                </div>
                 <input type="file" id="chatFileInput" hidden multiple />
                 <input type="text" id="chatMessageInput" placeholder="Сообщение..." autocomplete="off" />
                 <button class="chat-round-btn" id="chatSendBtn" type="submit" aria-label="Отправить">
@@ -1603,6 +1623,57 @@
         <h3>Просмотры сообщения</h3>
         <p class="helper" id="chatReadStatusSummary">Кто просмотрел и во сколько.</p>
         <div class="history-list" id="chatReadStatusList"></div>
+      </section>
+    </div>
+
+    <div class="auth-modal" id="chatPollModal" hidden>
+      <div class="auth-backdrop" id="chatPollBackdrop"></div>
+      <section class="auth-card chat-create-card" role="dialog" aria-modal="true" aria-label="Создать голосование">
+        <button class="close-btn" id="closeChatPollBtn" type="button" aria-label="Закрыть">×</button>
+        <h3>Создать голосование</h3>
+        <form class="stock-form" id="chatPollForm" novalidate>
+          <label>
+            Вопрос
+            <input type="text" id="chatPollQuestion" placeholder="Например: Когда проверить пленки?" required />
+          </label>
+          <label>
+            Варианты (каждый с новой строки)
+            <textarea id="chatPollOptions" rows="5" placeholder="До обеда&#10;После обеда&#10;Завтра утром" required></textarea>
+          </label>
+          <label class="toggle-row">
+            <span>Разрешить несколько ответов</span>
+            <span>
+              <input class="toggle-input" id="chatPollAllowMulti" type="checkbox" />
+              <span class="toggle-switch"></span>
+            </span>
+          </label>
+          <button class="primary-btn full btn-with-icon" id="chatPollSubmitBtn" type="submit">
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-send"></use></svg></span><span>Отправить в чат</span>
+          </button>
+        </form>
+      </section>
+    </div>
+
+    <div class="auth-modal" id="chatTaskLinkModal" hidden>
+      <div class="auth-backdrop" id="chatTaskLinkBackdrop"></div>
+      <section class="auth-card chat-create-card" role="dialog" aria-modal="true" aria-label="Отправить задачу в чат">
+        <button class="close-btn" id="closeChatTaskLinkBtn" type="button" aria-label="Закрыть">×</button>
+        <h3>Отправить задачу</h3>
+        <form class="stock-form" id="chatTaskLinkForm" novalidate>
+          <label>
+            Выберите задачу
+            <select id="chatTaskLinkSelect" required>
+              <option value="">Выберите задачу</option>
+            </select>
+          </label>
+          <label>
+            Подпись
+            <textarea id="chatTaskLinkNote" rows="3" placeholder="Коллеги, сделайте сегодня"></textarea>
+          </label>
+          <button class="primary-btn full btn-with-icon" id="chatTaskLinkSubmitBtn" type="submit">
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-send"></use></svg></span><span>Отправить в чат</span>
+          </button>
+        </form>
       </section>
     </div>
 
