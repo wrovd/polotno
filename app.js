@@ -841,6 +841,7 @@ function setInventoryTab(tab) {
   }
   if (refs.inventoryView) refs.inventoryView.classList.toggle("is-main-ios-mode", isMain);
   if (refs.inventoryView) refs.inventoryView.classList.toggle("is-films-mode", isFilms);
+  if (refs.inventoryView) refs.inventoryView.classList.toggle("is-boxes-mode", isBoxSearch);
   if (refs.mainBottomMainBtn) refs.mainBottomMainBtn.classList.toggle("is-active", isMain);
   if (refs.mainBottomToolsBtn) refs.mainBottomToolsBtn.classList.toggle("is-active", isTools);
   if (refs.mainBottomHistoryBtn) refs.mainBottomHistoryBtn.classList.toggle("is-active", isHistory);
@@ -3325,11 +3326,6 @@ function renderBoxTrackedList() {
 
   const page = paginateList(groups, "boxTracked");
   page.items.forEach((box) => {
-    const itemsPreview = box.items
-      .slice(0, 4)
-      .map((it) => `${it.name || "Без названия"} (${it.barcode}) x${Math.max(1, Number(it.qty || 1))}`)
-      .join("<br/>");
-    const more = box.items.length > 4 ? `<div class="history-meta">и еще ${box.items.length - 4} шт.</div>` : "";
     const card = document.createElement("article");
     card.className = "box-tracked-card";
     card.innerHTML = `
@@ -3337,14 +3333,12 @@ function renderBoxTrackedList() {
         <div>
           <p class="box-tracked-title">${box.box_code || "BOX"}</p>
           <div class="box-tracked-meta">${iconSpan("map-pin")}<span>${box.location || "Место не указано"}</span></div>
-          <div class="box-tracked-meta">${iconSpan("package")}<span>${box.items.length} товаров • Ед.: ${Math.max(0, Number(box.total_qty || 0))}</span></div>
+          <div class="box-tracked-meta"><span>${box.items.length} товаров</span></div>
         </div>
         <button class="box-delete-btn" type="button" data-box-remove="${box.box_code}">
           ${iconSpan("trash")}<span>Удалить</span>
         </button>
       </div>
-      <div class="history-meta">${itemsPreview || "Пусто"}</div>
-      ${more}
     `;
     refs.boxTrackedList.appendChild(card);
   });

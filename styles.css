@@ -1134,8 +1134,8 @@ button:active {
   font-size: 14px;
   font-weight: 600;
   color: #fff;
-  border-color: #3478f6;
-  background: #3478f6;
+  border-color: #1f2023;
+  background: #1f2023;
 }
 
 .boxes-search {
@@ -1215,6 +1215,14 @@ button:active {
   padding: 14px;
 }
 
+.boxes-tracked-section {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
 .boxes-quick-scan-card .section-head h3 {
   display: inline-flex;
   align-items: center;
@@ -1223,6 +1231,14 @@ button:active {
 
 .boxes-quick-scan-card .section-head h3 .btn-icon {
   color: #ff9500;
+}
+
+.boxes-quick-scan-card .primary-btn {
+  min-height: 48px;
+  border-radius: 12px;
+  background: #1f2023;
+  border-color: #1f2023;
+  color: #fff;
 }
 
 .box-found-card {
@@ -1280,6 +1296,11 @@ button:active {
   gap: 6px;
   color: #8e8e93;
   font-size: 12px;
+}
+
+.box-tracked-meta .btn-icon {
+  width: 12px;
+  height: 12px;
 }
 
 .box-delete-btn {
@@ -1953,6 +1974,11 @@ td .actions {
 
 #inventoryView.is-films-mode > .nav-panel,
 #inventoryView.is-films-mode > .role-hint {
+  display: none;
+}
+
+#inventoryView.is-boxes-mode > .nav-panel,
+#inventoryView.is-boxes-mode > .role-hint {
   display: none;
 }
 
@@ -3725,6 +3751,10 @@ button.is-loading::after {
   .boxes-tracked-section {
     border-radius: 12px;
     padding: 12px;
+  }
+
+  .boxes-tracked-section {
+    padding: 0;
   }
 
   .box-tracked-top {
