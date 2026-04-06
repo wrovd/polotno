@@ -7554,10 +7554,12 @@ if (refs.tasksBoard) {
     if (!(target instanceof HTMLElement) || !event.dataTransfer) return;
     const taskId = String(target.getAttribute("data-task-id") || "");
     event.dataTransfer.setData("text/task-id", taskId);
+    refs.tasksBoard?.classList.add("is-drag-active");
     target.classList.add("is-dragging");
   });
   refs.tasksBoard.addEventListener("dragend", (event) => {
     const target = event.target instanceof HTMLElement ? event.target.closest("[data-task-id]") : null;
+    refs.tasksBoard?.classList.remove("is-drag-active");
     if (target instanceof HTMLElement) target.classList.remove("is-dragging");
     refs.tasksBoard.querySelectorAll(".tasks-column-drop").forEach((el) => el.classList.remove("is-drop-target"));
   });
@@ -7578,7 +7580,6 @@ if (refs.tasksBoard) {
     if (!taskId || !status) return;
     runDbAction(() => updateTaskStatus(taskId, status), { message: "Перемещаем задачу...", showOverlay: false })
       .then(() => {
-        showToast("Задача перемещена");
         hapticSuccess();
       })
       .catch((error) => {
