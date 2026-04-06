@@ -3317,6 +3317,8 @@ button.is-loading::after {
   right: 0;
   bottom: 82px;
   min-height: 0;
+  padding-top: 10px;
+  padding-bottom: 8px;
 }
 
 #inventoryView.is-chat-mode .chat-messages {
@@ -3332,6 +3334,34 @@ button.is-loading::after {
   right: 14px;
   bottom: 86px;
   z-index: 6;
+}
+
+@media (min-width: 901px) {
+  #inventoryView.is-chat-mode.view.active {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: var(--desktop-sidebar-w);
+    margin: 0;
+    width: auto;
+    padding: 0;
+    gap: 0;
+    z-index: 1;
+  }
+
+  #inventoryView.is-chat-mode #chatTab.tab-panel.active {
+    display: block;
+    height: 100%;
+    padding: 0;
+  }
+
+  #inventoryView.is-chat-mode .chat-page-figma {
+    height: 100%;
+    min-height: 100%;
+    border-radius: 0;
+    border: 0;
+  }
 }
 
 #chatTab.chat-mode-list .chat-main-figma {
