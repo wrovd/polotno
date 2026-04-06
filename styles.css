@@ -3643,14 +3643,15 @@ button.is-loading::after {
   }
 
   #inventoryView.is-main-ios-mode #mainTab {
-    width: 100%;
-    padding: 2px 0 24px;
+    width: min(860px, 100%);
+    margin: 0 auto;
+    padding: 2px 4px 24px;
   }
 
   #inventoryView.is-main-ios-mode .inventory-ios {
-    max-width: 1120px;
-    margin: 0 auto;
-    padding: 0 8px;
+    max-width: none;
+    margin: 0;
+    padding: 0;
     gap: 12px;
   }
 
