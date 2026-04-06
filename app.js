@@ -45,6 +45,7 @@ const state = {
   chatReplyTo: null,
   chatForwardMessage: null,
   chatLocalMessageMeta: {},
+  chatMessageActionsForId: "",
   chatPollTimer: null,
   chatPollingBusy: false,
   tasks: [],
@@ -330,6 +331,7 @@ const refs = {
   chatThreadAvatarLetter: document.getElementById("chatThreadAvatarLetter"),
   chatList: document.getElementById("chatList"),
   chatMessages: document.getElementById("chatMessages"),
+  chatMessageActionsPopover: document.getElementById("chatMessageActionsPopover"),
   chatThreadTitle: document.getElementById("chatThreadTitle"),
   chatThreadMeta: document.getElementById("chatThreadMeta"),
   chatMessageForm: document.getElementById("chatMessageForm"),
@@ -2176,6 +2178,94 @@ function openChatForwardModal(message) {
   openSimpleModal(refs.chatForwardModal);
 }
 
+function closeChatMessageActionsPopover() {
+  if (!refs.chatMessageActionsPopover) return;
+  refs.chatMessageActionsPopover.hidden = true;
+  refs.chatMessageActionsPopover.style.left = "";
+  refs.chatMessageActionsPopover.style.top = "";
+  refs.chatMessageActionsPopover.removeAttribute("data-chat-message-id");
+  state.chatMessageActionsForId = "";
+}
+
+function openChatMessageActionsPopover(messageId, anchorEl) {
+  if (!refs.chatMessageActionsPopover || !refs.chatMessages || !anchorEl) return;
+  const message = state.chatMessages.find((row) => chatMessageKey(row) === String(messageId));
+  if (!message) return;
+  const mine = String(message.author_email || "").toLowerCase() === String(state.user?.email || "").toLowerCase();
+  const deleteBtn = refs.chatMessageActionsPopover.querySelector('button[data-chat-pop-action="delete"]');
+  if (deleteBtn instanceof HTMLButtonElement) {
+    deleteBtn.hidden = !mine;
+  }
+  refs.chatMessageActionsPopover.hidden = false;
+  refs.chatMessageActionsPopover.setAttribute("data-chat-message-id", String(messageId));
+  state.chatMessageActionsForId = String(messageId);
+
+  const container = refs.chatMessages;
+  const cRect = container.getBoundingClientRect();
+  const aRect = anchorEl.getBoundingClientRect();
+  const popRect = refs.chatMessageActionsPopover.getBoundingClientRect();
+  const scrollLeft = container.scrollLeft || 0;
+  const scrollTop = container.scrollTop || 0;
+  const gap = 8;
+
+  let left = mine
+    ? aRect.right - cRect.left + scrollLeft - popRect.width
+    : aRect.left - cRect.left + scrollLeft;
+  const minLeft = scrollLeft + 8;
+  const maxLeft = scrollLeft + container.clientWidth - popRect.width - 8;
+  left = Math.max(minLeft, Math.min(left, maxLeft));
+
+  let top = aRect.top - cRect.top + scrollTop - popRect.height - gap;
+  if (top < scrollTop + 6) {
+    top = aRect.bottom - cRect.top + scrollTop + gap;
+  }
+
+  refs.chatMessageActionsPopover.style.left = `${Math.round(left)}px`;
+  refs.chatMessageActionsPopover.style.top = `${Math.round(top)}px`;
+}
+
+async function performChatMessageAction(action, message, messageId) {
+  if (!message) return;
+  const mine = String(message.author_email || "").toLowerCase() === String(state.user?.email || "").toLowerCase();
+  const parsed = parseChatMessageBody(message.body || "");
+  if (action === "reply") {
+    state.chatReplyTo = {
+      id: messageId,
+      author: mine ? "Вы" : String(message.author_email || "Пользователь"),
+      text: parsed.text || "",
+    };
+    renderChatReplyPreview();
+    refs.chatMessageInput?.focus();
+    return;
+  }
+  if (action === "forward") {
+    openChatForwardModal(message);
+    return;
+  }
+  if (action === "delete") {
+    if (!mine) return;
+    if (!window.confirm("Удалить сообщение?")) return;
+    if (String(messageId).startsWith("local_")) {
+      state.chatMessages = state.chatMessages.filter((row) => chatMessageKey(row) !== messageId);
+      delete state.chatLocalMessageMeta[messageId];
+      renderChatMessages();
+      return;
+    }
+    await apiRequest("/api/inventory/chat-delete-message", {
+      method: "POST",
+      body: {
+        threadId: state.chatActiveThreadId,
+        messageId: message.id,
+      },
+    });
+    state.chatMessages = state.chatMessages.filter((row) => chatMessageKey(row) !== messageId);
+    delete state.chatLocalMessageMeta[messageId];
+    renderChatMessages();
+    showToast("Сообщение удалено");
+    hapticSuccess();
+  }
+}
+
 function renderChatThreads(list = filteredChatThreads()) {
   if (!refs.chatList) return;
   refs.chatList.innerHTML = "";
@@ -2281,13 +2371,23 @@ function startChatPolling() {
 
 function renderChatMessages() {
   if (!refs.chatMessages) return;
+  const popover = refs.chatMessageActionsPopover;
+  if (popover && popover.parentElement === refs.chatMessages) {
+    popover.remove();
+  }
   refs.chatMessages.innerHTML = "";
+  if (popover) {
+    refs.chatMessages.appendChild(popover);
+  }
+  closeChatMessageActionsPopover();
   if (!state.chatActiveThreadId) {
     refs.chatMessages.innerHTML = '<p class="muted">Откройте чат, чтобы увидеть сообщения.</p>';
+    if (popover) refs.chatMessages.appendChild(popover);
     return;
   }
   if (!state.chatMessages.length) {
     refs.chatMessages.innerHTML = '<p class="muted">Сообщений пока нет.</p>';
+    if (popover) refs.chatMessages.appendChild(popover);
     return;
   }
 
@@ -2308,14 +2408,10 @@ function renderChatMessages() {
         <div class="chat-message-time">${formatHistoryDate(message.created_at)}</div>
         ${mine ? `<button type="button" class="chat-status-btn" data-chat-status-id="${key}" title="Статус">${escapeText(statusIcon)}</button>` : ""}
       </div>
-      <div class="chat-message-actions">
-        <button type="button" data-chat-action="reply" data-chat-message-id="${key}">Ответить</button>
-        <button type="button" data-chat-action="forward" data-chat-message-id="${key}">Переслать</button>
-        ${mine ? `<button type="button" data-chat-action="delete" data-chat-message-id="${key}" class="is-danger">Удалить</button>` : ""}
-      </div>
     `;
     refs.chatMessages.appendChild(row);
   });
+  if (popover) refs.chatMessages.appendChild(popover);
   refs.chatMessages.scrollTop = refs.chatMessages.scrollHeight;
 }
 
@@ -5965,55 +6061,40 @@ if (refs.chatMessages) refs.chatMessages.addEventListener("click", async (event)
     return;
   }
 
-  const actionBtn = target.closest("button[data-chat-action]");
-  if (!(actionBtn instanceof HTMLButtonElement)) return;
-  const action = String(actionBtn.getAttribute("data-chat-action") || "");
-  const messageId = String(actionBtn.getAttribute("data-chat-message-id") || "").trim();
-  const message = state.chatMessages.find((row) => chatMessageKey(row) === messageId);
-  if (!message) return;
-  const mine = String(message.author_email || "").toLowerCase() === String(state.user?.email || "").toLowerCase();
-  const parsed = parseChatMessageBody(message.body || "");
-  if (action === "reply") {
-    state.chatReplyTo = {
-      id: messageId,
-      author: mine ? "Вы" : String(message.author_email || "Пользователь"),
-      text: parsed.text || "",
-    };
-    renderChatReplyPreview();
-    refs.chatMessageInput?.focus();
-    return;
-  }
-  if (action === "forward") {
-    openChatForwardModal(message);
-    return;
-  }
-  if (action === "delete") {
-    if (!mine) return;
-    if (!window.confirm("Удалить сообщение?")) return;
-    if (String(messageId).startsWith("local_")) {
-      state.chatMessages = state.chatMessages.filter((row) => chatMessageKey(row) !== messageId);
-      delete state.chatLocalMessageMeta[messageId];
-      renderChatMessages();
-      return;
-    }
+  const popActionBtn = target.closest("button[data-chat-pop-action]");
+  if (popActionBtn instanceof HTMLButtonElement) {
+    const action = String(popActionBtn.getAttribute("data-chat-pop-action") || "").trim();
+    const messageId = String(refs.chatMessageActionsPopover?.getAttribute("data-chat-message-id") || "").trim();
+    const message = state.chatMessages.find((row) => chatMessageKey(row) === messageId);
+    closeChatMessageActionsPopover();
+    if (!action || !messageId || !message) return;
     try {
-      await apiRequest("/api/inventory/chat-delete-message", {
-        method: "POST",
-        body: {
-          threadId: state.chatActiveThreadId,
-          messageId: message.id,
-        },
-      });
-      state.chatMessages = state.chatMessages.filter((row) => chatMessageKey(row) !== messageId);
-      delete state.chatLocalMessageMeta[messageId];
-      renderChatMessages();
-      showToast("Сообщение удалено");
-      hapticSuccess();
+      await performChatMessageAction(action, message, messageId);
     } catch (error) {
-      showToast(error.message || "Не удалось удалить сообщение");
+      showToast(error.message || "Не удалось выполнить действие");
       hapticWarning();
     }
+    return;
   }
+
+  const messageEl = target.closest(".chat-message[data-chat-message-id]");
+  if (messageEl instanceof HTMLElement) {
+    const messageId = String(messageEl.getAttribute("data-chat-message-id") || "").trim();
+    if (!messageId) return;
+    const openedSame = !refs.chatMessageActionsPopover?.hidden && state.chatMessageActionsForId === messageId;
+    if (openedSame) {
+      closeChatMessageActionsPopover();
+    } else {
+      openChatMessageActionsPopover(messageId, messageEl);
+      hapticSelection();
+    }
+    return;
+  }
+
+  closeChatMessageActionsPopover();
+});
+if (refs.chatMessages) refs.chatMessages.addEventListener("scroll", () => {
+  closeChatMessageActionsPopover();
 });
 if (refs.chatMessageForm) refs.chatMessageForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -6164,9 +6245,20 @@ if (refs.chatReadStatusBackdrop) refs.chatReadStatusBackdrop.addEventListener("c
 document.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Node)) return;
-  if (!refs.chatTopMenuBtn || !refs.chatMenuPopover || refs.chatMenuPopover.hidden) return;
-  if (refs.chatTopMenuBtn.contains(target) || refs.chatMenuPopover.contains(target)) return;
-  setChatMenuOpen(false);
+  if (refs.chatTopMenuBtn && refs.chatMenuPopover && !refs.chatMenuPopover.hidden) {
+    const inMenuToggle = refs.chatTopMenuBtn.contains(target);
+    const inMenu = refs.chatMenuPopover.contains(target);
+    if (!inMenuToggle && !inMenu) {
+      setChatMenuOpen(false);
+    }
+  }
+  if (refs.chatMessageActionsPopover && !refs.chatMessageActionsPopover.hidden) {
+    const inPopover = refs.chatMessageActionsPopover.contains(target);
+    const inMessage = target instanceof Element && Boolean(target.closest(".chat-message[data-chat-message-id]"));
+    if (!inPopover && !inMessage) {
+      closeChatMessageActionsPopover();
+    }
+  }
 });
 if (refs.taskCreateBtn) refs.taskCreateBtn.addEventListener("click", async () => {
   try {
@@ -6859,6 +6951,7 @@ document.addEventListener("keydown", (event) => {
     closeChatCreateModal();
     closeChatForwardModal();
     closeChatReadStatusModal();
+    closeChatMessageActionsPopover();
     setChatMenuOpen(false);
     closeAccountMenu();
     stopScanner();

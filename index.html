@@ -899,6 +899,20 @@
                 <div class="chat-day-pill">Сегодня</div>
                 <div class="history-list chat-messages" id="chatMessages">
                   <p class="muted">Сообщений пока нет.</p>
+                  <div class="chat-message-actions-popover" id="chatMessageActionsPopover" hidden>
+                    <button type="button" data-chat-pop-action="reply">
+                      <span class="btn-icon" aria-hidden="true"><svg><use href="#i-message"></use></svg></span>
+                      <span>Ответить</span>
+                    </button>
+                    <button type="button" data-chat-pop-action="forward">
+                      <span class="btn-icon" aria-hidden="true"><svg><use href="#i-upload"></use></svg></span>
+                      <span>Переслать</span>
+                    </button>
+                    <button type="button" data-chat-pop-action="delete" class="is-danger">
+                      <span class="btn-icon" aria-hidden="true"><svg><use href="#i-trash"></use></svg></span>
+                      <span>Удалить</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 

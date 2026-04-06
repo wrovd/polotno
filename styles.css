@@ -2818,6 +2818,7 @@ button.is-loading::after {
   align-content: start;
   padding-right: 4px;
   padding-bottom: 8px;
+  position: relative;
 }
 
 .chat-message {
@@ -2829,6 +2830,7 @@ button.is-loading::after {
   padding: 10px 16px;
   display: grid;
   gap: 4px;
+  cursor: pointer;
 }
 
 .chat-message.is-mine {
@@ -2910,31 +2912,52 @@ button.is-loading::after {
 }
 
 .chat-message-actions {
-  margin-top: 6px;
-  display: none;
-  gap: 6px;
-  flex-wrap: wrap;
+  display: none !important;
 }
 
-.chat-message:hover .chat-message-actions,
-.chat-message:focus-within .chat-message-actions {
-  display: inline-flex;
+.chat-message-actions-popover {
+  position: absolute;
+  z-index: 12;
+  min-width: 184px;
+  border: 1px solid #d9deea;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(26, 33, 47, 0.18);
+  padding: 6px;
+  display: grid;
+  gap: 4px;
 }
 
-.chat-message-actions button {
+.chat-message-actions-popover button {
+  min-height: 34px;
   border: 0;
-  border-radius: 8px;
-  background: rgba(100, 116, 145, 0.14);
-  color: #4e5a74;
-  min-height: 24px;
-  padding: 0 8px;
-  font-size: 12px;
+  border-radius: 10px;
+  background: transparent;
+  color: #232a38;
+  font-size: 13px;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start;
+  padding: 0 10px;
 }
 
-.chat-message-actions .is-danger {
-  color: #ca4e4e;
-  background: rgba(243, 146, 146, 0.16);
+.chat-message-actions-popover button .btn-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.chat-message-actions-popover button:hover {
+  background: #f2f5fb;
+}
+
+.chat-message-actions-popover button.is-danger {
+  color: #d64d4d;
+}
+
+.chat-message-actions-popover button.is-danger:hover {
+  background: rgba(230, 83, 83, 0.11);
 }
 
 .chat-dropzone {
@@ -3528,7 +3551,7 @@ button.is-loading::after {
   }
 
   .chat-message-actions {
-    display: inline-flex;
+    display: none !important;
   }
 }
 
