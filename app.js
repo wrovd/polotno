@@ -51,6 +51,9 @@ const state = {
   homeNotifications: [],
   homeNotificationsUnread: 0,
   homeNotificationsPollTimer: null,
+  homeBrowserNotifiedOwner: "",
+  homeBrowserNotified: {},
+  homeTaskStatusSnapshot: {},
   tasks: [],
   taskViewMode: "board",
   boxCatalog: [],
@@ -108,6 +111,11 @@ const DISPLAY_PREFS_KEY = "polotno_display_prefs_v1";
 function homeNotificationsSeenKey() {
   const email = String(state.user?.email || "guest").trim().toLowerCase() || "guest";
   return `polotno_home_notifications_seen_${email}`;
+}
+
+function homeBrowserNotifiedKey() {
+  const email = String(state.user?.email || "guest").trim().toLowerCase() || "guest";
+  return `polotno_home_browser_notified_${email}`;
 }
 
 const refs = {
@@ -983,6 +991,9 @@ function updateAuthButton() {
   if (refs.homeAuthEmail) refs.homeAuthEmail.textContent = "Гость";
   state.homeNotifications = [];
   state.homeNotificationsUnread = 0;
+  state.homeTaskStatusSnapshot = {};
+  state.homeBrowserNotifiedOwner = "";
+  state.homeBrowserNotified = {};
   renderHomeNotificationsBadge();
   renderHomeNotificationsPopover();
   closeHomeNotificationsPopover();
@@ -1059,6 +1070,107 @@ function setHomeNotificationsSeenNow() {
 function closeHomeNotificationsPopover() {
   if (!refs.homeNotificationsPopover) return;
   refs.homeNotificationsPopover.hidden = true;
+}
+
+function ensureHomeBrowserNotifiedStore() {
+  const owner = String(state.user?.email || "guest").trim().toLowerCase() || "guest";
+  if (state.homeBrowserNotifiedOwner === owner && state.homeBrowserNotified && typeof state.homeBrowserNotified === "object") {
+    return;
+  }
+  state.homeBrowserNotifiedOwner = owner;
+  state.homeBrowserNotified = {};
+  try {
+    const raw = localStorage.getItem(homeBrowserNotifiedKey()) || "{}";
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") {
+      state.homeBrowserNotified = parsed;
+    }
+  } catch {
+    state.homeBrowserNotified = {};
+  }
+}
+
+function wasHomeBrowserNotified(eventKey) {
+  ensureHomeBrowserNotifiedStore();
+  return Boolean(state.homeBrowserNotified[String(eventKey || "")]);
+}
+
+function markHomeBrowserNotified(eventKey) {
+  ensureHomeBrowserNotifiedStore();
+  const key = String(eventKey || "").trim();
+  if (!key) return;
+  state.homeBrowserNotified[key] = Date.now();
+  const entries = Object.entries(state.homeBrowserNotified)
+    .sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))
+    .slice(0, 300);
+  state.homeBrowserNotified = Object.fromEntries(entries);
+  try {
+    localStorage.setItem(homeBrowserNotifiedKey(), JSON.stringify(state.homeBrowserNotified));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+async function openHomeNotificationTarget(item) {
+  if (!item) return;
+  if (item.type === "chat" && item.threadId) {
+    setModuleView("inventory");
+    setInventoryTab("chat");
+    try {
+      await openChatThread(item.threadId);
+    } catch {
+      // ignore
+    }
+    return;
+  }
+
+  if (item.type === "task") {
+    setModuleView("inventory");
+    setInventoryTab("tasks");
+    if (item.taskId) {
+      try {
+        await loadTasks();
+        await openTaskDetails(item.taskId);
+      } catch {
+        // ignore
+      }
+    }
+  }
+}
+
+function showHomeBrowserNotification(item) {
+  if (!item || getBrowserNotificationsPermission() !== "granted") return;
+  const eventKey = String(item.browserEventKey || "").trim();
+  if (!eventKey || wasHomeBrowserNotified(eventKey)) return;
+  const title = String(item.title || "Polotno");
+  const body = String(item.subtitle || "").trim() || "Новое уведомление";
+  try {
+    const notif = new Notification(title, {
+      body,
+      tag: eventKey,
+      renotify: false,
+    });
+    notif.onclick = () => {
+      try {
+        window.focus();
+      } catch {
+        // ignore
+      }
+      void openHomeNotificationTarget(item);
+      notif.close();
+    };
+    markHomeBrowserNotified(eventKey);
+  } catch {
+    // ignore browser notification errors
+  }
+}
+
+function pushHomeBrowserNotifications(items = []) {
+  if (!Array.isArray(items) || !items.length) return;
+  if (getBrowserNotificationsPermission() !== "granted") return;
+  for (const item of items) {
+    showHomeBrowserNotification(item);
+  }
 }
 
 function getBrowserNotificationsPermission() {
@@ -1194,6 +1306,9 @@ async function refreshHomeNotifications(force = false) {
   if (!state.token || !state.user?.email) {
     state.homeNotifications = [];
     state.homeNotificationsUnread = 0;
+    state.homeTaskStatusSnapshot = {};
+    state.homeBrowserNotifiedOwner = "";
+    state.homeBrowserNotified = {};
     renderHomeNotificationsBadge();
     renderHomeNotificationsPopover();
     closeHomeNotificationsPopover();
@@ -1208,18 +1323,29 @@ async function refreshHomeNotifications(force = false) {
   const threads = Array.isArray(chatData?.threads) ? chatData.threads : [];
   const tasks = Array.isArray(tasksData?.tasks) ? tasksData.tasks : [];
   const me = String(state.user?.email || "").trim().toLowerCase();
+  const prevTaskStatus = state.homeTaskStatusSnapshot && typeof state.homeTaskStatusSnapshot === "object"
+    ? state.homeTaskStatusSnapshot
+    : {};
+  const nextTaskStatus = {};
 
   const chatItems = threads
     .filter((t) => Number(t.unread_count || 0) > 0)
-    .map((t) => ({
-      id: `chat:${String(t.id || "")}`,
-      type: "chat",
-      title: String(t.title || "Чат"),
-      subtitle: String(t.last_message_preview || "Новое сообщение"),
-      time: t.last_message_at || t.updated_at || new Date().toISOString(),
-      unread: true,
-      threadId: String(t.id || ""),
-    }));
+    .map((t) => {
+      const time = t.last_message_at || t.updated_at || new Date().toISOString();
+      const ts = new Date(time).getTime();
+      const isNew = Number.isFinite(ts) && ts > seenAtTs;
+      const threadId = String(t.id || "");
+      return {
+        id: `chat:${threadId}`,
+        type: "chat",
+        title: String(t.title || "Чат"),
+        subtitle: String(t.last_message_preview || "Новое сообщение"),
+        time,
+        unread: true,
+        threadId,
+        browserEventKey: isNew ? `chat:${threadId}:${time}` : "",
+      };
+    });
 
   const taskItems = tasks
     .filter((task) => {
@@ -1232,16 +1358,28 @@ async function refreshHomeNotifications(force = false) {
       const time = task.updated_at || task.created_at || new Date().toISOString();
       const ts = new Date(time).getTime();
       const unread = Number.isFinite(ts) && ts > seenAtTs;
+      const taskId = String(task.id || "");
+      const status = String(task.status || "todo").toLowerCase();
+      nextTaskStatus[taskId] = status;
+      const prevStatus = String(prevTaskStatus[taskId] || "");
+      const statusChanged = Boolean(prevStatus) && prevStatus !== status;
+      const statusChangedSubtitle = `Статус изменен: ${statusLabel(prevStatus)} → ${statusLabel(status)}`;
       return {
-        id: `task:${String(task.id || "")}`,
+        id: `task:${taskId}`,
         type: "task",
         title: String(task.title || "Новая задача"),
         subtitle: task.description ? String(task.description) : `Статус: ${statusLabel(task.status || "todo")}`,
         time,
         unread,
-        taskId: String(task.id || ""),
+        taskId,
+        status,
+        statusChanged,
+        statusChangedSubtitle,
+        browserEventKey: unread ? `task-new:${taskId}:${time}` : "",
       };
     });
+
+  state.homeTaskStatusSnapshot = nextTaskStatus;
 
   const merged = [...chatItems, ...taskItems]
     .sort((a, b) => new Date(b.time || 0).getTime() - new Date(a.time || 0).getTime())
@@ -1251,6 +1389,25 @@ async function refreshHomeNotifications(force = false) {
   state.homeNotificationsUnread = merged.filter((x) => x.unread).length;
   renderHomeNotificationsBadge();
   renderHomeNotificationsPopover();
+
+  if (!force) {
+    const browserEvents = [];
+    for (const item of chatItems) {
+      if (item.browserEventKey) browserEvents.push(item);
+    }
+    for (const task of taskItems) {
+      if (task.statusChanged) {
+        browserEvents.push({
+          ...task,
+          subtitle: task.statusChangedSubtitle || task.subtitle,
+          browserEventKey: `task-status:${task.taskId}:${task.status}:${task.time}`,
+        });
+      } else if (task.browserEventKey) {
+        browserEvents.push(task);
+      }
+    }
+    pushHomeBrowserNotifications(browserEvents);
+  }
 }
 
 function setHomeProfileButtonPhoto(dataUrl = "") {
@@ -1524,6 +1681,9 @@ function clearSession() {
   state.homeProfilePhotoChatId = "";
   state.homeNotifications = [];
   state.homeNotificationsUnread = 0;
+  state.homeTaskStatusSnapshot = {};
+  state.homeBrowserNotifiedOwner = "";
+  state.homeBrowserNotified = {};
   state.profileLoaded = false;
   updateAuthButton();
   renderHomeNotificationsBadge();
@@ -5487,30 +5647,7 @@ if (refs.homeNotificationsList) refs.homeNotificationsList.addEventListener("cli
   renderHomeNotificationsBadge();
   renderHomeNotificationsPopover();
   closeHomeNotificationsPopover();
-
-  if (item.type === "chat" && item.threadId) {
-    setModuleView("inventory");
-    setInventoryTab("chat");
-    try {
-      await openChatThread(item.threadId);
-    } catch {
-      // ignore
-    }
-    return;
-  }
-
-  if (item.type === "task") {
-    setModuleView("inventory");
-    setInventoryTab("tasks");
-    if (item.taskId) {
-      try {
-        await loadTasks();
-        await openTaskDetails(item.taskId);
-      } catch {
-        // ignore
-      }
-    }
-  }
+  await openHomeNotificationTarget(item);
 });
 if (refs.homeNavSettingsBtn) refs.homeNavSettingsBtn.addEventListener("click", () => {
   openSettingsView().catch((error) => {
