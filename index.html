@@ -147,6 +147,21 @@
         <rect x="4" y="15" width="4" height="4" rx="1" fill="none" stroke="currentColor" stroke-width="1.8" />
         <path d="M11 7h9M11 12h9M11 17h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
       </symbol>
+      <symbol id="i-arrow-left" viewBox="0 0 24 24">
+        <path d="M14.5 6.5L9 12l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-more-vertical" viewBox="0 0 24 24">
+        <circle cx="12" cy="6" r="1.7" fill="currentColor" />
+        <circle cx="12" cy="12" r="1.7" fill="currentColor" />
+        <circle cx="12" cy="18" r="1.7" fill="currentColor" />
+      </symbol>
+      <symbol id="i-paperclip" viewBox="0 0 24 24">
+        <path d="M9.2 12.2l6.7-6.7a3.8 3.8 0 0 1 5.3 5.3l-8.5 8.5a6 6 0 0 1-8.5-8.5l8.6-8.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-send" viewBox="0 0 24 24">
+        <path d="M21 3L10 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+        <path d="M21 3L14 21l-4-7-7-4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+      </symbol>
     </svg>
 
     <div class="bg-shape bg-shape-top" aria-hidden="true"></div>
@@ -850,7 +865,7 @@
             <section class="chat-main-figma">
               <header class="chat-main-topbar">
                 <button class="chat-round-btn" id="chatBackBtn" type="button" aria-label="Назад">
-                  <svg><use href="#i-home"></use></svg>
+                  <svg><use href="#i-arrow-left"></use></svg>
                 </button>
                 <div class="chat-top-meta">
                   <div class="chat-thread-chip" id="chatThreadAvatarLetter">C</div>
@@ -864,8 +879,13 @@
                     <svg><use href="#i-search"></use></svg>
                   </button>
                   <button class="chat-round-btn" id="chatTopMenuBtn" type="button" aria-label="Меню">
-                    <svg><use href="#i-filter"></use></svg>
+                    <svg><use href="#i-more-vertical"></use></svg>
                   </button>
+                  <div class="chat-menu-popover" id="chatMenuPopover" hidden>
+                    <button type="button" id="chatMenuNewDirectBtn"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-message"></use></svg></span><span>Новый чат</span></button>
+                    <button type="button" id="chatMenuNewGroupBtn"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-user"></use></svg></span><span>Новая группа</span></button>
+                    <button type="button" id="chatMenuNewChannelBtn"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-layout-list"></use></svg></span><span>Новый канал</span></button>
+                  </div>
                 </div>
               </header>
 
@@ -884,11 +904,12 @@
 
               <form class="chat-composer-figma" id="chatMessageForm" novalidate>
                 <button class="chat-round-btn" id="chatAttachBtn" type="button" aria-label="Вложение">
-                  <svg><use href="#i-edit"></use></svg>
+                  <svg><use href="#i-paperclip"></use></svg>
                 </button>
-                <input type="text" id="chatMessageInput" placeholder="Сообщение..." autocomplete="off" required />
+                <input type="file" id="chatFileInput" hidden multiple />
+                <input type="text" id="chatMessageInput" placeholder="Сообщение..." autocomplete="off" />
                 <button class="chat-round-btn" id="chatSendBtn" type="submit" aria-label="Отправить">
-                  <svg><use href="#i-rocket"></use></svg>
+                  <svg><use href="#i-send"></use></svg>
                 </button>
               </form>
             </section>
@@ -1489,6 +1510,28 @@
           <button class="secondary-btn full btn-with-icon" id="filmFoundAddBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Добавить</span></button>
           <button class="glass-btn full btn-with-icon" id="filmFoundDeleteBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-trash"></use></svg></span><span>Удалить</span></button>
         </div>
+      </section>
+    </div>
+
+    <div class="auth-modal" id="chatCreateModal" hidden>
+      <div class="auth-backdrop" id="chatCreateBackdrop"></div>
+      <section class="auth-card chat-create-card" role="dialog" aria-modal="true" aria-label="Создание чата">
+        <button class="close-btn" id="closeChatCreateBtn" type="button" aria-label="Закрыть">×</button>
+        <h3 id="chatCreateModalTitle">Новый чат</h3>
+        <form class="stock-form" id="chatCreateForm" novalidate>
+          <input type="hidden" id="chatCreateKind" value="direct" />
+          <label>
+            Название
+            <input type="text" id="chatCreateTitleInput" placeholder="Например, Склад #1" required />
+          </label>
+          <label id="chatCreateMembersWrap">
+            Email участника (опционально)
+            <input type="email" id="chatCreateMemberInput" placeholder="user@company.com" />
+          </label>
+          <button class="primary-btn full btn-with-icon" id="chatCreateSubmitBtn" type="submit">
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Создать</span>
+          </button>
+        </form>
       </section>
     </div>
 

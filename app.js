@@ -39,6 +39,8 @@ const state = {
   chatThreads: [],
   chatMessages: [],
   chatActiveThreadId: "",
+  chatDraftFiles: [],
+  chatCreateKind: "direct",
   tasks: [],
   taskViewMode: "board",
   boxCatalog: [],
@@ -307,6 +309,10 @@ const refs = {
   chatCreateBtn: document.getElementById("chatCreateBtn"),
   chatCreateGroupBtn: document.getElementById("chatCreateGroupBtn"),
   chatChannelsBtn: document.getElementById("chatChannelsBtn"),
+  chatMenuPopover: document.getElementById("chatMenuPopover"),
+  chatMenuNewDirectBtn: document.getElementById("chatMenuNewDirectBtn"),
+  chatMenuNewGroupBtn: document.getElementById("chatMenuNewGroupBtn"),
+  chatMenuNewChannelBtn: document.getElementById("chatMenuNewChannelBtn"),
   chatDrawer: document.getElementById("chatDrawer"),
   chatToggleListBtn: document.getElementById("chatToggleListBtn"),
   chatCloseListBtn: document.getElementById("chatCloseListBtn"),
@@ -319,7 +325,21 @@ const refs = {
   chatThreadMeta: document.getElementById("chatThreadMeta"),
   chatMessageForm: document.getElementById("chatMessageForm"),
   chatMessageInput: document.getElementById("chatMessageInput"),
+  chatFileInput: document.getElementById("chatFileInput"),
+  chatAttachBtn: document.getElementById("chatAttachBtn"),
+  chatDropZone: document.getElementById("chatDropZone"),
+  chatFilePreviewList: document.getElementById("chatFilePreviewList"),
   chatSendBtn: document.getElementById("chatSendBtn"),
+  chatCreateModal: document.getElementById("chatCreateModal"),
+  chatCreateBackdrop: document.getElementById("chatCreateBackdrop"),
+  closeChatCreateBtn: document.getElementById("closeChatCreateBtn"),
+  chatCreateForm: document.getElementById("chatCreateForm"),
+  chatCreateModalTitle: document.getElementById("chatCreateModalTitle"),
+  chatCreateKind: document.getElementById("chatCreateKind"),
+  chatCreateTitleInput: document.getElementById("chatCreateTitleInput"),
+  chatCreateMemberInput: document.getElementById("chatCreateMemberInput"),
+  chatCreateMembersWrap: document.getElementById("chatCreateMembersWrap"),
+  chatCreateSubmitBtn: document.getElementById("chatCreateSubmitBtn"),
   tasksSearchInput: document.getElementById("tasksSearchInput"),
   taskCreateBtn: document.getElementById("taskCreateBtn"),
   tasksBoardBtn: document.getElementById("tasksBoardBtn"),
@@ -838,6 +858,10 @@ function setInventoryTab(tab) {
     refs.inventoryTabsRow.classList.toggle("context-tabs-boxes", isBoxesContext);
     refs.inventoryTabsRow.classList.toggle("context-tabs-chat", isChatContext);
     refs.inventoryTabsRow.classList.toggle("context-tabs-tasks", isTasksContext);
+  }
+  if (!isChat) {
+    setChatMenuOpen(false);
+    setChatDrawerOpen(false);
   }
   if (refs.inventoryView) refs.inventoryView.classList.toggle("is-main-ios-mode", isMain);
   if (refs.inventoryView) refs.inventoryView.classList.toggle("is-films-mode", isFilms);
@@ -1844,6 +1868,102 @@ function filteredChatThreads() {
   });
 }
 
+function formatFileSize(bytes) {
+  const size = Number(bytes || 0);
+  if (!Number.isFinite(size) || size <= 0) return "0 Б";
+  if (size < 1024) return `${size} Б`;
+  const kb = size / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} КБ`;
+  const mb = kb / 1024;
+  return `${mb.toFixed(1)} МБ`;
+}
+
+function renderChatFilePreviews() {
+  if (!refs.chatFilePreviewList) return;
+  refs.chatFilePreviewList.innerHTML = "";
+  const files = Array.isArray(state.chatDraftFiles) ? state.chatDraftFiles : [];
+  if (!files.length) {
+    refs.chatFilePreviewList.classList.remove("has-files");
+    return;
+  }
+  files.forEach((file, index) => {
+    const card = document.createElement("article");
+    card.className = "chat-file-chip";
+    card.innerHTML = `
+      <div>
+        <strong>${escapeText(file.name || "Файл")}</strong>
+        <span>${escapeText(formatFileSize(file.size || 0))}</span>
+      </div>
+      <button type="button" aria-label="Удалить файл" data-chat-file-remove="${index}">×</button>
+    `;
+    refs.chatFilePreviewList.appendChild(card);
+  });
+  refs.chatFilePreviewList.classList.add("has-files");
+}
+
+function addChatDraftFiles(fileList) {
+  if (!fileList) return;
+  const incoming = Array.from(fileList).filter((file) => file && typeof file.name === "string");
+  if (!incoming.length) return;
+  const existing = new Set(state.chatDraftFiles.map((file) => `${file.name}_${file.size}_${file.lastModified}`));
+  incoming.forEach((file) => {
+    const key = `${file.name}_${file.size}_${file.lastModified}`;
+    if (!existing.has(key)) {
+      state.chatDraftFiles.push(file);
+      existing.add(key);
+    }
+  });
+  renderChatFilePreviews();
+}
+
+function resetChatDraftFiles() {
+  state.chatDraftFiles = [];
+  if (refs.chatFileInput) refs.chatFileInput.value = "";
+  if (refs.chatDropZone) refs.chatDropZone.classList.remove("is-active");
+  renderChatFilePreviews();
+}
+
+function setChatMenuOpen(open) {
+  if (!refs.chatMenuPopover) return;
+  refs.chatMenuPopover.hidden = !open;
+}
+
+function setChatCreateKind(kind = "direct") {
+  const normalized = kind === "group" || kind === "channel" ? kind : "direct";
+  state.chatCreateKind = normalized;
+  if (refs.chatCreateKind) refs.chatCreateKind.value = normalized;
+  if (refs.chatCreateModalTitle) {
+    refs.chatCreateModalTitle.textContent =
+      normalized === "group"
+        ? "Новая группа"
+        : normalized === "channel"
+          ? "Новый канал"
+          : "Новый чат";
+  }
+  if (refs.chatCreateTitleInput) {
+    refs.chatCreateTitleInput.placeholder =
+      normalized === "group"
+        ? "Например, Упаковка"
+        : normalized === "channel"
+          ? "Например, Анонсы склада"
+          : "Например, Личный чат";
+  }
+  const showMemberField = normalized === "direct";
+  if (refs.chatCreateMembersWrap) refs.chatCreateMembersWrap.hidden = !showMemberField;
+}
+
+function openChatCreateModal(kind = "direct") {
+  setChatMenuOpen(false);
+  setChatCreateKind(kind);
+  if (refs.chatCreateForm) refs.chatCreateForm.reset();
+  openSimpleModal(refs.chatCreateModal);
+  setTimeout(() => refs.chatCreateTitleInput?.focus(), 40);
+}
+
+function closeChatCreateModal() {
+  closeSimpleModal(refs.chatCreateModal);
+}
+
 function renderChatThreads(list = filteredChatThreads()) {
   if (!refs.chatList) return;
   refs.chatList.innerHTML = "";
@@ -1947,19 +2067,18 @@ async function loadChatData() {
 
 async function createChat(kind = "direct") {
   if (!state.token) throw new Error("Требуется вход в систему");
-  const defaultTitle = kind === "group" ? "Новая группа" : "Новый чат";
-  const title = window.prompt("Название чата", defaultTitle);
-  if (!title || !String(title).trim()) return null;
+  const payload = typeof kind === "object" && kind !== null ? kind : { kind };
+  const chatKind = payload.kind === "group" || payload.kind === "channel" ? payload.kind : "direct";
+  const title = String(payload.title || "").trim();
+  if (!title) throw new Error("Укажите название чата");
   const threadPayload = {
-    title: String(title).trim(),
-    kind: kind === "group" ? "group" : "direct",
+    title,
+    kind: chatKind,
     memberEmails: [],
   };
-  if (kind !== "group") {
-    const target = window.prompt("Email второго участника (опционально)", "");
-    if (target && String(target).trim()) {
-      threadPayload.memberEmails = [String(target).trim().toLowerCase()];
-    }
+  const target = String(payload.memberEmail || "").trim().toLowerCase();
+  if (chatKind === "direct" && target) {
+    threadPayload.memberEmails = [target];
   }
   const result = await apiRequest("/api/inventory/chat-create", {
     method: "POST",
@@ -1973,12 +2092,15 @@ async function sendActiveChatMessage() {
   const threadId = String(state.chatActiveThreadId || "").trim();
   if (!threadId) throw new Error("Выберите чат");
   const text = String(refs.chatMessageInput?.value || "").trim();
-  if (!text) return;
+  const fileLines = state.chatDraftFiles.map((file) => `📎 ${file.name}`);
+  if (!text && !fileLines.length) return;
+  const body = [text, ...fileLines].filter(Boolean).join("\n");
   await apiRequest("/api/inventory/chat-send", {
     method: "POST",
-    body: { threadId, body: text },
+    body: { threadId, body },
   });
   if (refs.chatMessageInput) refs.chatMessageInput.value = "";
+  resetChatDraftFiles();
   await openChatThread(threadId);
   await loadChatData();
 }
@@ -5453,21 +5575,9 @@ if (refs.chatBackBtn) refs.chatBackBtn.addEventListener("click", () => {
   hapticSelection();
 });
 if (refs.chatTopMenuBtn) refs.chatTopMenuBtn.addEventListener("click", async () => {
-  try {
-    const thread = await runDbAction(() => createChat("group"), {
-      button: refs.chatTopMenuBtn,
-      message: "Создаем быстрый групповой чат...",
-    });
-    if (thread?.id) {
-      await loadChatData();
-      await openChatThread(thread.id);
-      showToast("Групповой чат создан");
-      hapticSuccess();
-    }
-  } catch (error) {
-    showToast(error.message);
-    hapticWarning();
-  }
+  const isHidden = Boolean(refs.chatMenuPopover?.hidden);
+  setChatMenuOpen(isHidden);
+  hapticSelection();
 });
 if (refs.chatList) refs.chatList.addEventListener("click", async (event) => {
   const target = event.target;
@@ -5485,7 +5595,6 @@ if (refs.chatList) refs.chatList.addEventListener("click", async (event) => {
 });
 if (refs.chatMessageForm) refs.chatMessageForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (!refs.chatMessageForm.reportValidity()) return;
   const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : refs.chatSendBtn;
   try {
     await runDbAction(() => sendActiveChatMessage(), {
@@ -5499,14 +5608,85 @@ if (refs.chatMessageForm) refs.chatMessageForm.addEventListener("submit", async 
   }
 });
 if (refs.chatCreateBtn) refs.chatCreateBtn.addEventListener("click", async () => {
+  openChatCreateModal("direct");
+  hapticSelection();
+});
+if (refs.chatCreateGroupBtn) refs.chatCreateGroupBtn.addEventListener("click", async () => {
+  openChatCreateModal("group");
+  hapticSelection();
+});
+if (refs.chatChannelsBtn) refs.chatChannelsBtn.addEventListener("click", async () => {
+  openChatCreateModal("channel");
+  hapticSelection();
+});
+if (refs.chatMenuNewDirectBtn) refs.chatMenuNewDirectBtn.addEventListener("click", () => {
+  openChatCreateModal("direct");
+  hapticSelection();
+});
+if (refs.chatMenuNewGroupBtn) refs.chatMenuNewGroupBtn.addEventListener("click", () => {
+  openChatCreateModal("group");
+  hapticSelection();
+});
+if (refs.chatMenuNewChannelBtn) refs.chatMenuNewChannelBtn.addEventListener("click", () => {
+  openChatCreateModal("channel");
+  hapticSelection();
+});
+if (refs.chatAttachBtn) refs.chatAttachBtn.addEventListener("click", () => {
+  refs.chatFileInput?.click();
+  hapticSelection();
+});
+if (refs.chatFileInput) refs.chatFileInput.addEventListener("change", () => {
+  addChatDraftFiles(refs.chatFileInput.files);
+});
+if (refs.chatFilePreviewList) refs.chatFilePreviewList.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const button = target.closest("button[data-chat-file-remove]");
+  if (!(button instanceof HTMLButtonElement)) return;
+  const idx = Number(button.getAttribute("data-chat-file-remove"));
+  if (!Number.isFinite(idx) || idx < 0) return;
+  state.chatDraftFiles.splice(idx, 1);
+  renderChatFilePreviews();
+});
+if (refs.chatDropZone) {
+  const dragTargets = [refs.chatDropZone, refs.chatMessages].filter(Boolean);
+  dragTargets.forEach((node) => {
+    node.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      refs.chatDropZone.classList.add("is-active");
+    });
+    node.addEventListener("dragleave", (event) => {
+      event.preventDefault();
+      const related = event.relatedTarget;
+      if (!(related instanceof Node) || !refs.chatDropZone.contains(related)) {
+        refs.chatDropZone.classList.remove("is-active");
+      }
+    });
+    node.addEventListener("drop", (event) => {
+      event.preventDefault();
+      refs.chatDropZone.classList.remove("is-active");
+      addChatDraftFiles(event.dataTransfer?.files);
+      hapticSelection();
+    });
+  });
+}
+if (refs.closeChatCreateBtn) refs.closeChatCreateBtn.addEventListener("click", closeChatCreateModal);
+if (refs.chatCreateBackdrop) refs.chatCreateBackdrop.addEventListener("click", closeChatCreateModal);
+if (refs.chatCreateForm) refs.chatCreateForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!refs.chatCreateForm.reportValidity()) return;
+  const kind = String(refs.chatCreateKind?.value || state.chatCreateKind || "direct");
+  const title = String(refs.chatCreateTitleInput?.value || "").trim();
+  const memberEmail = String(refs.chatCreateMemberInput?.value || "").trim();
   try {
-    const thread = await runDbAction(() => createChat("direct"), {
-      button: refs.chatCreateBtn,
+    const thread = await runDbAction(() => createChat({ kind, title, memberEmail }), {
+      button: refs.chatCreateSubmitBtn,
       message: "Создаем чат...",
     });
     if (thread?.id) {
       await loadChatData();
       await openChatThread(thread.id);
+      closeChatCreateModal();
       showToast("Чат создан");
       hapticSuccess();
     }
@@ -5515,39 +5695,12 @@ if (refs.chatCreateBtn) refs.chatCreateBtn.addEventListener("click", async () =>
     hapticWarning();
   }
 });
-if (refs.chatCreateGroupBtn) refs.chatCreateGroupBtn.addEventListener("click", async () => {
-  try {
-    const thread = await runDbAction(() => createChat("group"), {
-      button: refs.chatCreateGroupBtn,
-      message: "Создаем группу...",
-    });
-    if (thread?.id) {
-      await loadChatData();
-      await openChatThread(thread.id);
-      showToast("Группа создана");
-      hapticSuccess();
-    }
-  } catch (error) {
-    showToast(error.message);
-    hapticWarning();
-  }
-});
-if (refs.chatChannelsBtn) refs.chatChannelsBtn.addEventListener("click", async () => {
-  try {
-    const thread = await runDbAction(() => createChat("channel"), {
-      button: refs.chatChannelsBtn,
-      message: "Создаем канал...",
-    });
-    if (thread?.id) {
-      await loadChatData();
-      await openChatThread(thread.id);
-      showToast("Канал создан");
-      hapticSuccess();
-    }
-  } catch (error) {
-    showToast(error.message);
-    hapticWarning();
-  }
+document.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof Node)) return;
+  if (!refs.chatTopMenuBtn || !refs.chatMenuPopover || refs.chatMenuPopover.hidden) return;
+  if (refs.chatTopMenuBtn.contains(target) || refs.chatMenuPopover.contains(target)) return;
+  setChatMenuOpen(false);
 });
 if (refs.taskCreateBtn) refs.taskCreateBtn.addEventListener("click", async () => {
   try {
@@ -6237,6 +6390,8 @@ document.addEventListener("keydown", (event) => {
     closeBoxFoundModal();
     closeFilmAddModal();
     closeFilmDeleteModal();
+    closeChatCreateModal();
+    setChatMenuOpen(false);
     closeAccountMenu();
     stopScanner();
   }
@@ -6262,6 +6417,7 @@ renderHomeProcessCards();
 renderHomeSummary();
 initStatsFilters();
 renderQuickFilmBatch();
+renderChatFilePreviews();
 loadItems();
 loadHistory();
 loadFilms();
