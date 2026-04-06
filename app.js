@@ -41,6 +41,9 @@ const state = {
   chatActiveThreadId: "",
   chatDraftFiles: [],
   chatCreateKind: "direct",
+  chatReplyTo: null,
+  chatForwardMessage: null,
+  chatLocalMessageMeta: {},
   tasks: [],
   taskViewMode: "board",
   boxCatalog: [],
@@ -332,6 +335,7 @@ const refs = {
   chatAttachBtn: document.getElementById("chatAttachBtn"),
   chatDropZone: document.getElementById("chatDropZone"),
   chatFilePreviewList: document.getElementById("chatFilePreviewList"),
+  chatReplyPreview: document.getElementById("chatReplyPreview"),
   chatSendBtn: document.getElementById("chatSendBtn"),
   chatCreateModal: document.getElementById("chatCreateModal"),
   chatCreateBackdrop: document.getElementById("chatCreateBackdrop"),
@@ -343,6 +347,15 @@ const refs = {
   chatCreateMemberInput: document.getElementById("chatCreateMemberInput"),
   chatCreateMembersWrap: document.getElementById("chatCreateMembersWrap"),
   chatCreateSubmitBtn: document.getElementById("chatCreateSubmitBtn"),
+  chatForwardModal: document.getElementById("chatForwardModal"),
+  chatForwardBackdrop: document.getElementById("chatForwardBackdrop"),
+  closeChatForwardBtn: document.getElementById("closeChatForwardBtn"),
+  chatForwardList: document.getElementById("chatForwardList"),
+  chatReadStatusModal: document.getElementById("chatReadStatusModal"),
+  chatReadStatusBackdrop: document.getElementById("chatReadStatusBackdrop"),
+  closeChatReadStatusBtn: document.getElementById("closeChatReadStatusBtn"),
+  chatReadStatusSummary: document.getElementById("chatReadStatusSummary"),
+  chatReadStatusList: document.getElementById("chatReadStatusList"),
   tasksSearchInput: document.getElementById("tasksSearchInput"),
   taskCreateBtn: document.getElementById("taskCreateBtn"),
   tasksBoardBtn: document.getElementById("tasksBoardBtn"),
@@ -1981,6 +1994,128 @@ function closeChatCreateModal() {
   closeSimpleModal(refs.chatCreateModal);
 }
 
+function closeChatForwardModal() {
+  closeSimpleModal(refs.chatForwardModal);
+}
+
+function closeChatReadStatusModal() {
+  closeSimpleModal(refs.chatReadStatusModal);
+}
+
+function chatMessageKey(message) {
+  return String(message?.id || message?.local_id || "");
+}
+
+function parseChatMessageBody(rawBody = "") {
+  const raw = String(rawBody || "");
+  const lines = raw.split("\n");
+  const first = String(lines[0] || "").trim();
+  if (first.startsWith("↪ Ответ на:")) {
+    return {
+      reply: first.replace(/^↪ Ответ на:\s*/i, "").trim(),
+      forwarded: "",
+      text: lines.slice(1).join("\n").trim(),
+    };
+  }
+  if (first.startsWith("↗ Переслано от:")) {
+    return {
+      reply: "",
+      forwarded: first.replace(/^↗ Переслано от:\s*/i, "").trim(),
+      text: lines.slice(1).join("\n").trim(),
+    };
+  }
+  return { reply: "", forwarded: "", text: raw };
+}
+
+function renderChatReplyPreview() {
+  if (!refs.chatReplyPreview) return;
+  const data = state.chatReplyTo;
+  if (!data) {
+    refs.chatReplyPreview.hidden = true;
+    refs.chatReplyPreview.innerHTML = "";
+    return;
+  }
+  refs.chatReplyPreview.hidden = false;
+  refs.chatReplyPreview.innerHTML = `
+    <div class="chat-reply-preview-body">
+      <strong>Ответ: ${escapeText(data.author || "Сообщение")}</strong>
+      <p>${escapeText(String(data.text || "").slice(0, 120))}</p>
+    </div>
+    <button type="button" class="chat-reply-preview-close" id="chatReplyCancelBtn" aria-label="Отменить ответ">×</button>
+  `;
+  const cancelBtn = document.getElementById("chatReplyCancelBtn");
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", () => {
+      state.chatReplyTo = null;
+      renderChatReplyPreview();
+    });
+  }
+}
+
+function buildMessageStatus(message, mine) {
+  if (!mine) return "";
+  const key = chatMessageKey(message);
+  const localMeta = state.chatLocalMessageMeta[key] || {};
+  const delivery = String(localMeta.delivery || "sent");
+  if (delivery === "sending") return "⏳";
+  if (delivery === "failed") return "!";
+  const readCount = Number(localMeta.readCount || 0);
+  return readCount > 0 ? "✓✓" : "✓";
+}
+
+async function openChatReadStatus(message) {
+  if (!state.token || !message) return;
+  const threadId = String(state.chatActiveThreadId || "").trim();
+  const messageId = String(message.id || "").trim();
+  if (!threadId || !messageId) return;
+  const data = await apiRequest(
+    `/api/inventory/chat-message-readers?thread_id=${encodeURIComponent(threadId)}&message_id=${encodeURIComponent(messageId)}`
+  );
+  const readers = Array.isArray(data.readers) ? data.readers : [];
+  state.chatLocalMessageMeta[messageId] = {
+    ...(state.chatLocalMessageMeta[messageId] || {}),
+    delivery: "sent",
+    readCount: readers.length,
+  };
+  renderChatMessages();
+  if (refs.chatReadStatusSummary) {
+    refs.chatReadStatusSummary.textContent = readers.length
+      ? `Просмотрено: ${readers.length}`
+      : "Пока никто не просмотрел.";
+  }
+  if (refs.chatReadStatusList) {
+    if (!readers.length) {
+      refs.chatReadStatusList.innerHTML = '<p class="muted">Нет просмотров.</p>';
+    } else {
+      refs.chatReadStatusList.innerHTML = readers
+        .map((row) => {
+          const who = String(row.name || row.email || "Пользователь");
+          const at = row.read_at ? formatHistoryDate(row.read_at) : "—";
+          return `<article class="history-item"><strong>${escapeText(who)}</strong><div class="history-meta">${escapeText(at)}</div></article>`;
+        })
+        .join("");
+    }
+  }
+  openSimpleModal(refs.chatReadStatusModal);
+}
+
+function openChatForwardModal(message) {
+  state.chatForwardMessage = message || null;
+  if (!refs.chatForwardList) return;
+  const list = state.chatThreads.filter((thread) => String(thread.id) !== String(state.chatActiveThreadId));
+  refs.chatForwardList.innerHTML = list.length
+    ? list
+        .map(
+          (thread) => `<button class="chat-forward-item" type="button" data-chat-forward-to="${thread.id}">
+      <strong>${escapeText(thread.title || "Без названия")}</strong>
+      <span>${escapeText(thread.kind || "chat")}</span>
+    </button>`
+        )
+        .join("")
+    : '<p class="muted">Нет доступных чатов для пересылки.</p>';
+  openSimpleModal(refs.chatForwardModal);
+}
+
 function renderChatThreads(list = filteredChatThreads()) {
   if (!refs.chatList) return;
   refs.chatList.innerHTML = "";
@@ -2029,12 +2164,26 @@ function renderChatMessages() {
 
   state.chatMessages.forEach((message) => {
     const mine = String(message.author_email || "").toLowerCase() === String(state.user?.email || "").toLowerCase();
+    const parsed = parseChatMessageBody(message.body || "");
+    const statusIcon = buildMessageStatus(message, mine);
+    const key = chatMessageKey(message);
     const row = document.createElement("article");
     row.className = `chat-message${mine ? " is-mine" : ""}`;
+    row.setAttribute("data-chat-message-id", key);
     row.innerHTML = `
       <div class="chat-message-author">${escapeText(mine ? "Вы" : message.author_email || "Пользователь")}</div>
-      <div class="chat-message-body">${escapeText(message.body || "")}</div>
-      <div class="chat-message-time">${formatHistoryDate(message.created_at)}</div>
+      ${parsed.forwarded ? `<div class="chat-message-forwarded">↗ ${escapeText(parsed.forwarded)}</div>` : ""}
+      ${parsed.reply ? `<div class="chat-message-reply">${escapeText(parsed.reply)}</div>` : ""}
+      <div class="chat-message-body">${escapeText(parsed.text || "")}</div>
+      <div class="chat-message-foot">
+        <div class="chat-message-time">${formatHistoryDate(message.created_at)}</div>
+        ${mine ? `<button type="button" class="chat-status-btn" data-chat-status-id="${key}" title="Статус">${escapeText(statusIcon)}</button>` : ""}
+      </div>
+      <div class="chat-message-actions">
+        <button type="button" data-chat-action="reply" data-chat-message-id="${key}">Ответить</button>
+        <button type="button" data-chat-action="forward" data-chat-message-id="${key}">Переслать</button>
+        ${mine ? `<button type="button" data-chat-action="delete" data-chat-message-id="${key}" class="is-danger">Удалить</button>` : ""}
+      </div>
     `;
     refs.chatMessages.appendChild(row);
   });
@@ -2048,6 +2197,8 @@ async function openChatThread(threadId) {
   const data = await apiRequest(`/api/inventory/chat-messages?thread_id=${encodeURIComponent(id)}`);
   state.chatActiveThreadId = id;
   state.chatMessages = Array.isArray(data.messages) ? data.messages : [];
+  state.chatReplyTo = null;
+  renderChatReplyPreview();
   const thread = chatThreadById(id);
   syncChatHeader(thread);
   renderChatMessages();
@@ -2066,6 +2217,8 @@ async function loadChatData() {
     state.chatThreads = [];
     state.chatMessages = [];
     state.chatActiveThreadId = "";
+    state.chatReplyTo = null;
+    renderChatReplyPreview();
     renderChatThreads([]);
     renderChatMessages();
     return;
@@ -2082,6 +2235,8 @@ async function loadChatData() {
   }
   state.chatMessages = [];
   state.chatActiveThreadId = "";
+  state.chatReplyTo = null;
+  renderChatReplyPreview();
   syncChatHeader(null);
   renderChatMessages();
   syncChatLayoutMode();
@@ -2116,15 +2271,48 @@ async function sendActiveChatMessage() {
   const text = String(refs.chatMessageInput?.value || "").trim();
   const fileLines = state.chatDraftFiles.map((file) => `📎 ${file.name}`);
   if (!text && !fileLines.length) return;
-  const body = [text, ...fileLines].filter(Boolean).join("\n");
-  await apiRequest("/api/inventory/chat-send", {
-    method: "POST",
-    body: { threadId, body },
-  });
+  let body = [text, ...fileLines].filter(Boolean).join("\n");
+  if (state.chatReplyTo) {
+    const replyMeta = `↪ Ответ на: ${state.chatReplyTo.author}: ${String(state.chatReplyTo.text || "").slice(0, 80)}`;
+    body = `${replyMeta}\n${body}`.trim();
+  }
+  const localId = `local_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const optimistic = {
+    id: localId,
+    local_id: localId,
+    author_email: String(state.user?.email || ""),
+    body,
+    created_at: new Date().toISOString(),
+  };
+  state.chatMessages.push(optimistic);
+  state.chatLocalMessageMeta[localId] = { delivery: "sending", readCount: 0 };
+  renderChatMessages();
   if (refs.chatMessageInput) refs.chatMessageInput.value = "";
+  state.chatReplyTo = null;
+  renderChatReplyPreview();
   resetChatDraftFiles();
-  await openChatThread(threadId);
-  await loadChatData();
+  try {
+    const sent = await apiRequest("/api/inventory/chat-send", {
+      method: "POST",
+      body: { threadId, body },
+    });
+    const message = sent?.message || null;
+    if (message?.id) {
+      state.chatMessages = state.chatMessages.map((row) =>
+        chatMessageKey(row) === localId ? message : row
+      );
+      delete state.chatLocalMessageMeta[localId];
+      state.chatLocalMessageMeta[String(message.id)] = { delivery: "sent", readCount: 0 };
+    } else {
+      state.chatLocalMessageMeta[localId] = { delivery: "failed", readCount: 0 };
+    }
+    renderChatMessages();
+    await loadChatData();
+  } catch (error) {
+    state.chatLocalMessageMeta[localId] = { delivery: "failed", readCount: 0 };
+    renderChatMessages();
+    throw error;
+  }
 }
 
 function priorityLabel(priority) {
@@ -5626,18 +5814,84 @@ if (refs.chatList) refs.chatList.addEventListener("click", async (event) => {
     hapticWarning();
   }
 });
+if (refs.chatMessages) refs.chatMessages.addEventListener("click", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+
+  const statusBtn = target.closest("button[data-chat-status-id]");
+  if (statusBtn instanceof HTMLButtonElement) {
+    const messageId = String(statusBtn.getAttribute("data-chat-status-id") || "").trim();
+    const message = state.chatMessages.find((row) => chatMessageKey(row) === messageId);
+    if (!message) return;
+    try {
+      await openChatReadStatus(message);
+    } catch (error) {
+      showToast(error.message || "Не удалось загрузить статусы");
+    }
+    return;
+  }
+
+  const actionBtn = target.closest("button[data-chat-action]");
+  if (!(actionBtn instanceof HTMLButtonElement)) return;
+  const action = String(actionBtn.getAttribute("data-chat-action") || "");
+  const messageId = String(actionBtn.getAttribute("data-chat-message-id") || "").trim();
+  const message = state.chatMessages.find((row) => chatMessageKey(row) === messageId);
+  if (!message) return;
+  const mine = String(message.author_email || "").toLowerCase() === String(state.user?.email || "").toLowerCase();
+  const parsed = parseChatMessageBody(message.body || "");
+  if (action === "reply") {
+    state.chatReplyTo = {
+      id: messageId,
+      author: mine ? "Вы" : String(message.author_email || "Пользователь"),
+      text: parsed.text || "",
+    };
+    renderChatReplyPreview();
+    refs.chatMessageInput?.focus();
+    return;
+  }
+  if (action === "forward") {
+    openChatForwardModal(message);
+    return;
+  }
+  if (action === "delete") {
+    if (!mine) return;
+    if (!window.confirm("Удалить сообщение?")) return;
+    if (String(messageId).startsWith("local_")) {
+      state.chatMessages = state.chatMessages.filter((row) => chatMessageKey(row) !== messageId);
+      delete state.chatLocalMessageMeta[messageId];
+      renderChatMessages();
+      return;
+    }
+    try {
+      await apiRequest("/api/inventory/chat-delete-message", {
+        method: "POST",
+        body: {
+          threadId: state.chatActiveThreadId,
+          messageId: message.id,
+        },
+      });
+      state.chatMessages = state.chatMessages.filter((row) => chatMessageKey(row) !== messageId);
+      delete state.chatLocalMessageMeta[messageId];
+      renderChatMessages();
+      showToast("Сообщение удалено");
+      hapticSuccess();
+    } catch (error) {
+      showToast(error.message || "Не удалось удалить сообщение");
+      hapticWarning();
+    }
+  }
+});
 if (refs.chatMessageForm) refs.chatMessageForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : refs.chatSendBtn;
   try {
-    await runDbAction(() => sendActiveChatMessage(), {
-      button: submitBtn,
-      message: "Отправляем сообщение...",
-    });
+    if (refs.chatSendBtn) refs.chatSendBtn.disabled = true;
+    await sendActiveChatMessage();
     hapticSuccess();
   } catch (error) {
     showToast(error.message);
     hapticWarning();
+  } finally {
+    if (refs.chatSendBtn) refs.chatSendBtn.disabled = false;
   }
 });
 if (refs.chatCreateBtn) refs.chatCreateBtn.addEventListener("click", async () => {
@@ -5737,6 +5991,33 @@ if (refs.chatCreateForm) refs.chatCreateForm.addEventListener("submit", async (e
     hapticWarning();
   }
 });
+if (refs.closeChatForwardBtn) refs.closeChatForwardBtn.addEventListener("click", closeChatForwardModal);
+if (refs.chatForwardBackdrop) refs.chatForwardBackdrop.addEventListener("click", closeChatForwardModal);
+if (refs.chatForwardList) refs.chatForwardList.addEventListener("click", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const btn = target.closest("button[data-chat-forward-to]");
+  if (!(btn instanceof HTMLButtonElement)) return;
+  const toThreadId = String(btn.getAttribute("data-chat-forward-to") || "").trim();
+  if (!toThreadId || !state.chatForwardMessage) return;
+  const parsed = parseChatMessageBody(state.chatForwardMessage.body || "");
+  const forwardHeader = `↗ Переслано от: ${state.chatForwardMessage.author_email || "Пользователь"}`;
+  const forwardBody = `${forwardHeader}\n${parsed.text || state.chatForwardMessage.body || ""}`.trim();
+  try {
+    await apiRequest("/api/inventory/chat-send", {
+      method: "POST",
+      body: { threadId: toThreadId, body: forwardBody },
+    });
+    closeChatForwardModal();
+    showToast("Сообщение переслано");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message || "Не удалось переслать сообщение");
+    hapticWarning();
+  }
+});
+if (refs.closeChatReadStatusBtn) refs.closeChatReadStatusBtn.addEventListener("click", closeChatReadStatusModal);
+if (refs.chatReadStatusBackdrop) refs.chatReadStatusBackdrop.addEventListener("click", closeChatReadStatusModal);
 document.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Node)) return;
@@ -6433,6 +6714,8 @@ document.addEventListener("keydown", (event) => {
     closeFilmAddModal();
     closeFilmDeleteModal();
     closeChatCreateModal();
+    closeChatForwardModal();
+    closeChatReadStatusModal();
     setChatMenuOpen(false);
     closeAccountMenu();
     stopScanner();
@@ -6460,6 +6743,7 @@ renderHomeSummary();
 initStatsFilters();
 renderQuickFilmBatch();
 renderChatFilePreviews();
+renderChatReplyPreview();
 loadItems();
 loadHistory();
 loadFilms();

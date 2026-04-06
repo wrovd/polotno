@@ -907,6 +907,7 @@
                 <p>Перетащите файлы сюда для отправки</p>
               </div>
               <div class="chat-file-previews" id="chatFilePreviewList"></div>
+              <div class="chat-reply-preview" id="chatReplyPreview" hidden></div>
 
               <form class="chat-composer-figma" id="chatMessageForm" novalidate>
                 <button class="chat-round-btn" id="chatAttachBtn" type="button" aria-label="Вложение">
@@ -1538,6 +1539,26 @@
             <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Создать</span>
           </button>
         </form>
+      </section>
+    </div>
+
+    <div class="auth-modal" id="chatForwardModal" hidden>
+      <div class="auth-backdrop" id="chatForwardBackdrop"></div>
+      <section class="auth-card chat-create-card" role="dialog" aria-modal="true" aria-label="Переслать сообщение">
+        <button class="close-btn" id="closeChatForwardBtn" type="button" aria-label="Закрыть">×</button>
+        <h3>Переслать сообщение</h3>
+        <p class="helper">Выберите чат, куда переслать.</p>
+        <div class="history-list" id="chatForwardList"></div>
+      </section>
+    </div>
+
+    <div class="auth-modal" id="chatReadStatusModal" hidden>
+      <div class="auth-backdrop" id="chatReadStatusBackdrop"></div>
+      <section class="auth-card chat-create-card" role="dialog" aria-modal="true" aria-label="Статус прочтения">
+        <button class="close-btn" id="closeChatReadStatusBtn" type="button" aria-label="Закрыть">×</button>
+        <h3>Просмотры сообщения</h3>
+        <p class="helper" id="chatReadStatusSummary">Кто просмотрел и во сколько.</p>
+        <div class="history-list" id="chatReadStatusList"></div>
       </section>
     </div>
 

@@ -12,6 +12,8 @@ const {
   listChatMessages,
   sendChatMessage,
   markChatThreadRead,
+  deleteChatMessage,
+  listChatMessageReaders,
   listTaskBoard,
   createTask,
   updateTaskById,
@@ -416,6 +418,40 @@ async function handleChat(req, res) {
       if (!threadId) return send(res, 400, { error: "threadId is required" });
       await markChatThreadRead(threadId, auth.user.email);
       return send(res, 200, { ok: true });
+    }
+
+    if (req.method === "POST" && action === "chat-delete-message") {
+      const body = parseJsonBody(req);
+      const threadId = String(body.threadId || body.thread_id || "").trim();
+      const messageId = String(body.messageId || body.message_id || "").trim();
+      if (!threadId) return send(res, 400, { error: "threadId is required" });
+      if (!messageId) return send(res, 400, { error: "messageId is required" });
+      await deleteChatMessage({
+        threadId,
+        messageId,
+        requesterEmail: auth.user.email,
+      });
+      await appendMovement({
+        item_id: `CHAT:${threadId}`,
+        delta: 0,
+        reason: "chat_message_delete",
+        user_email: auth.user.email,
+        created_at: new Date().toISOString(),
+      });
+      return send(res, 200, { ok: true });
+    }
+
+    if (req.method === "GET" && action === "chat-message-readers") {
+      const threadId = String(req.query.thread_id || req.query.threadId || "").trim();
+      const messageId = String(req.query.message_id || req.query.messageId || "").trim();
+      if (!threadId) return send(res, 400, { error: "threadId is required" });
+      if (!messageId) return send(res, 400, { error: "messageId is required" });
+      const readers = await listChatMessageReaders({
+        threadId,
+        messageId,
+        userEmail: auth.user.email,
+      });
+      return send(res, 200, { readers });
     }
   } catch (error) {
     return send(res, 500, { error: error.message || "Chat action failed" });
