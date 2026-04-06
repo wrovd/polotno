@@ -149,6 +149,8 @@ const refs = {
   homeBellBadge: document.getElementById("homeBellBadge"),
   homeNotificationsPopover: document.getElementById("homeNotificationsPopover"),
   homeNotificationsList: document.getElementById("homeNotificationsList"),
+  homeNotificationsBrowserBtn: document.getElementById("homeNotificationsBrowserBtn"),
+  homeNotificationsBrowserBtnText: document.getElementById("homeNotificationsBrowserBtnText"),
   homeNotificationsMarkReadBtn: document.getElementById("homeNotificationsMarkReadBtn"),
   homeNotificationsCloseBtn: document.getElementById("homeNotificationsCloseBtn"),
   homeAuthCaption: document.getElementById("homeAuthCaption"),
@@ -1059,8 +1061,72 @@ function closeHomeNotificationsPopover() {
   refs.homeNotificationsPopover.hidden = true;
 }
 
+function getBrowserNotificationsPermission() {
+  if (typeof window === "undefined" || !("Notification" in window)) return "unsupported";
+  return String(Notification.permission || "default");
+}
+
+function syncHomeNotificationsBrowserButton() {
+  if (!refs.homeNotificationsBrowserBtn) return;
+  const permission = getBrowserNotificationsPermission();
+  refs.homeNotificationsBrowserBtn.classList.remove("is-enabled", "is-blocked");
+  if (permission === "granted") {
+    refs.homeNotificationsBrowserBtn.classList.add("is-enabled");
+  } else if (permission === "denied") {
+    refs.homeNotificationsBrowserBtn.classList.add("is-blocked");
+  }
+  if (refs.homeNotificationsBrowserBtnText) {
+    refs.homeNotificationsBrowserBtnText.textContent = permission === "granted"
+      ? "Вкл"
+      : permission === "denied"
+        ? "Blocked"
+        : permission === "unsupported"
+          ? "Нет API"
+          : "Включить";
+  }
+}
+
+async function requestBrowserNotificationsPermission() {
+  const permission = getBrowserNotificationsPermission();
+  if (permission === "unsupported") {
+    showToast("В этом браузере нет поддержки уведомлений.");
+    hapticWarning();
+    return;
+  }
+  if (permission === "granted") {
+    showToast("Уведомления браузера уже включены.");
+    hapticSuccess();
+    syncHomeNotificationsBrowserButton();
+    return;
+  }
+  if (permission === "denied") {
+    showToast("Уведомления заблокированы. Разрешите их в настройках браузера.");
+    hapticWarning();
+    syncHomeNotificationsBrowserButton();
+    return;
+  }
+  try {
+    const result = await Notification.requestPermission();
+    if (result === "granted") {
+      showToast("Уведомления браузера включены.");
+      hapticSuccess();
+    } else if (result === "denied") {
+      showToast("Разрешение отклонено.");
+      hapticWarning();
+    } else {
+      showToast("Разрешение не выбрано.");
+    }
+  } catch (error) {
+    showToast(error instanceof Error ? error.message : "Не удалось запросить разрешение.");
+    hapticWarning();
+  } finally {
+    syncHomeNotificationsBrowserButton();
+  }
+}
+
 function renderHomeNotificationsPopover() {
   if (!refs.homeNotificationsList) return;
+  syncHomeNotificationsBrowserButton();
   const list = Array.isArray(state.homeNotifications) ? state.homeNotifications : [];
   if (!list.length) {
     refs.homeNotificationsList.innerHTML = '<p class="muted">Уведомлений пока нет.</p>';
@@ -1096,6 +1162,7 @@ function renderHomeNotificationsBadge() {
 function openHomeNotificationsPopover() {
   if (!refs.homeNotificationsPopover) return;
   refs.homeNotificationsPopover.hidden = false;
+  syncHomeNotificationsBrowserButton();
 }
 
 function toggleHomeNotificationsPopover(forceOpen = null) {
@@ -5401,6 +5468,9 @@ if (refs.homeNotificationsMarkReadBtn) refs.homeNotificationsMarkReadBtn.addEven
   renderHomeNotificationsBadge();
   renderHomeNotificationsPopover();
   hapticSuccess();
+});
+if (refs.homeNotificationsBrowserBtn) refs.homeNotificationsBrowserBtn.addEventListener("click", async () => {
+  await requestBrowserNotificationsPermission();
 });
 if (refs.homeNotificationsList) refs.homeNotificationsList.addEventListener("click", async (event) => {
   const target = event.target;

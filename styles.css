@@ -745,6 +745,33 @@ h1 {
   height: 16px;
 }
 
+.home-notifications-head-actions .home-notifications-browser-btn {
+  width: auto;
+  min-width: 98px;
+  padding: 0 10px;
+  border-radius: 10px;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #4d5870;
+  background: #edf1f8;
+}
+
+.home-notifications-head-actions .home-notifications-browser-btn .btn-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.home-notifications-head-actions .home-notifications-browser-btn.is-enabled {
+  color: #1e7a3f;
+  background: #e7f7ee;
+}
+
+.home-notifications-head-actions .home-notifications-browser-btn.is-blocked {
+  color: #b2433a;
+  background: #fdeeee;
+}
+
 .home-notifications-list {
   overflow: auto;
   max-height: min(64vh, 540px);
@@ -4212,6 +4239,12 @@ button.is-loading::after {
 
   .home-notifications-head h3 {
     font-size: 26px;
+  }
+
+  .home-notifications-head-actions .home-notifications-browser-btn {
+    min-width: 86px;
+    padding: 0 8px;
+    font-size: 11px;
   }
 
   .home-notification-item {
