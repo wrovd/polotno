@@ -3341,6 +3341,12 @@ function taskCode(task) {
 }
 
 function extractTaskTags(task) {
+  if (Array.isArray(task?.tags) && task.tags.length) {
+    return task.tags
+      .map((item) => String(item || "").trim())
+      .filter(Boolean)
+      .slice(0, 2);
+  }
   const title = String(task?.title || "").toLowerCase();
   const tags = [];
   if (title.includes("инвентар")) tags.push("Инвентаризация");
@@ -3350,6 +3356,22 @@ function extractTaskTags(task) {
   if (title.includes("пленк")) tags.push("Склад");
   if (title.includes("сроч") || task?.priority === "urgent" || task?.priority === "high") tags.push("Срочно");
   return tags.slice(0, 2);
+}
+
+function selectedTaskModalTags() {
+  const nodes = Array.from(document.querySelectorAll(".task-modal-tag.is-active"));
+  return nodes
+    .map((node) => String(node.getAttribute("data-tag") || node.textContent || "").trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
+function setTaskModalTags(tags = []) {
+  const selected = new Set((Array.isArray(tags) ? tags : []).map((item) => String(item || "").trim()).filter(Boolean));
+  document.querySelectorAll(".task-modal-tag").forEach((node) => {
+    const value = String(node.getAttribute("data-tag") || node.textContent || "").trim();
+    node.classList.toggle("is-active", selected.has(value));
+  });
 }
 
 function tasksStatusUiTitle(status) {
@@ -3386,15 +3408,16 @@ function taskCardHtml(task, compact = false) {
   const priorityText = taskPriorityUiLabel(task.priority);
   const commentsCount = Math.max(0, Number(task.comments_count || 0));
   const attachCount = Math.max(0, Number(task.attachments_count || 0));
-  return `
-    <article class="task-card-figma${compact ? " compact" : ""}" data-task-id="${task.id}" draggable="true">
-      <div class="task-card-top">
-        <span class="task-priority ${priority}">${iconSpan("flag")}${escapeText(priorityText)}</span>
-        <span class="task-code">${escapeText(taskCode(task))}</span>
+  const footerLine = compact
+    ? `
+      <div class="task-card-meta-line">
+        <span class="task-avatar">${escapeText(assigneeInitial)}</span>
+        ${dueText ? `<span class="task-due${overdue ? " overdue" : ""}">${iconSpan("clock2")}${escapeText(dueText)}</span>` : '<span class="task-due">${iconSpan("clock2")}—</span>'}
+        <span class="task-count-chip">${iconSpan("message")}<strong>${commentsCount}</strong></span>
+        <span class="task-count-chip">${iconSpan("paperclip")}<strong>${attachCount}</strong></span>
       </div>
-      <h5 class="task-card-title">${escapeText(task.title || "Без названия")}</h5>
-      ${task.description ? `<div class="task-card-desc">${escapeText(task.description)}</div>` : ""}
-      <div class="task-tag-row">${tags.map((tag) => `<span class="task-tag">${escapeText(tag)}</span>`).join("")}</div>
+    `
+    : `
       <div class="task-card-footer">
         <div class="task-assignee">
           <span class="task-avatar">${escapeText(assigneeInitial)}</span>
@@ -3407,6 +3430,17 @@ function taskCardHtml(task, compact = false) {
           <button type="button" aria-label="Удалить" data-task-action="delete" data-task-id="${task.id}">${iconSpan("trash")}</button>
         </div>
       </div>
+    `;
+  return `
+    <article class="task-card-figma${compact ? " compact" : ""}" data-task-id="${task.id}" draggable="true">
+      <div class="task-card-top">
+        <span class="task-priority ${priority}">${iconSpan("flag")}${escapeText(priorityText)}</span>
+        <span class="task-code">${escapeText(taskCode(task))}</span>
+      </div>
+      <h5 class="task-card-title">${escapeText(task.title || "Без названия")}</h5>
+      ${task.description ? `<div class="task-card-desc">${escapeText(task.description)}</div>` : ""}
+      <div class="task-tag-row">${tags.map((tag) => `<span class="task-tag">${escapeText(tag)}</span>`).join("")}</div>
+      ${footerLine}
     </article>
   `;
 }
@@ -3527,6 +3561,7 @@ function populateTaskForm(task = null, status = "todo") {
   if (refs.taskEditStatus) refs.taskEditStatus.value = String(task?.status || status || "todo");
   if (refs.taskEditAssignee) refs.taskEditAssignee.value = String(task?.assignee_email || "");
   if (refs.taskEditDueDate) refs.taskEditDueDate.value = String(task?.due_date || "");
+  setTaskModalTags(Array.isArray(task?.tags) ? task.tags : []);
 }
 
 function openTaskEditor(task = null, status = "todo") {
@@ -3545,6 +3580,7 @@ async function saveTaskFromForm() {
   const payload = {
     title: String(refs.taskEditTitle?.value || "").trim(),
     description: String(refs.taskEditDescription?.value || "").trim(),
+    tags: selectedTaskModalTags(),
     priority: String(refs.taskEditPriority?.value || "medium"),
     status: String(refs.taskEditStatus?.value || "todo"),
     assigneeEmail: String(refs.taskEditAssignee?.value || "").trim().toLowerCase(),
@@ -7236,6 +7272,12 @@ if (refs.tasksFilterBtn) refs.tasksFilterBtn.addEventListener("click", () => {
   showToast("Фильтры задач будут в следующем шаге");
   hapticSelection();
 });
+document.querySelectorAll(".task-modal-tag").forEach((node) => {
+  node.addEventListener("click", () => {
+    node.classList.toggle("is-active");
+    hapticSelection();
+  });
+});
 if (refs.taskEditForm) refs.taskEditForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
@@ -7288,6 +7330,14 @@ document.querySelectorAll("button[data-task-add-status]").forEach((node) => {
 async function onTaskAction(event) {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
+  const card = target.closest(".task-card-figma[data-task-id]");
+  if (card instanceof HTMLElement && !target.closest("button[data-task-action]")) {
+    const taskIdFromCard = String(card.getAttribute("data-task-id") || "").trim();
+    if (taskIdFromCard) {
+      await runDbAction(() => openTaskDetails(taskIdFromCard), { message: "Открываем детали..." });
+    }
+    return;
+  }
   const row = target.closest("[data-task-open-id]");
   if (row instanceof HTMLElement && !target.closest("button[data-task-action]")) {
     const taskId = String(row.getAttribute("data-task-open-id") || "").trim();

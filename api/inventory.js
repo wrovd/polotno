@@ -495,6 +495,7 @@ async function handleTasks(req, res) {
       const task = await createTask({
         title,
         description: body.description || "",
+        tags: Array.isArray(body.tags) ? body.tags : [],
         status: body.status || "todo",
         priority: body.priority || "medium",
         assignee_email: body.assigneeEmail || body.assignee_email || "",
@@ -518,6 +519,7 @@ async function handleTasks(req, res) {
       const task = await updateTaskById(taskId, {
         title: body.title,
         description: body.description,
+        tags: Array.isArray(body.tags) ? body.tags : undefined,
         status: body.status,
         priority: body.priority,
         assignee_email: body.assigneeEmail ?? body.assignee_email,
