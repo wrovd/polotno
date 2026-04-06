@@ -1767,6 +1767,11 @@ td .actions {
   display: none;
 }
 
+#inventoryView.is-films-mode > .nav-panel,
+#inventoryView.is-films-mode > .role-hint {
+  display: none;
+}
+
 #inventoryView.is-main-ios-mode {
   padding-top: 0;
 }

@@ -840,6 +840,7 @@ function setInventoryTab(tab) {
     refs.inventoryTabsRow.classList.toggle("context-tabs-tasks", isTasksContext);
   }
   if (refs.inventoryView) refs.inventoryView.classList.toggle("is-main-ios-mode", isMain);
+  if (refs.inventoryView) refs.inventoryView.classList.toggle("is-films-mode", isFilms);
   if (refs.mainBottomMainBtn) refs.mainBottomMainBtn.classList.toggle("is-active", isMain);
   if (refs.mainBottomToolsBtn) refs.mainBottomToolsBtn.classList.toggle("is-active", isTools);
   if (refs.mainBottomHistoryBtn) refs.mainBottomHistoryBtn.classList.toggle("is-active", isHistory);
