@@ -1875,7 +1875,7 @@ function applyRoleAccess() {
     refs.adminPanel.classList.toggle("is-hidden", !canManageUsers);
   }
   if (refs.quickFilmIngestPanel) {
-    if (!canManageUsers) refs.quickFilmIngestPanel.classList.add("is-hidden");
+    refs.quickFilmIngestPanel.classList.add("is-hidden");
   }
 
   refs.stockManagePanel.classList.toggle("is-hidden", !canManageUsers);
