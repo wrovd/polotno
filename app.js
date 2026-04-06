@@ -45,6 +45,8 @@ const state = {
   chatReplyTo: null,
   chatForwardMessage: null,
   chatLocalMessageMeta: {},
+  chatPollTimer: null,
+  chatPollingBusy: false,
   tasks: [],
   taskViewMode: "board",
   boxCatalog: [],
@@ -819,6 +821,7 @@ function setModuleView(view) {
   if (!showInventory) {
     stopScanner();
     state.scanContext = "inventory";
+    stopChatPolling();
   }
   closeAccountMenu();
   updateMobileScanFab();
@@ -881,6 +884,7 @@ function setInventoryTab(tab) {
   if (!isChat) {
     setChatMenuOpen(false);
     setChatDrawerOpen(false);
+    stopChatPolling();
   }
   if (refs.inventoryView) refs.inventoryView.classList.toggle("is-main-ios-mode", isMain);
   if (refs.inventoryView) refs.inventoryView.classList.toggle("is-films-mode", isFilms);
@@ -914,6 +918,8 @@ function setInventoryTab(tab) {
       showToast(error.message || "Не удалось загрузить чаты");
     });
     loadChatUsers().catch(() => {});
+    startChatPolling();
+    refreshChatRealtime().catch(() => {});
     syncChatLayoutMode();
   }
   if (isTasks) {
@@ -1261,6 +1267,7 @@ function clearSession() {
   localStorage.removeItem("sf_user");
   state.token = "";
   state.user = null;
+  stopChatPolling();
   clearQrLoginPolling();
   state.homeProfilePhotoChatId = "";
   state.profileLoaded = false;
@@ -2201,6 +2208,75 @@ function renderChatThreads(list = filteredChatThreads()) {
     `;
     refs.chatList.appendChild(card);
   });
+}
+
+function mergeChatMessagesWithLocal(serverMessages = []) {
+  const server = Array.isArray(serverMessages) ? serverMessages : [];
+  const localPending = (state.chatMessages || []).filter((row) => {
+    const key = chatMessageKey(row);
+    if (!String(key).startsWith("local_")) return false;
+    const delivery = String(state.chatLocalMessageMeta[key]?.delivery || "");
+    return delivery === "sending" || delivery === "failed";
+  });
+  const merged = [...server];
+  localPending.forEach((row) => {
+    const key = chatMessageKey(row);
+    const exists = merged.some((x) => chatMessageKey(x) === key);
+    if (!exists) merged.push(row);
+  });
+  merged.sort((a, b) => {
+    const ta = new Date(a.created_at || 0).getTime() || 0;
+    const tb = new Date(b.created_at || 0).getTime() || 0;
+    return ta - tb;
+  });
+  return merged;
+}
+
+async function refreshChatRealtime() {
+  if (!state.token) return;
+  if (state.moduleView !== "inventory" || state.inventoryTab !== "chat") return;
+  if (state.chatPollingBusy) return;
+  state.chatPollingBusy = true;
+  try {
+    const search = String(refs.chatSearchInput?.value || "").trim();
+    const listData = await apiRequest(`/api/inventory/chat-list?search=${encodeURIComponent(search)}`);
+    state.chatThreads = Array.isArray(listData.threads) ? listData.threads : [];
+    renderChatThreads();
+
+    const activeId = String(state.chatActiveThreadId || "").trim();
+    if (!activeId) return;
+    const msgData = await apiRequest(`/api/inventory/chat-messages?thread_id=${encodeURIComponent(activeId)}&limit=250`);
+    const serverMessages = Array.isArray(msgData.messages) ? msgData.messages : [];
+    state.chatMessages = mergeChatMessagesWithLocal(serverMessages);
+    const thread = chatThreadById(activeId);
+    syncChatHeader(thread);
+    renderChatMessages();
+    state.chatThreads = state.chatThreads.map((row) =>
+      String(row.id) === activeId ? { ...row, unread_count: 0 } : row
+    );
+    renderChatThreads();
+  } catch {
+    // silent polling errors: avoid noisy toasts while user types
+  } finally {
+    state.chatPollingBusy = false;
+  }
+}
+
+function stopChatPolling() {
+  if (state.chatPollTimer) {
+    clearInterval(state.chatPollTimer);
+    state.chatPollTimer = null;
+  }
+  state.chatPollingBusy = false;
+}
+
+function startChatPolling() {
+  stopChatPolling();
+  if (!state.token) return;
+  if (state.moduleView !== "inventory" || state.inventoryTab !== "chat") return;
+  state.chatPollTimer = setInterval(() => {
+    refreshChatRealtime();
+  }, 2200);
 }
 
 function renderChatMessages() {
