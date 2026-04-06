@@ -3405,7 +3405,7 @@ function renderTaskAssigneesUi() {
       ? selected
           .map((email) => `<span class="task-assignee-chip" data-assignee-email="${escapeText(email)}">${escapeText(taskUserLabel(email))}</span>`)
           .join("")
-      : '<span class="task-assignees-empty">Не назначен</span>';
+      : "";
   }
   if (refs.taskAssigneesList) {
     const users = Array.isArray(state.chatUsers) ? state.chatUsers : [];
