@@ -2793,6 +2793,7 @@ button.is-loading::after {
 
 .chat-stage {
   min-height: 0;
+  overflow: hidden;
   padding: 10px 14px 8px;
   display: grid;
   grid-template-rows: auto 1fr;
@@ -2816,6 +2817,7 @@ button.is-loading::after {
   gap: 12px;
   align-content: start;
   padding-right: 4px;
+  padding-bottom: 8px;
 }
 
 .chat-message {
@@ -3392,11 +3394,16 @@ button.is-loading::after {
   border-radius: 18px;
   overflow: hidden;
   background: #f2f2f7;
+  height: calc(100vh - 180px);
+  max-height: calc(100vh - 180px);
 }
 
 .chat-main-topbar {
   height: 72px;
   background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 3;
 }
 
 .chat-thread-chip {
@@ -3419,6 +3426,9 @@ button.is-loading::after {
 .chat-composer-figma {
   height: 82px;
   background: #fff;
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
 }
 
 .chat-composer-figma input {
@@ -3459,6 +3469,8 @@ button.is-loading::after {
 
   .chat-main-figma {
     min-height: calc(100vh - 180px);
+    height: calc(100vh - 180px);
+    max-height: calc(100vh - 180px);
   }
 
   .tasks-board {
@@ -3474,6 +3486,8 @@ button.is-loading::after {
 
   .chat-main-figma {
     min-height: calc(100vh - 170px);
+    height: calc(100vh - 170px);
+    max-height: calc(100vh - 170px);
   }
 
   .chat-top-meta h3 {
