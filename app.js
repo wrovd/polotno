@@ -2340,6 +2340,19 @@ function mergeChatMessagesWithLocal(serverMessages = []) {
   return merged;
 }
 
+function chatMessagesSignature(list = []) {
+  return (Array.isArray(list) ? list : [])
+    .map((row) => `${chatMessageKey(row)}|${String(row?.created_at || "")}|${String(row?.body || "")}`)
+    .join("||");
+}
+
+function findChatMessageElementById(messageId) {
+  if (!refs.chatMessages || !messageId) return null;
+  return Array.from(refs.chatMessages.querySelectorAll(".chat-message[data-chat-message-id]")).find(
+    (el) => String(el.getAttribute("data-chat-message-id") || "") === String(messageId)
+  ) || null;
+}
+
 async function refreshChatRealtime() {
   if (!state.token) return;
   if (state.moduleView !== "inventory" || state.inventoryTab !== "chat") return;
@@ -2355,14 +2368,19 @@ async function refreshChatRealtime() {
     if (!activeId) return;
     const msgData = await apiRequest(`/api/inventory/chat-messages?thread_id=${encodeURIComponent(activeId)}&limit=250`);
     const serverMessages = Array.isArray(msgData.messages) ? msgData.messages : [];
-    state.chatMessages = mergeChatMessagesWithLocal(serverMessages);
-    const thread = chatThreadById(activeId);
-    syncChatHeader(thread);
-    renderChatMessages();
-    state.chatThreads = state.chatThreads.map((row) =>
-      String(row.id) === activeId ? { ...row, unread_count: 0 } : row
-    );
-    renderChatThreads();
+    const merged = mergeChatMessagesWithLocal(serverMessages);
+    const prevSig = chatMessagesSignature(state.chatMessages);
+    const nextSig = chatMessagesSignature(merged);
+    if (prevSig !== nextSig) {
+      state.chatMessages = merged;
+      const thread = chatThreadById(activeId);
+      syncChatHeader(thread);
+      renderChatMessages({ keepPosition: true, keepPopover: true });
+      state.chatThreads = state.chatThreads.map((row) =>
+        String(row.id) === activeId ? { ...row, unread_count: 0 } : row
+      );
+      renderChatThreads();
+    }
   } catch {
     // silent polling errors: avoid noisy toasts while user types
   } finally {
@@ -2387,9 +2405,15 @@ function startChatPolling() {
   }, 2200);
 }
 
-function renderChatMessages() {
+function renderChatMessages(options = {}) {
+  const { forceScrollBottom = false, keepPosition = false, keepPopover = false } = options;
   if (!refs.chatMessages) return;
+  const container = refs.chatMessages;
+  const prevScrollTop = container.scrollTop || 0;
+  const prevScrollHeight = container.scrollHeight || 0;
+  const wasNearBottom = prevScrollTop + container.clientHeight >= prevScrollHeight - 36;
   const popover = refs.chatMessageActionsPopover;
+  const openedPopoverMessageId = keepPopover ? String(state.chatMessageActionsForId || "") : "";
   if (popover && popover.parentElement === refs.chatMessages) {
     popover.remove();
   }
@@ -2430,7 +2454,20 @@ function renderChatMessages() {
     refs.chatMessages.appendChild(row);
   });
   if (popover) refs.chatMessages.appendChild(popover);
-  refs.chatMessages.scrollTop = refs.chatMessages.scrollHeight;
+  if (forceScrollBottom || (!keepPosition && wasNearBottom)) {
+    refs.chatMessages.scrollTop = refs.chatMessages.scrollHeight;
+  } else if (keepPosition) {
+    refs.chatMessages.scrollTop = Math.max(0, prevScrollTop);
+  }
+
+  if (keepPopover && openedPopoverMessageId) {
+    const anchor = findChatMessageElementById(openedPopoverMessageId);
+    if (anchor) {
+      openChatMessageActionsPopover(openedPopoverMessageId, anchor);
+    } else {
+      closeChatMessageActionsPopover();
+    }
+  }
 }
 
 async function openChatThread(threadId) {
@@ -2444,7 +2481,7 @@ async function openChatThread(threadId) {
   renderChatReplyPreview();
   const thread = chatThreadById(id);
   syncChatHeader(thread);
-  renderChatMessages();
+  renderChatMessages({ forceScrollBottom: true });
   syncChatLayoutMode();
   state.chatThreads = state.chatThreads.map((row) =>
     String(row.id) === id
@@ -2534,7 +2571,7 @@ async function sendActiveChatMessage() {
   };
   state.chatMessages.push(optimistic);
   state.chatLocalMessageMeta[localId] = { delivery: "sending", readCount: 0 };
-  renderChatMessages();
+  renderChatMessages({ forceScrollBottom: true });
   if (refs.chatMessageInput) refs.chatMessageInput.value = "";
   state.chatReplyTo = null;
   renderChatReplyPreview();
@@ -2554,11 +2591,11 @@ async function sendActiveChatMessage() {
     } else {
       state.chatLocalMessageMeta[localId] = { delivery: "failed", readCount: 0 };
     }
-    renderChatMessages();
+    renderChatMessages({ forceScrollBottom: true });
     await loadChatData();
   } catch (error) {
     state.chatLocalMessageMeta[localId] = { delivery: "failed", readCount: 0 };
-    renderChatMessages();
+    renderChatMessages({ forceScrollBottom: true });
     throw error;
   }
 }
