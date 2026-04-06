@@ -1864,6 +1864,24 @@ function escapeText(value) {
     .replace(/'/g, "&#39;");
 }
 
+function renderChatTextWithLinks(value) {
+  const raw = String(value ?? "");
+  if (!raw) return "";
+  const escaped = escapeText(raw);
+  const withLinks = escaped.replace(/((?:https?:\/\/|www\.)[^\s<]+)/gi, (match) => {
+    let clean = String(match || "");
+    let suffix = "";
+    while (/[),.!?:;]+$/.test(clean)) {
+      suffix = clean.slice(-1) + suffix;
+      clean = clean.slice(0, -1);
+    }
+    if (!clean) return match;
+    const href = clean.toLowerCase().startsWith("www.") ? `https://${clean}` : clean;
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer">${clean}</a>${suffix}`;
+  });
+  return withLinks.replace(/\n/g, "<br>");
+}
+
 function formatShortDate(value) {
   if (!value) return "";
   const dt = new Date(value);
@@ -2403,7 +2421,7 @@ function renderChatMessages() {
       <div class="chat-message-author">${escapeText(mine ? "Вы" : message.author_email || "Пользователь")}</div>
       ${parsed.forwarded ? `<div class="chat-message-forwarded">↗ ${escapeText(parsed.forwarded)}</div>` : ""}
       ${parsed.reply ? `<div class="chat-message-reply">${escapeText(parsed.reply)}</div>` : ""}
-      <div class="chat-message-body">${escapeText(parsed.text || "")}</div>
+      <div class="chat-message-body">${renderChatTextWithLinks(parsed.text || "")}</div>
       <div class="chat-message-foot">
         <div class="chat-message-time">${formatHistoryDate(message.created_at)}</div>
         ${mine ? `<button type="button" class="chat-status-btn" data-chat-status-id="${key}" title="Статус">${escapeText(statusIcon)}</button>` : ""}

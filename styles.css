@@ -2860,6 +2860,13 @@ button.is-loading::after {
   white-space: pre-wrap;
 }
 
+.chat-message-body a {
+  color: #2b6fe8;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-word;
+}
+
 .chat-message-forwarded,
 .chat-message-reply {
   font-size: 12px;
@@ -2874,6 +2881,10 @@ button.is-loading::after {
 
 .chat-message.is-mine .chat-message-body {
   color: #fff;
+}
+
+.chat-message.is-mine .chat-message-body a {
+  color: #d7e5ff;
 }
 
 .chat-message.is-mine .chat-message-forwarded,
