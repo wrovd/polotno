@@ -91,6 +91,10 @@
         <rect x="4" y="13" width="7" height="7" rx="1.3" fill="none" stroke="currentColor" stroke-width="1.8" />
         <rect x="13" y="13" width="7" height="7" rx="1.3" fill="none" stroke="currentColor" stroke-width="1.8" />
       </symbol>
+      <symbol id="i-film-menu" viewBox="0 0 24 24">
+        <rect x="3.5" y="4.5" width="17" height="15" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <path d="M8.5 4.5v15M15.5 4.5v15M3.5 9.5h17M3.5 14.5h17" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+      </symbol>
       <symbol id="i-history" viewBox="0 0 24 24">
         <path d="M4 12a8 8 0 1 0 2-5.3M4 4v4h4M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
       </symbol>
@@ -108,6 +112,13 @@
       </symbol>
       <symbol id="i-filter" viewBox="0 0 24 24">
         <path d="M4 6h16l-6 7v5l-4 2v-7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-map-pin" viewBox="0 0 24 24">
+        <path d="M12 21s6-5.3 6-10a6 6 0 1 0-12 0c0 4.7 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <circle cx="12" cy="11" r="2.4" fill="none" stroke="currentColor" stroke-width="1.8" />
+      </symbol>
+      <symbol id="i-package" viewBox="0 0 24 24">
+        <path d="M12 3l8 4.5-8 4.5-8-4.5 8-4.5zM4 7.5V16.5L12 21M20 7.5V16.5L12 21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
       </symbol>
       <symbol id="i-flag" viewBox="0 0 24 24">
         <path d="M6 21V4m0 0h9l-1.5 3L15 10H6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
@@ -180,7 +191,7 @@
             <span class="btn-icon" aria-hidden="true"><svg><use href="#i-cube"></use></svg></span><span>Расходники</span>
           </button>
           <button class="desktop-sidebar-item" id="desktopNavFilmsBtn" type="button">
-            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span><span>Пленки</span>
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-film-menu"></use></svg></span><span>Пленки</span>
           </button>
           <button class="desktop-sidebar-item" id="desktopNavBoxesBtn" type="button">
             <span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Коробки</span>
@@ -219,7 +230,7 @@
                 <span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span><span>Расходники</span>
               </button>
               <button class="home-dashboard-nav-item" id="homeNavFilmsBtn" type="button">
-                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-warehouse"></use></svg></span><span>Пленки</span>
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-film-menu"></use></svg></span><span>Пленки</span>
               </button>
               <button class="home-dashboard-nav-item" id="homeNavBoxesBtn" type="button">
                 <span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Коробки</span>
@@ -728,25 +739,25 @@
 
         <section id="boxSearchTab" class="tab-panel">
           <section class="boxes-page">
-            <header class="films-head-row">
+            <header class="boxes-head-row">
               <h2>Коробки</h2>
-              <button class="primary-btn btn-with-icon" id="boxCreateToggleBtn" type="button">
+              <button class="primary-btn btn-with-icon boxes-create-btn" id="boxCreateToggleBtn" type="button">
                 <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Создать</span>
               </button>
             </header>
 
-            <label class="films-search" for="boxSearchInput">
-              <span class="films-search-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span>
+            <label class="boxes-search" for="boxSearchInput">
+              <span class="boxes-search-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span>
               <input id="boxSearchInput" type="search" placeholder="Штрихкод, товар, коробка, место" autocomplete="off" />
               <button class="is-hidden" id="boxSearchBtn" type="button">Найти</button>
             </label>
 
-            <div class="films-chip-row">
-              <button class="films-chip desktop-only admin-only" id="downloadBoxCatalogTemplateBtn" type="button">
+            <div class="boxes-chip-row">
+              <button class="boxes-chip desktop-only admin-only" id="downloadBoxCatalogTemplateBtn" type="button">
                 <span class="btn-icon" aria-hidden="true"><svg><use href="#i-download"></use></svg></span><span>Шаблон импорта</span>
               </button>
-              <button class="films-chip desktop-only admin-only" id="importBoxCatalogBtn" type="button">
-                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Импорт товаров</span>
+              <button class="boxes-chip desktop-only admin-only" id="importBoxCatalogBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-upload"></use></svg></span><span>Импорт товаров</span>
               </button>
               <button class="is-hidden" id="boxApplyFiltersBtn" type="button">Применить</button>
               <button class="is-hidden" id="boxResetFiltersBtn" type="button">Сбросить</button>
@@ -754,9 +765,9 @@
             </div>
             <input id="importBoxCatalogFile" type="file" accept=".xlsx,.xls,.csv" hidden />
 
-            <section class="panel box-quick-scan">
+            <section class="boxes-quick-scan-card">
               <div class="section-head">
-                <h3><span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span>Быстрый поиск для сборщика</h3>
+                <h3><span class="btn-icon" aria-hidden="true"><svg><use href="#i-qr"></use></svg></span>Быстрый поиск для сборщика</h3>
                 <p>Сканируйте штрихкод товара, чтобы сразу увидеть коробку и место её нахождения.</p>
               </div>
               <button class="primary-btn full btn-with-icon" id="boxScanBarcodeBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span><span>Сканировать штрихкод товара</span></button>
@@ -765,7 +776,7 @@
               </div>
             </section>
 
-            <section class="panel is-hidden" id="boxCreatePanel">
+            <section class="boxes-create-card is-hidden" id="boxCreatePanel">
               <header class="films-inline-head">
                 <h3>Создать коробку</h3>
                 <button class="close-btn films-inline-close" id="boxCreateCloseBtn" type="button" aria-label="Закрыть">×</button>
@@ -803,7 +814,7 @@
               </form>
             </section>
 
-            <section class="panel panel-collapsible">
+            <section class="boxes-tracked-section">
               <div class="section-head">
                 <h3>Коробки в отслеживании</h3>
               </div>

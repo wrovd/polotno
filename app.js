@@ -3241,7 +3241,7 @@ function renderBoxDraftItems() {
   }
   state.boxDraftItems.forEach((item, idx) => {
     const card = document.createElement("article");
-    card.className = "history-item";
+    card.className = "box-draft-item";
     card.innerHTML = `
       <div><strong>${item.barcode}</strong></div>
       <div class="history-meta">${item.name || "Название будет подтянуто из каталога"} • Кол-во: ${Math.max(1, Number(item.qty || 1))}</div>
@@ -3331,20 +3331,20 @@ function renderBoxTrackedList() {
       .join("<br/>");
     const more = box.items.length > 4 ? `<div class="history-meta">и еще ${box.items.length - 4} шт.</div>` : "";
     const card = document.createElement("article");
-    card.className = "history-item";
+    card.className = "box-tracked-card";
     card.innerHTML = `
-      <div><strong>Коробка ${box.box_code}</strong> <span class="history-reason">${box.location || "Место не указано"}</span></div>
-      <div class="history-meta">Товаров: ${box.items.length} • Ед.: ${Math.max(0, Number(box.total_qty || 0))}</div>
-      <div class="history-meta">${itemsPreview || "Пусто"}</div>
-      ${more}
-      <div class="hero-actions">
-        <button class="secondary-btn btn-with-icon desktop-only" type="button" data-box-print="${box.box_code}">
-          ${iconSpan("print")}<span>Печать этикетки</span>
-        </button>
-        <button class="glass-btn btn-with-icon danger" type="button" data-box-remove="${box.box_code}">
-          ${iconSpan("trash")}<span>Удалить из отслеживания</span>
+      <div class="box-tracked-top">
+        <div>
+          <p class="box-tracked-title">${box.box_code || "BOX"}</p>
+          <div class="box-tracked-meta">${iconSpan("map-pin")}<span>${box.location || "Место не указано"}</span></div>
+          <div class="box-tracked-meta">${iconSpan("package")}<span>${box.items.length} товаров • Ед.: ${Math.max(0, Number(box.total_qty || 0))}</span></div>
+        </div>
+        <button class="box-delete-btn" type="button" data-box-remove="${box.box_code}">
+          ${iconSpan("trash")}<span>Удалить</span>
         </button>
       </div>
+      <div class="history-meta">${itemsPreview || "Пусто"}</div>
+      ${more}
     `;
     refs.boxTrackedList.appendChild(card);
   });
@@ -3358,23 +3358,16 @@ function renderBoxScanResult(boxes = []) {
     refs.boxScanResultList.innerHTML = '<p class="muted">Совпадений не найдено.</p>';
     return;
   }
-  boxes.forEach((box) => {
-    const card = document.createElement("article");
-    card.className = "history-item";
-    card.innerHTML = `
-      <div><strong>Коробка ${box.box_code}</strong> <span class="history-reason">${box.location || "Место не указано"}</span></div>
-      <div class="history-meta">Товаров в коробке: ${box.items.length} • Ед.: ${Math.max(0, Number(box.total_qty || 0))}</div>
-      <div class="hero-actions">
-        <button class="secondary-btn btn-with-icon desktop-only" type="button" data-box-print="${box.box_code}">
-          ${iconSpan("print")}<span>Печать этикетки</span>
-        </button>
-        <button class="glass-btn btn-with-icon danger" type="button" data-box-remove="${box.box_code}">
-          ${iconSpan("trash")}<span>Удалить из отслеживания</span>
-        </button>
-      </div>
-    `;
-    refs.boxScanResultList.appendChild(card);
-  });
+  const first = boxes[0];
+  const card = document.createElement("article");
+  card.className = "box-found-card";
+  card.innerHTML = `
+    <div class="box-found-title">${iconSpan("check")}<span>Найдено!</span></div>
+    <p class="box-tracked-title">${first.box_code || "BOX"}</p>
+    <div class="box-found-meta">${iconSpan("package")}<span>Товаров: ${first.items.length} • Ед.: ${Math.max(0, Number(first.total_qty || 0))}</span></div>
+    <div class="box-found-meta">${iconSpan("map-pin")}<span>${first.location || "Место не указано"}</span></div>
+  `;
+  refs.boxScanResultList.appendChild(card);
 }
 
 function renderBoxFoundModal(boxes = [], barcode = "") {
