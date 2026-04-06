@@ -939,6 +939,7 @@ function setInventoryTab(tab) {
   if (refs.inventoryView) refs.inventoryView.classList.toggle("is-films-mode", isFilms);
   if (refs.inventoryView) refs.inventoryView.classList.toggle("is-boxes-mode", isBoxSearch);
   if (refs.inventoryView) refs.inventoryView.classList.toggle("is-chat-mode", isChat);
+  if (refs.inventoryView) refs.inventoryView.classList.toggle("is-tasks-mode", isTasks);
   if (refs.mainBottomMainBtn) refs.mainBottomMainBtn.classList.toggle("is-active", isMain);
   if (refs.mainBottomToolsBtn) refs.mainBottomToolsBtn.classList.toggle("is-active", isTools);
   if (refs.mainBottomHistoryBtn) refs.mainBottomHistoryBtn.classList.toggle("is-active", isHistory);

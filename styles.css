@@ -3800,6 +3800,18 @@ button.is-loading::after {
   display: none !important;
 }
 
+#inventoryView.is-tasks-mode #inventoryTabsRow {
+  display: none !important;
+}
+
+#inventoryView.is-tasks-mode .nav-panel {
+  display: none !important;
+}
+
+#inventoryView.is-tasks-mode > .role-hint {
+  display: none !important;
+}
+
 #inventoryView.is-chat-mode {
   min-height: calc(100dvh - env(safe-area-inset-top, 0px) - var(--tg-top-offset));
 }
