@@ -3113,6 +3113,10 @@ button.is-loading::after {
   grid-template-rows: auto auto auto 1fr;
 }
 
+#chatTab.chat-mode-list .chat-drawer.is-hidden {
+  display: grid !important;
+}
+
 #chatTab.chat-mode-room .chat-drawer {
   display: none !important;
 }
