@@ -1007,6 +1007,23 @@
               <p class="tasks-total-count" id="tasksTotalCount">0 задач</p>
             </div>
 
+            <section class="tasks-filters-panel is-hidden" id="tasksFiltersPanel">
+              <div class="tasks-filters-group">
+                <h4>Исполнитель</h4>
+                <div class="tasks-filter-chips" id="tasksAssigneeChips"></div>
+              </div>
+              <div class="tasks-filters-group">
+                <h4>Приоритет</h4>
+                <div class="tasks-filter-chips" id="tasksPriorityChips">
+                  <button class="tasks-filter-chip is-active" type="button" data-filter-kind="priority" data-filter-value="all">Все</button>
+                  <button class="tasks-filter-chip" type="button" data-filter-kind="priority" data-filter-value="urgent">Срочный</button>
+                  <button class="tasks-filter-chip" type="button" data-filter-kind="priority" data-filter-value="high">Высокий</button>
+                  <button class="tasks-filter-chip" type="button" data-filter-kind="priority" data-filter-value="medium">Средний</button>
+                  <button class="tasks-filter-chip" type="button" data-filter-kind="priority" data-filter-value="low">Низкий</button>
+                </div>
+              </div>
+            </section>
+
             <section class="tasks-board-figma" id="tasksBoard">
               <article class="tasks-column-figma">
                 <header class="tasks-column-head">

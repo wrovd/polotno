@@ -56,6 +56,11 @@ const state = {
   homeTaskStatusSnapshot: {},
   tasks: [],
   taskViewMode: "board",
+  taskFilters: {
+    open: false,
+    assignee: "all",
+    priority: "all",
+  },
   boxCatalog: [],
   boxTrackingEntries: [],
   boxSearchResult: [],
@@ -411,6 +416,9 @@ const refs = {
   tasksBoardBtn: document.getElementById("tasksBoardBtn"),
   tasksListBtn: document.getElementById("tasksListBtn"),
   tasksFilterBtn: document.getElementById("tasksFilterBtn"),
+  tasksFiltersPanel: document.getElementById("tasksFiltersPanel"),
+  tasksAssigneeChips: document.getElementById("tasksAssigneeChips"),
+  tasksPriorityChips: document.getElementById("tasksPriorityChips"),
   tasksTotalCount: document.getElementById("tasksTotalCount"),
   tasksTodoCount: document.getElementById("tasksTodoCount"),
   tasksInProgressCount: document.getElementById("tasksInProgressCount"),
@@ -3325,14 +3333,64 @@ function statusPrev(status) {
 
 function filteredTasks() {
   const search = String(refs.tasksSearchInput?.value || "").trim().toLowerCase();
-  if (!search) return state.tasks;
+  const selectedAssignee = String(state.taskFilters?.assignee || "all").trim().toLowerCase();
+  const selectedPriority = String(state.taskFilters?.priority || "all").trim().toLowerCase();
   return state.tasks.filter((task) => {
-    return (
-      String(task.title || "").toLowerCase().includes(search) ||
-      String(task.description || "").toLowerCase().includes(search) ||
-      String(task.assignee_email || "").toLowerCase().includes(search)
-    );
+    const matchesSearch = !search
+      || String(task.title || "").toLowerCase().includes(search)
+      || String(task.description || "").toLowerCase().includes(search)
+      || String(task.assignee_email || "").toLowerCase().includes(search);
+    if (!matchesSearch) return false;
+    if (selectedPriority !== "all" && String(task.priority || "medium").toLowerCase() !== selectedPriority) return false;
+    if (selectedAssignee !== "all") {
+      const assignees = parseAssigneeEmails(task.assignee_email || "");
+      if (!assignees.includes(selectedAssignee)) return false;
+    }
+    return true;
   });
+}
+
+function taskAssigneeShortLabel(email = "") {
+  const label = taskUserLabel(email) || String(email || "").trim();
+  const parts = label.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0]} ${parts[1].charAt(0)}.`;
+  return label;
+}
+
+function availableTaskAssignees() {
+  const set = new Set();
+  state.tasks.forEach((task) => {
+    parseAssigneeEmails(task.assignee_email || "").forEach((email) => {
+      if (email) set.add(email);
+    });
+  });
+  return [...set]
+    .sort((a, b) => taskAssigneeShortLabel(a).localeCompare(taskAssigneeShortLabel(b), "ru-RU"));
+}
+
+function renderTaskFiltersUi() {
+  if (refs.tasksFiltersPanel) refs.tasksFiltersPanel.classList.toggle("is-hidden", !state.taskFilters.open);
+  if (refs.tasksFilterBtn) refs.tasksFilterBtn.classList.toggle("is-active", Boolean(state.taskFilters.open));
+  if (refs.tasksAssigneeChips) {
+    const assignees = availableTaskAssignees();
+    const selected = String(state.taskFilters.assignee || "all").toLowerCase();
+    const chips = [
+      `<button class="tasks-filter-chip${selected === "all" ? " is-active" : ""}" type="button" data-filter-kind="assignee" data-filter-value="all">Все</button>`,
+      ...assignees.map((email) => `
+        <button class="tasks-filter-chip${selected === email ? " is-active" : ""}" type="button" data-filter-kind="assignee" data-filter-value="${escapeText(email)}">
+          ${escapeText(taskAssigneeShortLabel(email))}
+        </button>
+      `),
+    ];
+    refs.tasksAssigneeChips.innerHTML = chips.join("");
+  }
+  if (refs.tasksPriorityChips) {
+    const selectedPriority = String(state.taskFilters.priority || "all").toLowerCase();
+    refs.tasksPriorityChips.querySelectorAll(".tasks-filter-chip[data-filter-kind='priority']").forEach((node) => {
+      const value = String(node.getAttribute("data-filter-value") || "all").toLowerCase();
+      node.classList.toggle("is-active", value === selectedPriority);
+    });
+  }
 }
 
 function taskPriorityClass(priority) {
@@ -3624,6 +3682,7 @@ function renderTasksList(list = filteredTasks()) {
 function renderTasks() {
   const list = filteredTasks();
   if (refs.tasksTotalCount) refs.tasksTotalCount.textContent = `${list.length} задач`;
+  renderTaskFiltersUi();
   renderTasksBoard(list);
   renderTasksList(list);
   if (refs.tasksBoard) refs.tasksBoard.classList.toggle("is-hidden", state.taskViewMode !== "board");
@@ -3641,6 +3700,11 @@ async function loadTasks() {
   const search = String(refs.tasksSearchInput?.value || "").trim();
   const data = await apiRequest(`/api/inventory/tasks-list?search=${encodeURIComponent(search)}`);
   state.tasks = Array.isArray(data.tasks) ? data.tasks : [];
+  try {
+    await loadChatUsers();
+  } catch (_error) {
+    // keep tasks available even if users lookup fails
+  }
   renderTasks();
 }
 
@@ -7389,7 +7453,20 @@ if (refs.tasksListBtn) refs.tasksListBtn.addEventListener("click", () => {
   hapticSelection();
 });
 if (refs.tasksFilterBtn) refs.tasksFilterBtn.addEventListener("click", () => {
-  showToast("Фильтры задач будут в следующем шаге");
+  state.taskFilters.open = !state.taskFilters.open;
+  renderTasks();
+  hapticSelection();
+});
+if (refs.tasksFiltersPanel) refs.tasksFiltersPanel.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const chip = target.closest(".tasks-filter-chip[data-filter-kind][data-filter-value]");
+  if (!(chip instanceof HTMLButtonElement)) return;
+  const kind = String(chip.getAttribute("data-filter-kind") || "").trim();
+  const value = String(chip.getAttribute("data-filter-value") || "").trim().toLowerCase();
+  if (kind === "assignee") state.taskFilters.assignee = value || "all";
+  if (kind === "priority") state.taskFilters.priority = value || "all";
+  renderTasks();
   hapticSelection();
 });
 if (refs.taskAssigneesTrigger) refs.taskAssigneesTrigger.addEventListener("click", () => {
