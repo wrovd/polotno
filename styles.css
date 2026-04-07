@@ -3758,14 +3758,14 @@ button.is-loading::after {
 }
 
 #chatCreateModal .chat-create-card {
-  width: min(640px, 100%);
-  border-radius: 24px;
-  padding: 18px 22px 20px;
+  width: min(610px, 100%);
+  border-radius: 22px;
+  padding: 16px 18px 16px;
 }
 
 #chatCreateModal .chat-create-card h3 {
-  margin: 0 0 14px;
-  font-size: 22px;
+  margin: 0 0 12px;
+  font-size: 20px;
   line-height: 1.1;
   letter-spacing: -0.01em;
   font-weight: 700;
@@ -3773,36 +3773,36 @@ button.is-loading::after {
 
 .chat-create-direct-pane {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .chat-create-search {
-  min-height: 60px;
+  min-height: 56px;
   border: 0;
-  border-radius: 14px;
+  border-radius: 13px;
   background: #f2f2f7;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 16px;
+  gap: 9px;
+  padding: 0 14px;
 }
 
 .chat-create-search .btn-icon {
-  width: 21px;
-  height: 21px;
+  width: 20px;
+  height: 20px;
   color: #9b9ea7;
   flex: 0 0 auto;
 }
 
 .chat-create-search input {
-  min-height: 48px;
+  min-height: 42px;
   border: 0;
   padding: 0;
   background: transparent;
   color: #212632;
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .chat-create-search input::placeholder {
@@ -3821,21 +3821,21 @@ button.is-loading::after {
 
 .chat-create-user-list {
   display: grid;
-  gap: 4px;
-  max-height: min(52vh, 420px);
+  gap: 2px;
+  max-height: min(50vh, 390px);
   overflow: auto;
   padding-right: 2px;
 }
 
 .chat-create-user-item {
-  min-height: 70px;
+  min-height: 64px;
   border: 0;
-  border-radius: 14px;
+  border-radius: 12px;
   background: transparent;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 8px 8px;
+  gap: 12px;
+  padding: 6px 8px;
   text-align: left;
   color: #20242f;
 }
@@ -3849,22 +3849,22 @@ button.is-loading::after {
 }
 
 .chat-create-user-avatar {
-  width: 58px;
-  height: 58px;
-  border-radius: 14px;
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
   background: #f0f1f5;
   color: #5c5f67;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1;
   font-weight: 600;
   flex: 0 0 auto;
 }
 
 .chat-create-user-name {
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.1;
   font-weight: 600;
   color: #1d222d;
