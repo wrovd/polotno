@@ -381,6 +381,9 @@ const refs = {
   chatCreateForm: document.getElementById("chatCreateForm"),
   chatCreateModalTitle: document.getElementById("chatCreateModalTitle"),
   chatCreateKind: document.getElementById("chatCreateKind"),
+  chatCreateDirectPane: document.getElementById("chatCreateDirectPane"),
+  chatCreateUserSearchInput: document.getElementById("chatCreateUserSearchInput"),
+  chatCreateUserList: document.getElementById("chatCreateUserList"),
   chatCreateTitleInput: document.getElementById("chatCreateTitleInput"),
   chatCreateMemberSelect: document.getElementById("chatCreateMemberSelect"),
   chatCreateMembersSelect: document.getElementById("chatCreateMembersSelect"),
@@ -2775,8 +2778,46 @@ function setChatCreateKind(kind = "direct") {
           : "Например, Личный чат";
   }
   const isDirect = normalized === "direct";
-  if (refs.chatCreateMemberSingleWrap) refs.chatCreateMemberSingleWrap.hidden = !isDirect;
+  if (refs.chatCreateDirectPane) refs.chatCreateDirectPane.hidden = !isDirect;
+  if (refs.chatCreateMemberSingleWrap) refs.chatCreateMemberSingleWrap.hidden = true;
   if (refs.chatCreateMembersWrap) refs.chatCreateMembersWrap.hidden = isDirect;
+  if (refs.chatCreateTitleInput) {
+    if (refs.chatCreateTitleInput.closest("label")) refs.chatCreateTitleInput.closest("label").hidden = isDirect;
+    refs.chatCreateTitleInput.required = !isDirect;
+  }
+  if (refs.chatCreateSubmitBtn) refs.chatCreateSubmitBtn.hidden = isDirect;
+  if (refs.closeChatCreateBtn) refs.closeChatCreateBtn.hidden = isDirect;
+}
+
+function renderChatCreateUserList() {
+  if (!refs.chatCreateUserList) return;
+  const isDirect = String(refs.chatCreateKind?.value || state.chatCreateKind || "direct") === "direct";
+  if (!isDirect) {
+    refs.chatCreateUserList.innerHTML = "";
+    return;
+  }
+  const needle = String(refs.chatCreateUserSearchInput?.value || "").trim().toLowerCase();
+  const users = Array.isArray(state.chatUsers) ? state.chatUsers : [];
+  const filtered = users.filter((user) => {
+    const full = composeUserDisplayName(user) || String(user.name || user.email || "").trim();
+    if (!needle) return true;
+    return full.toLowerCase().includes(needle) || String(user.email || "").toLowerCase().includes(needle);
+  });
+  if (!filtered.length) {
+    refs.chatCreateUserList.innerHTML = '<p class="helper">Сотрудники не найдены.</p>';
+    return;
+  }
+  refs.chatCreateUserList.innerHTML = filtered
+    .map((user) => {
+      const displayName = composeUserDisplayName(user) || String(user.name || user.email || "Сотрудник").trim();
+      const initial = initialFromName(displayName);
+      const email = String(user.email || "").trim().toLowerCase();
+      return `<button class="chat-create-user-item" type="button" data-chat-create-user="${escapeText(email)}">
+        <span class="chat-create-user-avatar">${escapeText(initial)}</span>
+        <span class="chat-create-user-name">${escapeText(displayName)}</span>
+      </button>`;
+    })
+    .join("");
 }
 
 function renderChatUsersOptions() {
@@ -2803,6 +2844,7 @@ function renderChatUsersOptions() {
       refs.chatCreateMembersSelect.appendChild(option);
     });
   }
+  renderChatCreateUserList();
 }
 
 async function loadChatUsers(force = false) {
@@ -2831,10 +2873,17 @@ function openChatCreateModal(kind = "direct") {
   setChatMenuOpen(false);
   setChatCreateKind(kind);
   if (refs.chatCreateForm) refs.chatCreateForm.reset();
+  if (refs.chatCreateUserSearchInput) refs.chatCreateUserSearchInput.value = "";
   renderChatUsersOptions();
   void loadChatUsers().catch(() => {});
   openSimpleModal(refs.chatCreateModal);
-  setTimeout(() => refs.chatCreateTitleInput?.focus(), 40);
+  setTimeout(() => {
+    if (String(refs.chatCreateKind?.value || state.chatCreateKind || "direct") === "direct") {
+      refs.chatCreateUserSearchInput?.focus();
+    } else {
+      refs.chatCreateTitleInput?.focus();
+    }
+  }, 40);
 }
 
 function closeChatCreateModal() {
@@ -7399,10 +7448,37 @@ if (refs.chatDropZone) {
 }
 if (refs.closeChatCreateBtn) refs.closeChatCreateBtn.addEventListener("click", closeChatCreateModal);
 if (refs.chatCreateBackdrop) refs.chatCreateBackdrop.addEventListener("click", closeChatCreateModal);
+if (refs.chatCreateUserSearchInput) refs.chatCreateUserSearchInput.addEventListener("input", () => {
+  renderChatCreateUserList();
+});
+if (refs.chatCreateUserList) refs.chatCreateUserList.addEventListener("click", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const button = target.closest("button[data-chat-create-user]");
+  if (!(button instanceof HTMLButtonElement)) return;
+  const memberEmail = String(button.getAttribute("data-chat-create-user") || "").trim().toLowerCase();
+  if (!memberEmail) return;
+  try {
+    const displayName = userDisplayNameByEmail(memberEmail, memberEmail);
+    const thread = await runDbAction(() => createChat({ kind: "direct", title: displayName, memberEmail }), {
+      button,
+      message: "Создаем чат...",
+    });
+    if (!thread?.id) return;
+    await loadChatData();
+    await openChatThread(thread.id);
+    closeChatCreateModal();
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message || "Не удалось создать чат");
+    hapticWarning();
+  }
+});
 if (refs.chatCreateForm) refs.chatCreateForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (!refs.chatCreateForm.reportValidity()) return;
   const kind = String(refs.chatCreateKind?.value || state.chatCreateKind || "direct");
+  if (kind === "direct") return;
+  if (!refs.chatCreateForm.reportValidity()) return;
   const title = String(refs.chatCreateTitleInput?.value || "").trim();
   const memberEmail = String(refs.chatCreateMemberSelect?.value || "").trim();
   const memberEmails =

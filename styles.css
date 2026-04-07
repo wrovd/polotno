@@ -3757,6 +3757,119 @@ button.is-loading::after {
   min-height: 152px;
 }
 
+#chatCreateModal .chat-create-card {
+  width: min(640px, 100%);
+  border-radius: 24px;
+  padding: 18px 22px 20px;
+}
+
+#chatCreateModal .chat-create-card h3 {
+  margin: 0 0 14px;
+  font-size: 22px;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  font-weight: 700;
+}
+
+.chat-create-direct-pane {
+  display: grid;
+  gap: 10px;
+}
+
+.chat-create-search {
+  min-height: 60px;
+  border: 0;
+  border-radius: 14px;
+  background: #f2f2f7;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+}
+
+.chat-create-search .btn-icon {
+  width: 21px;
+  height: 21px;
+  color: #9b9ea7;
+  flex: 0 0 auto;
+}
+
+.chat-create-search input {
+  min-height: 48px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #212632;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 500;
+}
+
+.chat-create-search input::placeholder {
+  color: #9b9ea7;
+  opacity: 1;
+}
+
+.chat-create-search:focus-within {
+  box-shadow: inset 0 0 0 1px #cfd3dc;
+}
+
+.chat-create-search input:focus {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.chat-create-user-list {
+  display: grid;
+  gap: 4px;
+  max-height: min(52vh, 420px);
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.chat-create-user-item {
+  min-height: 70px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 8px;
+  text-align: left;
+  color: #20242f;
+}
+
+.chat-create-user-item:hover {
+  background: #f3f4f8;
+}
+
+.chat-create-user-item:active {
+  transform: scale(0.995);
+}
+
+.chat-create-user-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
+  background: #f0f1f5;
+  color: #5c5f67;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.chat-create-user-name {
+  font-size: 16px;
+  line-height: 1.1;
+  font-weight: 600;
+  color: #1d222d;
+}
+
 .chat-forward-item {
   width: 100%;
   border: 1px solid var(--line);

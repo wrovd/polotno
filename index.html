@@ -1658,6 +1658,13 @@
         <h3 id="chatCreateModalTitle">Новый чат</h3>
         <form class="stock-form" id="chatCreateForm" novalidate>
           <input type="hidden" id="chatCreateKind" value="direct" />
+          <section id="chatCreateDirectPane" class="chat-create-direct-pane">
+            <label class="chat-create-search">
+              <span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span>
+              <input type="search" id="chatCreateUserSearchInput" placeholder="Поиск сотрудника..." autocomplete="off" />
+            </label>
+            <div class="chat-create-user-list" id="chatCreateUserList"></div>
+          </section>
           <label>
             Название
             <input type="text" id="chatCreateTitleInput" placeholder="Например, Склад #1" required />
