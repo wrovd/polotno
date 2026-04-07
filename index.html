@@ -452,17 +452,16 @@
             </div>
 
             <section class="inventory-inline-filters is-hidden" id="mainFiltersPanelTop">
-              <div class="history-filters main-filters">
-                <select id="mainGroupFilterTop">
+              <div class="inventory-compact-filters">
+                <select id="mainGroupFilterTop" class="is-hidden" aria-hidden="true">
                   <option value="">Все группы</option>
                 </select>
-                <select id="mainStockFilterTop">
+                <select id="mainStockFilterTop" class="is-hidden" aria-hidden="true">
                   <option value="">Все остатки</option>
                   <option value="low">Низкий остаток</option>
                   <option value="ok">В норме</option>
                 </select>
-                <button class="secondary-btn btn-with-icon" id="applyMainFiltersTopBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-check"></use></svg></span><span>Применить</span></button>
-                <button class="glass-btn btn-with-icon" id="resetMainFiltersTopBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-reset"></use></svg></span><span>Сбросить</span></button>
+                <div class="inventory-compact-chip-row" id="mainGroupChipsTop" role="group" aria-label="Фильтр по группам"></div>
               </div>
             </section>
 

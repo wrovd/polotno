@@ -479,6 +479,7 @@ const refs = {
   iosInventorySheetChipBtn: document.getElementById("iosInventorySheetChipBtn"),
   iosFilterParams: document.getElementById("iosFilterParams"),
   mainFiltersPanelTop: document.getElementById("mainFiltersPanelTop"),
+  mainGroupChipsTop: document.getElementById("mainGroupChipsTop"),
   mainGroupFilterTop: document.getElementById("mainGroupFilterTop"),
   mainStockFilterTop: document.getElementById("mainStockFilterTop"),
   applyMainFiltersTopBtn: document.getElementById("applyMainFiltersTopBtn"),
@@ -1657,6 +1658,7 @@ function resetMainFilters() {
   refs.mainStockFilter.value = "";
   if (refs.mainGroupFilterTop) refs.mainGroupFilterTop.value = "";
   if (refs.mainStockFilterTop) refs.mainStockFilterTop.value = "";
+  renderMainGroupChipsTop();
   state.mainFilters = { search: "", group: "", stock: "" };
   state.pages.items = 1;
   renderIosFilterChips();
@@ -5533,6 +5535,27 @@ function renderGroupOptions() {
   fill(refs.editItemGroup, "Без группы");
   fill(refs.mainGroupFilter, "Все группы");
   fill(refs.mainGroupFilterTop, "Все группы");
+  renderMainGroupChipsTop();
+}
+
+function renderMainGroupChipsTop() {
+  if (!refs.mainGroupChipsTop || !refs.mainGroupFilterTop) return;
+  const selected = String(refs.mainGroupFilterTop.value || "");
+  const options = [...refs.mainGroupFilterTop.options].map((option) => ({
+    value: String(option.value || ""),
+    label: String(option.textContent || "").trim() || "Без названия",
+  }));
+
+  refs.mainGroupChipsTop.innerHTML = "";
+  options.forEach((option) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "inventory-compact-chip";
+    chip.dataset.groupValue = option.value;
+    if (option.value === selected) chip.classList.add("is-active");
+    chip.textContent = option.label;
+    refs.mainGroupChipsTop.appendChild(chip);
+  });
 }
 
 function refreshAdjustItemOptions() {
@@ -6839,7 +6862,7 @@ if (refs.iosFiltersChipBtn) refs.iosFiltersChipBtn.addEventListener("click", () 
   if (refs.mainFiltersPanelTop) {
     refs.mainFiltersPanelTop.classList.toggle("is-hidden");
     if (!refs.mainFiltersPanelTop.classList.contains("is-hidden")) {
-      refs.mainGroupFilterTop?.focus();
+      refs.mainGroupChipsTop?.querySelector(".inventory-compact-chip")?.focus();
     }
   }
   hapticSelection();
@@ -6853,8 +6876,15 @@ if (refs.iosFilterParams) refs.iosFilterParams.addEventListener("click", (event)
   const chip = target.closest("button[data-filter-key]");
   if (!(chip instanceof HTMLButtonElement)) return;
   const key = String(chip.getAttribute("data-filter-key") || "");
-  if (key === "group") refs.mainGroupFilter.value = "";
-  if (key === "stock") refs.mainStockFilter.value = "";
+  if (key === "group") {
+    refs.mainGroupFilter.value = "";
+    if (refs.mainGroupFilterTop) refs.mainGroupFilterTop.value = "";
+    renderMainGroupChipsTop();
+  }
+  if (key === "stock") {
+    refs.mainStockFilter.value = "";
+    if (refs.mainStockFilterTop) refs.mainStockFilterTop.value = "";
+  }
   handleSearch();
 });
 if (refs.mainBackBtn) refs.mainBackBtn.addEventListener("click", () => {
@@ -6891,10 +6921,17 @@ refs.applyMainFiltersBtn.addEventListener("click", handleSearch);
 refs.resetMainFiltersBtn.addEventListener("click", resetMainFilters);
 refs.mainGroupFilter.addEventListener("change", handleSearch);
 refs.mainStockFilter.addEventListener("change", handleSearch);
-if (refs.applyMainFiltersTopBtn) refs.applyMainFiltersTopBtn.addEventListener("click", handleSearch);
-if (refs.resetMainFiltersTopBtn) refs.resetMainFiltersTopBtn.addEventListener("click", resetMainFilters);
-if (refs.mainGroupFilterTop) refs.mainGroupFilterTop.addEventListener("change", handleSearch);
-if (refs.mainStockFilterTop) refs.mainStockFilterTop.addEventListener("change", handleSearch);
+if (refs.mainGroupChipsTop) refs.mainGroupChipsTop.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const chip = target.closest("button[data-group-value]");
+  if (!(chip instanceof HTMLButtonElement)) return;
+  const nextValue = String(chip.dataset.groupValue || "");
+  if (refs.mainGroupFilterTop) refs.mainGroupFilterTop.value = nextValue;
+  if (refs.mainGroupFilter) refs.mainGroupFilter.value = nextValue;
+  renderMainGroupChipsTop();
+  handleSearch();
+});
 if (refs.closeMainAddPanelTopBtn) refs.closeMainAddPanelTopBtn.addEventListener("click", () => {
   refs.stockManagePanelTop?.classList.add("is-hidden");
 });
