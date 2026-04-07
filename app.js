@@ -2399,6 +2399,46 @@ function chatThreadById(threadId) {
   return state.chatThreads.find((row) => String(row.id) === String(threadId)) || null;
 }
 
+function normalizeNameToken(value = "") {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function currentUserNameVariants() {
+  const variants = new Set();
+  const email = String(state.user?.email || "").trim().toLowerCase();
+  const display = composeUserDisplayName(state.user);
+  const rawName = String(state.user?.name || "").trim();
+
+  if (email) {
+    variants.add(normalizeNameToken(email));
+    const localPart = email.split("@")[0];
+    if (localPart) variants.add(normalizeNameToken(localPart));
+  }
+  if (display) variants.add(normalizeNameToken(display));
+  if (rawName) variants.add(normalizeNameToken(rawName));
+  return variants;
+}
+
+function chatThreadDisplayTitle(thread, fallback = "Без названия") {
+  const rawTitle = String(thread?.title || "").trim();
+  const kind = String(thread?.kind || "").trim().toLowerCase();
+  if (kind !== "direct") return rawTitle || fallback;
+  if (!rawTitle) return "Личный чат";
+
+  const parts = rawTitle
+    .split("↔")
+    .map((x) => String(x || "").trim())
+    .filter(Boolean);
+  if (parts.length < 2) return rawTitle;
+
+  const selfVariants = currentUserNameVariants();
+  const peer = parts.find((part) => !selfVariants.has(normalizeNameToken(part)));
+  return peer || parts[0] || rawTitle;
+}
+
 function syncChatLayoutMode() {
   if (!refs.chatTab) return;
   const hasActive = Boolean(String(state.chatActiveThreadId || "").trim());
@@ -2412,7 +2452,7 @@ function setChatDrawerOpen(open) {
 }
 
 function syncChatHeader(thread) {
-  const title = String(thread?.title || "Выберите чат");
+  const title = thread ? chatThreadDisplayTitle(thread, "Выберите чат") : "Выберите чат";
   const meta =
     thread?.kind === "direct"
       ? "Личный чат"
@@ -2429,8 +2469,9 @@ function filteredChatThreads() {
   if (!search) return state.chatThreads;
   return state.chatThreads.filter((thread) => {
     const preview = chatThreadPreviewText(thread.last_message_preview || "");
+    const displayTitle = chatThreadDisplayTitle(thread, "");
     return (
-      String(thread.title || "").toLowerCase().includes(search) ||
+      String(displayTitle || thread.title || "").toLowerCase().includes(search) ||
       preview.toLowerCase().includes(search)
     );
   });
@@ -2952,7 +2993,7 @@ function openChatForwardModal(message) {
     ? list
         .map(
           (thread) => `<button class="chat-forward-item" type="button" data-chat-forward-to="${thread.id}">
-      <strong>${escapeText(thread.title || "Без названия")}</strong>
+      <strong>${escapeText(chatThreadDisplayTitle(thread, "Без названия"))}</strong>
       <span>${escapeText(thread.kind || "chat")}</span>
     </button>`
         )
@@ -3066,12 +3107,13 @@ function renderChatThreads(list = filteredChatThreads()) {
     const unread = Number(thread.unread_count || 0);
     const preview = chatThreadPreviewText(thread.last_message_preview || "");
     const isOnline = Boolean(thread.is_online);
-    const firstLetter = (String(thread.title || "Ч").trim().charAt(0) || "Ч").toUpperCase();
+    const displayTitle = chatThreadDisplayTitle(thread, "Без названия");
+    const firstLetter = (String(displayTitle || "Ч").trim().charAt(0) || "Ч").toUpperCase();
     card.innerHTML = `
       <div class="chat-thread-title">
         <div class="chat-thread-avatar">${escapeText(firstLetter)}</div>
         <div class="chat-thread-main">
-          <strong>${escapeText(thread.title || "Без названия")}</strong>
+          <strong>${escapeText(displayTitle)}</strong>
           <div class="chat-thread-meta">${escapeText(preview || "Нет сообщений")}</div>
         </div>
         <div class="chat-thread-right">
