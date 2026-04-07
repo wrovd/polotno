@@ -2852,6 +2852,26 @@ function chatThreadPreviewText(rawPreview = "") {
   return mapAuthorPrefix(raw);
 }
 
+function formatThreadLastMessageTime(value) {
+  if (!value) return "";
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return "";
+  const now = new Date();
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const day = new Date(dt);
+  day.setHours(0, 0, 0, 0);
+  const timeLabel = dt.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  if (day.getTime() === today.getTime()) return timeLabel;
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (day.getTime() === yesterday.getTime()) return `Вчера, ${timeLabel}`;
+  const dateOpts = dt.getFullYear() === now.getFullYear()
+    ? { day: "2-digit", month: "2-digit" }
+    : { day: "2-digit", month: "2-digit", year: "2-digit" };
+  return dt.toLocaleDateString("ru-RU", dateOpts);
+}
+
 function renderChatReplyPreview() {
   if (!refs.chatReplyPreview) return;
   const data = state.chatReplyTo;
@@ -3055,7 +3075,7 @@ function renderChatThreads(list = filteredChatThreads()) {
           <div class="chat-thread-meta">${escapeText(preview || "Нет сообщений")}</div>
         </div>
         <div class="chat-thread-right">
-          <div class="chat-thread-time">${thread.last_message_at ? formatHistoryDate(thread.last_message_at) : ""}</div>
+          <div class="chat-thread-time">${thread.last_message_at ? formatThreadLastMessageTime(thread.last_message_at) : ""}</div>
           ${unread > 0 ? `<span class="chat-unread-badge">${unread}</span>` : (isOnline ? '<span class="chat-online-dot" aria-label="Онлайн"></span>' : "")}
         </div>
       </div>

@@ -4015,13 +4015,16 @@ button.is-loading::after {
 }
 
 .chat-thread-main strong {
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1.2;
-  font-weight: 700;
+  font-weight: 600;
+  color: #262d39;
 }
 
 .chat-thread-main .chat-thread-meta {
-  font-size: 16px;
+  font-size: 14px;
+  line-height: 1.3;
+  font-weight: 500;
   color: #8b92a1;
   white-space: nowrap;
   overflow: hidden;
@@ -4037,9 +4040,10 @@ button.is-loading::after {
 }
 
 .chat-thread-right .chat-thread-time {
-  font-size: 14px;
-  font-weight: 700;
-  color: #1f2533;
+  font-size: 13px;
+  font-weight: 600;
+  color: #747d90;
+  letter-spacing: 0.01em;
 }
 
 .chat-unread-badge {
