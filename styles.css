@@ -3681,6 +3681,11 @@ button.is-loading::after {
   padding: 0 14px;
 }
 
+.chat-search-wrap:focus-within {
+  border-color: #b7c7eb;
+  box-shadow: 0 0 0 3px rgba(106, 151, 239, 0.14);
+}
+
 .chat-search-wrap .btn-icon {
   width: 18px;
   height: 18px;
@@ -3696,6 +3701,11 @@ button.is-loading::after {
   outline: none;
   font-size: 16px;
   color: #1c1c1e;
+}
+
+.chat-search-wrap input:focus {
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .chat-quick-actions {
@@ -5243,6 +5253,11 @@ button.is-loading::after {
   padding: 0 14px;
 }
 
+.tasks-search-wrap:focus-within {
+  border-color: #b7c7eb;
+  box-shadow: 0 0 0 3px rgba(106, 151, 239, 0.14);
+}
+
 .tasks-search-wrap .btn-icon {
   width: 18px;
   height: 18px;
@@ -5256,6 +5271,11 @@ button.is-loading::after {
   min-height: 42px;
   font-size: 16px;
   color: #1c1c1e;
+}
+
+.tasks-search-wrap input:focus {
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .tasks-top-controls {
