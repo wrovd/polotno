@@ -2292,16 +2292,16 @@ td .actions {
 }
 
 #stockManagePanelTop.inventory-inline-add {
-  border-radius: 20px;
-  padding: 16px;
+  border-radius: 18px;
+  padding: 14px;
 }
 
 #stockManagePanelTop .films-inline-head {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 #stockManagePanelTop .films-inline-head h3 {
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1.15;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -2324,7 +2324,7 @@ td .actions {
 }
 
 #stockManagePanelTop .consumables-add-form {
-  gap: 10px;
+  gap: 8px;
 }
 
 #stockManagePanelTop .cons-add-field {
@@ -2335,19 +2335,19 @@ td .actions {
 #stockManagePanelTop .cons-add-field select,
 #stockManagePanelTop .cons-add-field textarea {
   border: 0;
-  border-radius: 14px;
+  border-radius: 12px;
   background: #f2f2f7;
-  min-height: 52px;
-  padding: 0 16px;
-  font-size: 18px;
+  min-height: 46px;
+  padding: 0 14px;
+  font-size: 16px;
   line-height: 1;
   color: #1f2023;
   box-shadow: none;
 }
 
 #stockManagePanelTop .cons-add-field textarea {
-  min-height: 124px;
-  padding: 16px;
+  min-height: 112px;
+  padding: 14px;
   line-height: 1.35;
   resize: none;
 }
@@ -2356,6 +2356,7 @@ td .actions {
 #stockManagePanelTop .cons-add-field textarea::placeholder {
   color: #8f949f;
   opacity: 1;
+  font-weight: 500;
 }
 
 #stockManagePanelTop .cons-add-field input:focus,
@@ -2366,12 +2367,12 @@ td .actions {
 }
 
 #stockManagePanelTop .consumables-add-submit {
-  min-height: 58px;
+  min-height: 50px;
   border: 0;
-  border-radius: 16px;
+  border-radius: 14px;
   background: #1f2023;
   color: #fff;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0;
 }
