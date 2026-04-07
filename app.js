@@ -46,6 +46,7 @@ const state = {
   chatForwardMessage: null,
   chatLocalMessageMeta: {},
   chatMessageActionsForId: "",
+  chatPinnedThreadIds: [],
   chatPollTimer: null,
   chatPollingBusy: false,
   homeNotifications: [],
@@ -112,6 +113,21 @@ const state = {
 
 const ONBOARDING_KEY = "polotno_onboarding_seen_v1";
 const DISPLAY_PREFS_KEY = "polotno_display_prefs_v1";
+
+function chatPinnedThreadsKey() {
+  const email = String(state.user?.email || "guest").trim().toLowerCase() || "guest";
+  return `polotno_chat_pinned_threads_${email}`;
+}
+
+function loadPinnedChatThreads() {
+  const raw = safeParse(localStorage.getItem(chatPinnedThreadsKey()));
+  const ids = Array.isArray(raw) ? raw.map((x) => String(x || "").trim()).filter(Boolean) : [];
+  state.chatPinnedThreadIds = [...new Set(ids)];
+}
+
+function savePinnedChatThreads() {
+  localStorage.setItem(chatPinnedThreadsKey(), JSON.stringify(state.chatPinnedThreadIds || []));
+}
 
 function homeNotificationsSeenKey() {
   const email = String(state.user?.email || "guest").trim().toLowerCase() || "guest";
@@ -1525,6 +1541,7 @@ function applyUserFromServer(nextUser, nextToken = "") {
   if (!localStorage.getItem(homeNotificationsSeenKey())) {
     setHomeNotificationsSeenNow();
   }
+  loadPinnedChatThreads();
   startHomeNotificationsPolling();
   void loadChatUsers(true).catch(() => {});
   updateAuthButton();
@@ -1737,6 +1754,7 @@ function clearSession() {
   state.homeTaskStatusSnapshot = {};
   state.homeBrowserNotifiedOwner = "";
   state.homeBrowserNotified = {};
+  state.chatPinnedThreadIds = [];
   state.profileLoaded = false;
   updateAuthButton();
   renderHomeNotificationsBadge();
@@ -3053,6 +3071,26 @@ function openChatForwardModal(message) {
   openSimpleModal(refs.chatForwardModal);
 }
 
+function chatThreadIsPinned(threadId) {
+  const id = String(threadId || "").trim();
+  if (!id) return false;
+  return Array.isArray(state.chatPinnedThreadIds) && state.chatPinnedThreadIds.includes(id);
+}
+
+function toggleChatThreadPinned(threadId) {
+  const id = String(threadId || "").trim();
+  if (!id) return;
+  const next = new Set(Array.isArray(state.chatPinnedThreadIds) ? state.chatPinnedThreadIds : []);
+  if (next.has(id)) {
+    next.delete(id);
+  } else {
+    next.add(id);
+  }
+  state.chatPinnedThreadIds = [...next];
+  savePinnedChatThreads();
+  renderChatThreads();
+}
+
 function closeChatMessageActionsPopover() {
   if (!refs.chatMessageActionsPopover) return;
   refs.chatMessageActionsPopover.hidden = true;
@@ -3150,7 +3188,7 @@ function renderChatThreads(list = filteredChatThreads()) {
     return;
   }
 
-  list.forEach((thread) => {
+  const createThreadCard = (thread) => {
     const card = document.createElement("article");
     const active = String(state.chatActiveThreadId) === String(thread.id);
     card.className = `chat-thread-item${active ? " is-active" : ""}`;
@@ -3158,6 +3196,7 @@ function renderChatThreads(list = filteredChatThreads()) {
     const unread = Number(thread.unread_count || 0);
     const preview = chatThreadPreviewText(thread.last_message_preview || "");
     const isOnline = Boolean(thread.is_online);
+    const isPinned = chatThreadIsPinned(thread.id);
     const displayTitle = chatThreadDisplayTitle(thread, "Без названия");
     const firstLetter = (String(displayTitle || "Ч").trim().charAt(0) || "Ч").toUpperCase();
     card.innerHTML = `
@@ -3168,13 +3207,46 @@ function renderChatThreads(list = filteredChatThreads()) {
           <div class="chat-thread-meta">${escapeText(preview || "Нет сообщений")}</div>
         </div>
         <div class="chat-thread-right">
+          <button class="chat-pin-btn${isPinned ? " is-pinned" : ""}" type="button" data-chat-pin="${escapeText(String(thread.id || ""))}" aria-label="${isPinned ? "Открепить чат" : "Закрепить чат"}" title="${isPinned ? "Открепить чат" : "Закрепить чат"}">📌</button>
           <div class="chat-thread-time">${thread.last_message_at ? formatThreadLastMessageTime(thread.last_message_at) : ""}</div>
           ${unread > 0 ? `<span class="chat-unread-badge">${unread}</span>` : (isOnline ? '<span class="chat-online-dot" aria-label="Онлайн"></span>' : "")}
         </div>
       </div>
     `;
-    refs.chatList.appendChild(card);
+    return card;
+  };
+
+  const directThreads = [];
+  const groupThreads = [];
+  const pinnedThreads = [];
+  list.forEach((thread) => {
+    if (chatThreadIsPinned(thread.id)) {
+      pinnedThreads.push(thread);
+      return;
+    }
+    const kind = String(thread.kind || "").trim().toLowerCase();
+    if (kind === "direct") {
+      directThreads.push(thread);
+      return;
+    }
+    groupThreads.push(thread);
   });
+
+  const appendSection = (title, rows) => {
+    if (!rows.length) return;
+    const section = document.createElement("section");
+    section.className = "chat-thread-section";
+    section.innerHTML = `<header class="chat-thread-section-head"><h4>${escapeText(title)}</h4><span>${rows.length}</span></header>`;
+    const body = document.createElement("div");
+    body.className = "chat-thread-section-body";
+    rows.forEach((thread) => body.appendChild(createThreadCard(thread)));
+    section.appendChild(body);
+    refs.chatList.appendChild(section);
+  };
+
+  appendSection("Закрепленные", pinnedThreads);
+  appendSection("Личные чаты", directThreads);
+  appendSection("Группы и каналы", groupThreads);
 }
 
 function mergeChatMessagesWithLocal(serverMessages = []) {
@@ -7289,6 +7361,14 @@ if (refs.chatTopMenuBtn) refs.chatTopMenuBtn.addEventListener("click", async () 
 if (refs.chatList) refs.chatList.addEventListener("click", async (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
+  const pinBtn = target.closest("button[data-chat-pin]");
+  if (pinBtn instanceof HTMLButtonElement) {
+    const threadId = String(pinBtn.getAttribute("data-chat-pin") || "").trim();
+    if (!threadId) return;
+    toggleChatThreadPinned(threadId);
+    hapticSelection();
+    return;
+  }
   const chatItem = target.closest("[data-chat-open]");
   if (!(chatItem instanceof HTMLElement)) return;
   const threadId = String(chatItem.getAttribute("data-chat-open") || "").trim();
@@ -8448,6 +8528,7 @@ setModuleView("home");
 setInventoryTab("main");
 loadDisplayPrefs();
 sanitizeInitialSession();
+if (state.user?.email) loadPinnedChatThreads();
 updateAuthButton();
 applyRoleAccess();
 applyPrintAccess();

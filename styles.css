@@ -4045,6 +4045,76 @@ button.is-loading::after {
   color: #97a1b2;
 }
 
+.chat-thread-section {
+  display: grid;
+  gap: 6px;
+}
+
+.chat-thread-section + .chat-thread-section {
+  margin-top: 4px;
+}
+
+.chat-thread-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 2px 0;
+}
+
+.chat-thread-section-head h4 {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #5d677a;
+}
+
+.chat-thread-section-head span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #e8ebf2;
+  color: #7d8799;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 6px;
+}
+
+.chat-thread-section-body {
+  display: grid;
+  gap: 8px;
+}
+
+.chat-pin-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  border: 1px solid #d9dde7;
+  background: #f4f6fa;
+  color: #a1a8b8;
+  font-size: 11px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.chat-pin-btn:hover {
+  background: #eef1f8;
+  color: #667089;
+}
+
+.chat-pin-btn.is-pinned {
+  border-color: #9db7f0;
+  background: #e9f0ff;
+  color: #2f66d6;
+}
+
 /* Chat exact layout refinements (Figma Make parity) */
 #inventoryView.is-chat-mode #inventoryTabsRow {
   display: none !important;
