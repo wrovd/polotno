@@ -3672,28 +3672,30 @@ button.is-loading::after {
 
 .chat-search-wrap {
   min-height: 44px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: #f2f2f7;
+  border: 1px solid #dcdfe5;
+  border-radius: 12px;
+  background: #f9f9fa;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 12px;
+  gap: 10px;
+  padding: 0 14px;
 }
 
 .chat-search-wrap .btn-icon {
   width: 18px;
   height: 18px;
-  color: #8f98a8;
+  color: #8e8e93;
 }
 
 .chat-search-wrap input {
   width: 100%;
   border: 0;
   background: transparent;
-  min-height: 40px;
+  min-height: 42px;
   padding: 0;
   outline: none;
+  font-size: 16px;
+  color: #1c1c1e;
 }
 
 .chat-quick-actions {
@@ -3965,8 +3967,8 @@ button.is-loading::after {
 }
 
 .chat-search-wrap {
-  background: #fff;
-  border-color: #d7dbe4;
+  background: #f9f9fa;
+  border-color: #dcdfe5;
 }
 
 .chat-quick-actions {
@@ -5231,14 +5233,14 @@ button.is-loading::after {
 
 .tasks-search-wrap {
   position: relative;
-  height: 50px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 16px;
-  background: #fff;
+  height: 44px;
+  border: 1px solid #dcdfe5;
+  border-radius: 12px;
+  background: #f9f9fa;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 16px;
+  padding: 0 14px;
 }
 
 .tasks-search-wrap .btn-icon {
@@ -5251,7 +5253,7 @@ button.is-loading::after {
   width: 100%;
   border: 0;
   background: transparent;
-  min-height: 38px;
+  min-height: 42px;
   font-size: 16px;
   color: #1c1c1e;
 }
@@ -6179,9 +6181,9 @@ button.is-loading::after {
   }
 
   .tasks-search-wrap {
-    height: 48px;
-    border-radius: 13px;
-    padding: 0 12px;
+    height: 44px;
+    border-radius: 12px;
+    padding: 0 14px;
   }
 
   .tasks-top-controls {
