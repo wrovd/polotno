@@ -469,34 +469,29 @@
             <section class="inventory-inline-add is-hidden" id="stockManagePanelTop">
               <header class="films-inline-head">
                 <h3>Новый расходник</h3>
-                <button class="close-btn films-inline-close" id="closeMainAddPanelTopBtn" type="button" aria-label="Закрыть">×</button>
+                <button class="close-btn films-inline-close cons-add-close" id="closeMainAddPanelTopBtn" type="button" aria-label="Закрыть">×</button>
               </header>
-              <form class="stock-form films-inline-form" id="stockFormTop" novalidate>
-                <label>
-                  Наименование
+              <form class="stock-form films-inline-form consumables-add-form" id="stockFormTop" novalidate>
+                <label class="cons-add-field">
                   <input type="text" name="name" id="itemNameTop" placeholder="Наименование" required />
                 </label>
                 <div class="inventory-two-cols">
-                  <label>
-                    Количество
-                    <input type="number" name="qty" id="itemQtyTop" min="0" step="1" required />
+                  <label class="cons-add-field">
+                    <input type="number" name="qty" id="itemQtyTop" min="0" step="1" placeholder="Количество" required />
                   </label>
-                  <label>
-                    Лимит оповещения
-                    <input type="number" name="threshold" id="itemThresholdTop" min="0" step="1" required />
+                  <label class="cons-add-field">
+                    <input type="number" name="threshold" id="itemThresholdTop" min="0" step="1" placeholder="Лимит оповещения" required />
                   </label>
                 </div>
-                <label>
-                  Группа
+                <label class="cons-add-field">
                   <select id="itemGroupTop">
                     <option value="">Без группы</option>
                   </select>
                 </label>
-                <label>
-                  Заметка
-                  <textarea name="notes" id="itemNotesTop" rows="3" placeholder="Поставщик, место хранения"></textarea>
+                <label class="cons-add-field">
+                  <textarea name="notes" id="itemNotesTop" rows="3" placeholder="Заметка (поставщик, место хранения...)"></textarea>
                 </label>
-                <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить расходник</span></button>
+                <button class="primary-btn full consumables-add-submit" type="submit">Сохранить расходник</button>
               </form>
             </section>
 
