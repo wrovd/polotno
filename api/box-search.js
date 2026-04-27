@@ -20,10 +20,20 @@ function actionFromReq(req) {
   return String(req.query?.action || "").trim().toLowerCase();
 }
 
+function normalizeBarcodeQuery(value) {
+  const text = String(value || "")
+    .replace(/[\u0000-\u001F\u007F]/g, "")
+    .trim();
+  if (!text) return "";
+  const compact = text.replace(/\s+/g, "");
+  const matches = compact.match(/\d{6,}/g);
+  return matches?.length ? matches.sort((a, b) => b.length - a.length)[0] : compact;
+}
+
 function normalizeCatalogRow(raw = {}) {
   return {
     name: String(raw.name || "").trim(),
-    barcode: String(raw.barcode || "").trim(),
+    barcode: normalizeBarcodeQuery(raw.barcode),
   };
 }
 
@@ -31,7 +41,7 @@ function normalizeTrackedItem(raw = {}) {
   const qtyRaw = Number(raw.qty ?? 1);
   const qty = Number.isFinite(qtyRaw) ? Math.max(1, Math.round(qtyRaw)) : 1;
   return {
-    barcode: String(raw.barcode || "").trim(),
+    barcode: normalizeBarcodeQuery(raw.barcode),
     name: String(raw.name || "").trim(),
     qty,
   };
@@ -48,7 +58,7 @@ function normalizeTrackedBox(raw = {}) {
 
 function normalizeCaseLocationInput(raw = {}) {
   return {
-    barcode: String(raw.barcode || "").trim(),
+    barcode: normalizeBarcodeQuery(raw.barcode),
     name: String(raw.name || "").trim(),
     rack: String(raw.rack || raw.stand || raw.shelfRack || "").trim(),
     shelf: String(raw.shelf || raw.polka || "").trim(),
@@ -123,7 +133,7 @@ module.exports = async function handler(req, res) {
 
   if (method === "GET" && action === "find-by-barcode") {
     try {
-      const barcode = String(req.query?.barcode || "").trim();
+      const barcode = normalizeBarcodeQuery(req.query?.barcode);
       if (!barcode) return send(res, 400, { error: "barcode is required" });
       const entries = await findBoxTrackingByBarcode(barcode);
       return send(res, 200, {
@@ -166,7 +176,7 @@ module.exports = async function handler(req, res) {
 
   if (method === "GET" && action === "find-case") {
     try {
-      const barcode = String(req.query?.barcode || "").trim();
+      const barcode = normalizeBarcodeQuery(req.query?.barcode);
       if (!barcode) return send(res, 400, { error: "barcode is required" });
       const item = await findCaseLocationByBarcode(barcode);
       return send(res, 200, { item });

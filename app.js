@@ -84,6 +84,9 @@ const state = {
     boxes: [],
     selectedRack: "",
     countdownTimer: null,
+    scanBuffer: "",
+    scanBufferTimer: null,
+    inputDebounceTimer: null,
   },
   filmsFilters: {
     search: "",
@@ -5625,6 +5628,30 @@ function clearBoxKioskCountdown() {
   }
 }
 
+function clearBoxKioskInputDebounce() {
+  if (state.boxKiosk.inputDebounceTimer) {
+    clearTimeout(state.boxKiosk.inputDebounceTimer);
+    state.boxKiosk.inputDebounceTimer = null;
+  }
+}
+
+function clearBoxKioskScanBuffer() {
+  if (state.boxKiosk.scanBufferTimer) {
+    clearTimeout(state.boxKiosk.scanBufferTimer);
+    state.boxKiosk.scanBufferTimer = null;
+  }
+  state.boxKiosk.scanBuffer = "";
+}
+
+function submitBoxKioskScan(rawValue) {
+  const value = String(rawValue || "").trim();
+  if (!value) return;
+  if (refs.boxKioskScanInput) refs.boxKioskScanInput.value = "";
+  clearBoxKioskInputDebounce();
+  clearBoxKioskScanBuffer();
+  processBoxKioskScanValue(value).catch(() => showBoxKioskNotFound());
+}
+
 function showBoxKioskState(mode) {
   state.boxKiosk.mode = mode;
   [
@@ -5679,6 +5706,8 @@ function openBoxKiosk() {
 function closeBoxKiosk() {
   state.boxKiosk.open = false;
   clearBoxKioskCountdown();
+  clearBoxKioskInputDebounce();
+  clearBoxKioskScanBuffer();
   refs.boxKioskView?.classList.add("is-hidden");
   document.body.classList.remove("box-kiosk-open");
 }
@@ -6374,13 +6403,26 @@ function extractBarcodeFromScan(rawValue) {
   if (!text) return "";
   try {
     const obj = JSON.parse(text);
-    if (obj && typeof obj.barcode === "string") return obj.barcode.trim();
-    if (obj && typeof obj.id === "string" && !/^SUP-\d{3,}$/i.test(obj.id.trim())) return obj.id.trim();
-    if (obj && typeof obj.id === "string") return obj.id.trim();
+    if (obj && typeof obj.barcode === "string") return normalizeScannedProductBarcode(obj.barcode);
+    if (obj && typeof obj.id === "string" && !/^SUP-\d{3,}$/i.test(obj.id.trim())) return normalizeScannedProductBarcode(obj.id);
+    if (obj && typeof obj.id === "string") return normalizeScannedProductBarcode(obj.id);
   } catch {
     // ignore
   }
-  return text;
+  return normalizeScannedProductBarcode(text);
+}
+
+function normalizeScannedProductBarcode(rawValue) {
+  const text = String(rawValue || "")
+    .replace(/[\u0000-\u001F\u007F]/g, "")
+    .trim();
+  if (!text) return "";
+  const compact = text.replace(/\s+/g, "");
+  const digitMatches = compact.match(/\d{6,}/g);
+  if (digitMatches?.length) {
+    return digitMatches.sort((a, b) => b.length - a.length)[0];
+  }
+  return compact;
 }
 
 function extractQrLoginCode(rawValue) {
@@ -8827,13 +8869,33 @@ if (refs.boxScanBarcodeBtn) refs.boxScanBarcodeBtn.addEventListener("click", asy
 if (refs.boxKioskCloseBtn) refs.boxKioskCloseBtn.addEventListener("click", closeBoxKiosk);
 if (refs.boxKioskScanInput) {
   refs.boxKioskScanInput.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter") return;
+    if (!["Enter", "NumpadEnter", "Tab"].includes(event.key)) return;
     event.preventDefault();
-    const value = String(refs.boxKioskScanInput?.value || "").trim();
-    if (refs.boxKioskScanInput) refs.boxKioskScanInput.value = "";
-    processBoxKioskScanValue(value).catch(() => showBoxKioskNotFound());
+    submitBoxKioskScan(refs.boxKioskScanInput?.value || "");
+  });
+  refs.boxKioskScanInput.addEventListener("input", () => {
+    clearBoxKioskInputDebounce();
+    state.boxKiosk.inputDebounceTimer = setTimeout(() => {
+      submitBoxKioskScan(refs.boxKioskScanInput?.value || "");
+    }, 350);
   });
 }
+document.addEventListener("keydown", (event) => {
+  if (!state.boxKiosk.open) return;
+  if (event.metaKey || event.ctrlKey || event.altKey) return;
+  if (event.target === refs.boxKioskScanInput) return;
+  if (["Enter", "NumpadEnter", "Tab"].includes(event.key)) {
+    event.preventDefault();
+    submitBoxKioskScan(state.boxKiosk.scanBuffer);
+    return;
+  }
+  if (event.key.length !== 1) return;
+  state.boxKiosk.scanBuffer += event.key;
+  if (state.boxKiosk.scanBufferTimer) clearTimeout(state.boxKiosk.scanBufferTimer);
+  state.boxKiosk.scanBufferTimer = setTimeout(() => {
+    submitBoxKioskScan(state.boxKiosk.scanBuffer);
+  }, 350);
+});
 if (refs.boxKioskRacks) refs.boxKioskRacks.addEventListener("click", (event) => {
   const target = event.target instanceof HTMLElement ? event.target.closest("[data-kiosk-rack]") : null;
   if (!(target instanceof HTMLElement)) return;
