@@ -174,7 +174,34 @@
     <div class="bg-shape bg-shape-top" aria-hidden="true"></div>
     <div class="bg-shape bg-shape-bottom" aria-hidden="true"></div>
 
-    <main class="app-shell">
+    <section class="login-gate" id="loginGate" hidden>
+      <div class="login-gate-bg" aria-hidden="true"></div>
+      <article class="login-gate-card">
+        <header class="login-gate-head">
+          <div class="login-gate-brand">
+            <span class="login-gate-mark">P</span>
+            <div>
+              <p class="login-gate-eyebrow">POLOTNO</p>
+              <h2>Вход в систему</h2>
+            </div>
+          </div>
+          <p>Авторизуйтесь, чтобы открыть рабочее пространство.</p>
+        </header>
+        <form id="gateLoginForm" class="login-gate-form" novalidate>
+          <label>
+            Email
+            <input id="gateLoginEmail" type="email" placeholder="name@company.com" autocomplete="email" required />
+          </label>
+          <label>
+            Пароль
+            <input id="gateLoginPassword" type="password" placeholder="••••••••" autocomplete="current-password" required minlength="6" />
+          </label>
+          <button id="gateLoginSubmitBtn" class="login-gate-submit" type="submit">Войти</button>
+        </form>
+      </article>
+    </section>
+
+    <main class="app-shell" id="appShell" hidden>
       <header class="topbar">
         <div class="brand">
           <span class="brand-mark" aria-hidden="true"></span>

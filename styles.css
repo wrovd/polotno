@@ -85,6 +85,131 @@ p {
   padding-top: calc(env(safe-area-inset-top, 0px) + var(--tg-top-offset));
 }
 
+.login-gate {
+  position: relative;
+  min-height: calc(100vh - 34px);
+  display: grid;
+  place-items: center;
+  padding-top: calc(env(safe-area-inset-top, 0px) + var(--tg-top-offset));
+}
+
+.login-gate-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(620px 260px at 10% -10%, rgba(84, 108, 166, 0.14), transparent 72%),
+    radial-gradient(540px 220px at 100% 0%, rgba(40, 51, 82, 0.1), transparent 68%),
+    #eef0f3;
+  pointer-events: none;
+}
+
+.login-gate-card {
+  position: relative;
+  width: min(440px, calc(100vw - 22px));
+  border-radius: 22px;
+  border: 1px solid #d7dbe4;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 18px 54px rgba(23, 31, 49, 0.14);
+  padding: 22px;
+  display: grid;
+  gap: 16px;
+}
+
+.login-gate-head {
+  display: grid;
+  gap: 10px;
+}
+
+.login-gate-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.login-gate-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #1f2023;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 23px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.login-gate-eyebrow {
+  margin: 0;
+  color: #8b919d;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.login-gate-head h2 {
+  margin: 1px 0 0;
+  font-size: 32px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: #1e2128;
+  font-weight: 800;
+}
+
+.login-gate-head p {
+  color: #7f8694;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.login-gate-form {
+  display: grid;
+  gap: 10px;
+}
+
+.login-gate-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: #5f6879;
+  font-weight: 700;
+}
+
+.login-gate-form input {
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid #d6dae3;
+  background: #f2f3f7;
+  padding: 0 14px;
+  font-size: 16px;
+  color: #1f2024;
+  font-weight: 600;
+}
+
+.login-gate-form input:focus {
+  border-color: #8f9db7;
+  box-shadow: 0 0 0 2px rgba(143, 157, 183, 0.2);
+  background: #f6f7fb;
+}
+
+.login-gate-submit {
+  min-height: 50px;
+  border-radius: 14px;
+  border: 0;
+  background: #1f2023;
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.login-gate-submit:hover {
+  background: #16181c;
+}
+
 .topbar,
 .hero-card,
 .panel,

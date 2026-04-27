@@ -139,7 +139,61 @@ function homeBrowserNotifiedKey() {
   return `polotno_home_browser_notified_${email}`;
 }
 
+function isAuthenticated() {
+  return Boolean(state.token && state.user?.email);
+}
+
+function syncAuthGate() {
+  const authed = isAuthenticated();
+  if (refs.loginGate) refs.loginGate.hidden = authed;
+  if (refs.appShell) refs.appShell.hidden = !authed;
+  if (!authed) {
+    closeAuthModal();
+    document.body.style.overflow = "";
+  }
+}
+
+async function loadAuthorizedWorkspaceData() {
+  await loadItems();
+  await loadHistory();
+  await loadFilms();
+  await loadBoxSearchData();
+  await loadChatData();
+  await loadTasks();
+}
+
+async function loginAndBootstrap(email, password, button = null) {
+  const data = await runDbAction(
+    () =>
+      apiRequest("/api/auth/login", {
+        method: "POST",
+        auth: false,
+        body: {
+          email: String(email || "").trim(),
+          password: String(password || ""),
+        },
+      }),
+    { button, message: "Проверяем вход..." }
+  );
+
+  applyUserFromServer(data.user, data.token);
+  state.profileLoaded = false;
+  syncAuthGate();
+  await runDbAction(
+    async () => {
+      await loadAuthorizedWorkspaceData();
+    },
+    { message: "Загружаем данные аккаунта..." }
+  );
+}
+
 const refs = {
+  appShell: document.getElementById("appShell"),
+  loginGate: document.getElementById("loginGate"),
+  gateLoginForm: document.getElementById("gateLoginForm"),
+  gateLoginEmail: document.getElementById("gateLoginEmail"),
+  gateLoginPassword: document.getElementById("gateLoginPassword"),
+  gateLoginSubmitBtn: document.getElementById("gateLoginSubmitBtn"),
   openAuthBtn: document.getElementById("openAuthBtn"),
   accountMenu: document.getElementById("accountMenu"),
   openSettingsBtn: document.getElementById("openSettingsBtn"),
@@ -766,7 +820,8 @@ async function apiRequest(path, options = {}) {
     const payload = await response.json().catch(() => ({}));
     if (response.status === 401 && auth) {
       clearSession();
-      openAuthModal();
+      syncAuthGate();
+      setTimeout(() => refs.gateLoginEmail?.focus(), 60);
       showToast("Сессия истекла. Войдите снова");
     }
     throw new Error(payload.error || `HTTP ${response.status}`);
@@ -1545,6 +1600,7 @@ function applyUserFromServer(nextUser, nextToken = "") {
   startHomeNotificationsPolling();
   void loadChatUsers(true).catch(() => {});
   updateAuthButton();
+  syncAuthGate();
   applyRoleAccess();
   void refreshHomeNotifications(true).catch(() => {});
 }
@@ -1727,15 +1783,13 @@ async function openSettingsView() {
 
 function performLogout() {
   clearSession();
+  syncAuthGate();
+  if (refs.gateLoginEmail) refs.gateLoginEmail.value = "";
+  if (refs.gateLoginPassword) refs.gateLoginPassword.value = "";
+  setTimeout(() => refs.gateLoginEmail?.focus(), 60);
   closeAccountMenu();
   closeLogoutModal();
   setModuleView("home");
-  loadItems();
-  loadHistory();
-  loadFilms();
-  loadBoxSearchData();
-  loadChatData();
-  loadTasks();
   showToast("Вы вышли из аккаунта");
   hapticSuccess();
 }
@@ -1761,6 +1815,7 @@ function clearSession() {
   renderHomeNotificationsPopover();
   closeHomeNotificationsPopover();
   applyRoleAccess();
+  syncAuthGate();
 }
 
 function sanitizeInitialSession() {
@@ -5973,16 +6028,12 @@ async function pollQrLoginStatus() {
     clearQrLoginPolling();
     applyUserFromServer(data.user, data.token);
     state.profileLoaded = false;
+    syncAuthGate();
     closeQrLoginModal();
     closeAuthModal();
     await runDbAction(
       async () => {
-        await loadItems();
-        await loadHistory();
-        await loadFilms();
-        await loadBoxSearchData();
-        await loadChatData();
-        await loadTasks();
+        await loadAuthorizedWorkspaceData();
       },
       { message: "Загружаем данные аккаунта..." }
     );
@@ -6556,38 +6607,30 @@ refs.cancelLogoutBtn.addEventListener("click", closeLogoutModal);
 refs.confirmLogoutBtn.addEventListener("click", performLogout);
 refs.logoutBackdrop.addEventListener("click", closeLogoutModal);
 
+if (refs.gateLoginForm) refs.gateLoginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!refs.gateLoginForm.reportValidity()) return;
+  const submitBtn = refs.gateLoginSubmitBtn instanceof HTMLButtonElement ? refs.gateLoginSubmitBtn : null;
+  try {
+    await loginAndBootstrap(refs.gateLoginEmail?.value, refs.gateLoginPassword?.value, submitBtn);
+    if (refs.gateLoginPassword) refs.gateLoginPassword.value = "";
+    showToast("Вход успешен");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+
 refs.loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!refs.loginForm.reportValidity()) return;
-
-  const form = new FormData(refs.loginForm);
   const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
+  const form = new FormData(refs.loginForm);
 
   try {
-    const data = await runDbAction(
-      () =>
-        apiRequest("/api/auth/login", {
-          method: "POST",
-          auth: false,
-          body: {
-            email: String(form.get("email") || "").trim(),
-            password: String(form.get("password") || ""),
-          },
-        }),
-      { button: submitBtn, message: "Проверяем вход..." }
-    );
-
-    applyUserFromServer(data.user, data.token);
-    state.profileLoaded = false;
+    await loginAndBootstrap(String(form.get("email") || ""), String(form.get("password") || ""), submitBtn);
     closeAuthModal();
-    await runDbAction(
-      async () => {
-        await loadItems();
-        await loadHistory();
-        await loadFilms();
-      },
-      { message: "Загружаем данные аккаунта..." }
-    );
     showToast("Вход успешен");
     hapticSuccess();
   } catch (error) {
@@ -8530,6 +8573,7 @@ loadDisplayPrefs();
 sanitizeInitialSession();
 if (state.user?.email) loadPinnedChatThreads();
 updateAuthButton();
+syncAuthGate();
 applyRoleAccess();
 applyPrintAccess();
 initCollapsiblePanels();
@@ -8540,16 +8584,16 @@ initStatsFilters();
 renderQuickFilmBatch();
 renderChatFilePreviews();
 renderChatReplyPreview();
-loadItems();
-loadHistory();
-loadFilms();
-loadBoxSearchData();
-loadChatData();
-loadTasks();
 initTelegram();
 updateMobileScanFab();
 startHomeNotificationsPolling();
 refreshHomeNotifications(true).catch(() => {});
+
+if (isAuthenticated()) {
+  loadAuthorizedWorkspaceData();
+} else {
+  setTimeout(() => refs.gateLoginEmail?.focus(), 60);
+}
 
 if (!localStorage.getItem(ONBOARDING_KEY)) {
   openOnboarding();
