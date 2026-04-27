@@ -2297,7 +2297,7 @@ button:active {
 .box-kiosk-top-countdown {
   position: fixed;
   top: clamp(28px, 4vw, 54px);
-  right: clamp(34px, 4.4vw, 64px);
+  right: clamp(96px, 8vw, 138px);
   z-index: 3;
   display: inline-flex;
   align-items: center;
