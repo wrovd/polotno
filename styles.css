@@ -1806,19 +1806,19 @@ button:active {
 
 .box-kiosk-scan-input {
   position: fixed;
-  left: 1px;
-  top: 1px;
+  inset: 0;
   z-index: 4001;
-  width: 2px;
-  height: 2px;
+  width: 100vw;
+  height: 100vh;
   border: 0;
   padding: 0;
-  opacity: 0.01;
+  opacity: 0;
   color: transparent;
   background: transparent;
   caret-color: transparent;
   outline: none;
   pointer-events: none;
+  resize: none;
 }
 
 .box-kiosk-state {

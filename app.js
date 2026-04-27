@@ -87,7 +87,6 @@ const state = {
     scanBuffer: "",
     scanBufferTimer: null,
     inputDebounceTimer: null,
-    focusKeepAliveTimer: null,
   },
   filmsFilters: {
     search: "",
@@ -5648,31 +5647,15 @@ function focusBoxKioskScanner() {
   if (!state.boxKiosk.open || !refs.boxKioskScanInput) return;
   try {
     refs.boxKioskScanInput.focus({ preventScroll: true });
-    refs.boxKioskScanInput.select();
   } catch {
     refs.boxKioskScanInput.focus();
   }
 }
 
 function refocusBoxKioskScannerSoon() {
-  [0, 80, 220, 520].forEach((delay) => {
+  [0, 120, 360].forEach((delay) => {
     setTimeout(focusBoxKioskScanner, delay);
   });
-}
-
-function startBoxKioskFocusKeepAlive() {
-  if (state.boxKiosk.focusKeepAliveTimer) clearInterval(state.boxKiosk.focusKeepAliveTimer);
-  state.boxKiosk.focusKeepAliveTimer = setInterval(() => {
-    if (!state.boxKiosk.open) return;
-    if (document.activeElement !== refs.boxKioskScanInput) focusBoxKioskScanner();
-  }, 900);
-}
-
-function stopBoxKioskFocusKeepAlive() {
-  if (state.boxKiosk.focusKeepAliveTimer) {
-    clearInterval(state.boxKiosk.focusKeepAliveTimer);
-    state.boxKiosk.focusKeepAliveTimer = null;
-  }
 }
 
 function submitBoxKioskScan(rawValue) {
@@ -5732,7 +5715,6 @@ function openBoxKiosk() {
   clearBoxKioskCountdown();
   refs.boxKioskView?.classList.remove("is-hidden");
   document.body.classList.add("box-kiosk-open");
-  startBoxKioskFocusKeepAlive();
   showBoxKioskState("idle");
   refocusBoxKioskScannerSoon();
 }
@@ -5742,7 +5724,6 @@ function closeBoxKiosk() {
   clearBoxKioskCountdown();
   clearBoxKioskInputDebounce();
   clearBoxKioskScanBuffer();
-  stopBoxKioskFocusKeepAlive();
   refs.boxKioskView?.classList.add("is-hidden");
   document.body.classList.remove("box-kiosk-open");
 }
@@ -8922,10 +8903,21 @@ if (refs.boxKioskScanInput) {
       submitBoxKioskScan(refs.boxKioskScanInput?.value || "");
     }, 350);
   });
+  refs.boxKioskScanInput.addEventListener("blur", () => {
+    if (!state.boxKiosk.open) return;
+    setTimeout(focusBoxKioskScanner, 60);
+  });
 }
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden || !state.boxKiosk.open) return;
+  refocusBoxKioskScannerSoon();
+});
+window.addEventListener("focus", () => {
+  if (!state.boxKiosk.open) return;
+  refocusBoxKioskScannerSoon();
+});
 document.addEventListener("keydown", (event) => {
   if (!state.boxKiosk.open) return;
-  focusBoxKioskScanner();
   if (event.metaKey || event.ctrlKey || event.altKey) return;
   if (event.target === refs.boxKioskScanInput) return;
   if (["Enter", "NumpadEnter", "Tab"].includes(event.key)) {
