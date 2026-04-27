@@ -1684,7 +1684,7 @@ function renderSettingsActiveReminders() {
 
 function renderSettingsProfileMeta() {
   if (!state.user) return;
-  const name = currentUserDisplayName();
+  const name = composeUserDisplayName(state.user) || String(state.user.name || "").trim();
   if (refs.settingsProfileName) refs.settingsProfileName.textContent = name || "Пользователь";
   if (refs.settingsProfileEmail) refs.settingsProfileEmail.textContent = String(state.user.email || "").trim();
   if (refs.settingsProfileRole) refs.settingsProfileRole.textContent = String(state.user.role || "staff");
