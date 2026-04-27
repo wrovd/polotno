@@ -243,7 +243,7 @@
             <span class="btn-icon" aria-hidden="true"><svg><use href="#i-film-menu"></use></svg></span><span>Пленки</span>
           </button>
           <button class="desktop-sidebar-item" id="desktopNavBoxesBtn" type="button">
-            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Коробки</span>
+            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Поиск</span>
           </button>
           <button class="desktop-sidebar-item" id="desktopNavChatBtn" type="button">
             <span class="btn-icon" aria-hidden="true"><svg><use href="#i-message"></use></svg></span><span>Чат</span>
@@ -286,7 +286,7 @@
                 <span class="btn-icon" aria-hidden="true"><svg><use href="#i-film-menu"></use></svg></span><span>Пленки</span>
               </button>
               <button class="home-dashboard-nav-item" id="homeNavBoxesBtn" type="button">
-                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Коробки</span>
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Поиск</span>
               </button>
               <button class="home-dashboard-nav-item" id="homeNavChatBtn" type="button">
                 <span class="btn-icon" aria-hidden="true"><svg><use href="#i-message"></use></svg></span><span>Чат</span>
@@ -366,10 +366,10 @@
                   <strong>Склад пленок</strong>
                   <small>Ячейки, штрихкоды</small>
                 </button>
-                <button class="home-module-card" id="openProductsSearchTile" type="button" data-process-title="Поиск по коробкам">
+                <button class="home-module-card" id="openProductsSearchTile" type="button" data-process-title="Поиск коробок и чехлов">
                   <span class="home-module-icon is-orange"><svg><use href="#i-search"></use></svg></span>
-                  <strong>Поиск по коробкам</strong>
-                  <small>Коробки, сканер</small>
+                  <strong>Поиск коробок и чехлов</strong>
+                  <small>Коробки, чехлы, сканер</small>
                 </button>
                 <button class="home-module-card" id="openChatHomeTile" type="button" data-process-title="Чат">
                   <span class="home-module-icon is-blue"><svg><use href="#i-message"></use></svg></span>
@@ -806,12 +806,27 @@
         <section id="boxSearchTab" class="tab-panel">
           <section class="boxes-page">
             <header class="boxes-head-row">
-              <h2>Коробки</h2>
-              <button class="primary-btn btn-with-icon boxes-create-btn" id="boxCreateToggleBtn" type="button">
+              <h2>Поиск коробок и чехлов</h2>
+              <div class="boxes-head-actions">
+                <button class="boxes-chip admin-only" id="openBoxKioskBtn" type="button">
+                  <span class="btn-icon" aria-hidden="true"><svg><use href="#i-qr"></use></svg></span><span>Режим планшета</span>
+                </button>
+                <button class="primary-btn btn-with-icon boxes-create-btn" id="boxCreateToggleBtn" type="button">
                 <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Создать</span>
-              </button>
+                </button>
+              </div>
             </header>
 
+            <div class="boxes-subtabs" role="tablist" aria-label="Поиск коробок и чехлов">
+              <button class="boxes-subtab is-active" id="boxesSubTabBoxes" type="button" role="tab" aria-selected="true" data-boxes-mode="boxes">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-package"></use></svg></span><span>Коробки</span>
+              </button>
+              <button class="boxes-subtab" id="boxesSubTabCases" type="button" role="tab" aria-selected="false" data-boxes-mode="cases">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span><span>Чехлы</span>
+              </button>
+            </div>
+
+            <div class="boxes-subpanel is-active" id="boxesSubPanelBoxes">
             <label class="boxes-search" for="boxSearchInput">
               <span class="boxes-search-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span>
               <input id="boxSearchInput" type="search" placeholder="Штрихкод, товар, коробка, место" autocomplete="off" />
@@ -889,7 +904,92 @@
               </div>
               <div class="pager" id="boxTrackedPager" hidden></div>
             </section>
+            </div>
+
+            <div class="boxes-subpanel" id="boxesSubPanelCases" hidden>
+              <label class="boxes-search" for="caseSearchInput">
+                <span class="boxes-search-icon" aria-hidden="true"><svg><use href="#i-search"></use></svg></span>
+                <input id="caseSearchInput" type="search" placeholder="Название, штрихкод, стеллаж или полка" autocomplete="off" />
+              </label>
+
+              <section class="boxes-create-card case-create-card">
+                <header class="films-inline-head">
+                  <div>
+                    <h3>Чехлы на стеллажах</h3>
+                    <p class="films-inline-note">Укажите, где лежит модель: стеллаж и полка будут показаны на планшете после сканирования.</p>
+                  </div>
+                </header>
+                <form class="stock-form films-inline-form" id="caseLocationForm" novalidate>
+                  <input id="caseNameInput" type="text" placeholder="Наименование чехла" required />
+                  <div class="history-filters">
+                    <input id="caseBarcodeInput" type="text" placeholder="Штрихкод" required />
+                    <input id="caseRackInput" type="text" placeholder="Стеллаж, например 7" required />
+                    <input id="caseShelfInput" type="text" placeholder="Полка, например 3" required />
+                    <button class="primary-btn btn-with-icon" id="caseSaveBtn" type="submit">
+                      <span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить</span>
+                    </button>
+                  </div>
+                </form>
+              </section>
+
+              <section class="boxes-tracked-section">
+                <div class="section-head">
+                  <h3>Чехлы в поиске</h3>
+                </div>
+                <div class="history-list" id="caseLocationsList">
+                  <p class="muted">Пока нет чехлов с указанным местом.</p>
+                </div>
+              </section>
+            </div>
           </section>
+        </section>
+
+        <section class="box-kiosk-view is-hidden" id="boxKioskView" aria-live="polite">
+          <input class="box-kiosk-scan-input" id="boxKioskScanInput" type="text" autocomplete="off" inputmode="none" aria-label="Сканирование штрихкода или QR-кода" />
+          <div class="box-kiosk-state box-kiosk-idle" id="boxKioskIdle">
+            <div class="box-kiosk-ready"><span>✓</span>Устройство готово к сканированию</div>
+            <h2>Поиск коробок и чехлов</h2>
+            <p>Отсканируйте штрихкод или QR код ниже</p>
+            <div class="box-kiosk-chevrons" aria-hidden="true"><span></span><span></span></div>
+            <div class="box-kiosk-barcode" aria-hidden="true"></div>
+          </div>
+          <div class="box-kiosk-state is-hidden" id="boxKioskLoading">
+            <h2>Поиск товара</h2>
+            <div class="box-kiosk-spinner" aria-hidden="true"></div>
+          </div>
+          <div class="box-kiosk-state box-kiosk-found is-hidden" id="boxKioskFound">
+            <div class="box-kiosk-found-head">
+              <h2>Товар найден</h2>
+              <span class="box-kiosk-barcode-pill" id="boxKioskFoundBarcode">0000</span>
+            </div>
+            <h3 id="boxKioskFoundName">Наименование товара</h3>
+            <div class="box-kiosk-location-pill" id="boxKioskFoundLocation">Стеллаж 7, полка 3</div>
+            <h4>Стеллажи, на которых есть коробки с этим товаром</h4>
+            <div class="box-kiosk-racks" id="boxKioskRacks"></div>
+          </div>
+          <div class="box-kiosk-state box-kiosk-boxscan is-hidden" id="boxKioskBoxScan">
+            <div>
+              <h2>Отсканируйте QR-код<br />на коробке</h2>
+              <div class="box-kiosk-box-icon" aria-hidden="true">
+                <span class="box-lid"></span><span class="box-body"></span><span class="box-qr"></span>
+              </div>
+              <div class="box-kiosk-chevrons box-kiosk-chevrons-small" aria-hidden="true"><span></span><span></span></div>
+            </div>
+            <aside>
+              <div class="box-kiosk-rack-picked"><span id="boxKioskPickedRack">7</span></div>
+              <h3>Стеллаж выбран<br />для поиска</h3>
+              <p>Удаляя коробку из системы, вы автоматически соглашаетесь выставить модель на свое место. Все действия сохраняются в системе.</p>
+            </aside>
+          </div>
+          <div class="box-kiosk-state box-kiosk-message is-hidden" id="boxKioskNotFound">
+            <div class="box-kiosk-message-line"><span class="box-kiosk-dark-icon">×</span><h2>Ничего не найдено</h2></div>
+            <div class="box-kiosk-countdown"><strong id="boxKioskNotFoundCount">5</strong><span>Закроем окно<br />самостоятельно</span></div>
+          </div>
+          <div class="box-kiosk-state box-kiosk-message is-hidden" id="boxKioskSuccess">
+            <div class="box-kiosk-message-line"><span class="box-kiosk-dark-icon">✓</span><h2>Коробка удалена из системы</h2></div>
+            <div class="box-kiosk-countdown"><strong id="boxKioskSuccessCount">5</strong><span>Закроем окно<br />самостоятельно</span></div>
+          </div>
+          <button class="box-kiosk-close" id="boxKioskCloseBtn" type="button" aria-label="Закрыть режим планшета">×</button>
         </section>
 
         <section id="chatTab" class="tab-panel">

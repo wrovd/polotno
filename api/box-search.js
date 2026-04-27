@@ -10,6 +10,10 @@ const {
   findBoxTrackingByBarcode,
   removeBoxTrackingByBoxCode,
   boxCodeExists,
+  listCaseLocations,
+  findCaseLocationByBarcode,
+  upsertCaseLocation,
+  deleteCaseLocationByBarcode,
 } = require("../lib/sheets");
 
 function actionFromReq(req) {
@@ -39,6 +43,15 @@ function normalizeTrackedBox(raw = {}) {
     boxCode: String(raw.boxCode || raw.box_code || "").trim(),
     location: String(raw.location || "").trim(),
     items: itemsRaw.map(normalizeTrackedItem).filter((x) => x.barcode),
+  };
+}
+
+function normalizeCaseLocationInput(raw = {}) {
+  return {
+    barcode: String(raw.barcode || "").trim(),
+    name: String(raw.name || "").trim(),
+    rack: String(raw.rack || raw.stand || raw.shelfRack || "").trim(),
+    shelf: String(raw.shelf || raw.polka || "").trim(),
   };
 }
 
@@ -133,6 +146,32 @@ module.exports = async function handler(req, res) {
       return send(res, 500, { error: "Не удалось подобрать уникальный код коробки. Повторите попытку." });
     } catch (error) {
       return send(res, 500, { error: error.message || "Failed to generate box code" });
+    }
+  }
+
+  if (method === "GET" && action === "cases") {
+    try {
+      const items = await listCaseLocations({
+        search: req.query?.search || "",
+        barcode: req.query?.barcode || "",
+        rack: req.query?.rack || "",
+        limit: Number(req.query?.limit || 1000),
+        offset: Number(req.query?.offset || 0),
+      });
+      return send(res, 200, { items });
+    } catch (error) {
+      return send(res, 500, { error: error.message || "Failed to load case locations" });
+    }
+  }
+
+  if (method === "GET" && action === "find-case") {
+    try {
+      const barcode = String(req.query?.barcode || "").trim();
+      if (!barcode) return send(res, 400, { error: "barcode is required" });
+      const item = await findCaseLocationByBarcode(barcode);
+      return send(res, 200, { item });
+    } catch (error) {
+      return send(res, 500, { error: error.message || "Failed to find case" });
     }
   }
 
@@ -238,6 +277,52 @@ module.exports = async function handler(req, res) {
       });
     } catch (error) {
       return send(res, 400, { error: error.message || "Failed to create tracked box" });
+    }
+  }
+
+  if (method === "POST" && action === "case-upsert") {
+    try {
+      const body = parseJsonBody(req);
+      const item = normalizeCaseLocationInput(body);
+      if (!item.name) return send(res, 400, { error: "Нужно указать наименование чехла" });
+      if (!item.barcode) return send(res, 400, { error: "Нужно указать штрихкод" });
+      if (!item.rack) return send(res, 400, { error: "Нужно указать стеллаж" });
+      if (!item.shelf) return send(res, 400, { error: "Нужно указать полку" });
+      const saved = await upsertCaseLocation({
+        ...item,
+        updated_by: auth.user.email,
+      });
+      await appendMovement({
+        item_id: `CASE:${item.barcode}`,
+        delta: 1,
+        reason: "case_location_upsert",
+        user_email: auth.user.email,
+        created_at: new Date().toISOString(),
+      });
+      return send(res, 200, { ok: true, item: saved });
+    } catch (error) {
+      return send(res, 400, { error: error.message || "Failed to save case location" });
+    }
+  }
+
+  if (method === "POST" && action === "case-delete") {
+    try {
+      const body = parseJsonBody(req);
+      const barcode = String(body.barcode || "").trim();
+      if (!barcode) return send(res, 400, { error: "barcode is required" });
+      const removed = await deleteCaseLocationByBarcode(barcode);
+      if (removed.removed > 0) {
+        await appendMovement({
+          item_id: `CASE:${barcode}`,
+          delta: -removed.removed,
+          reason: "case_location_delete",
+          user_email: auth.user.email,
+          created_at: new Date().toISOString(),
+        });
+      }
+      return send(res, 200, { ok: true, removed: removed.removed });
+    } catch (error) {
+      return send(res, 500, { error: error.message || "Failed to delete case location" });
     }
   }
 

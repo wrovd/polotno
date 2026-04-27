@@ -65,11 +65,25 @@ const state = {
   },
   boxCatalog: [],
   boxTrackingEntries: [],
+  caseLocations: [],
   boxSearchResult: [],
   boxDraftItems: [],
+  boxesMode: "boxes",
   boxFilters: {
     search: "",
     location: "",
+  },
+  caseFilters: {
+    search: "",
+  },
+  boxKiosk: {
+    open: false,
+    mode: "idle",
+    barcode: "",
+    caseItem: null,
+    boxes: [],
+    selectedRack: "",
+    countdownTimer: null,
   },
   filmsFilters: {
     search: "",
@@ -96,6 +110,7 @@ const state = {
     adminUsers: 1,
     adminHistory: 1,
     boxTracked: 1,
+    cases: 1,
   },
   stats: {
     dateFrom: "",
@@ -399,6 +414,11 @@ const refs = {
   filmsGroupWithoutBtn: document.getElementById("filmsGroupWithoutBtn"),
   boxSearchInput: document.getElementById("boxSearchInput"),
   boxSearchBtn: document.getElementById("boxSearchBtn"),
+  openBoxKioskBtn: document.getElementById("openBoxKioskBtn"),
+  boxesSubTabBoxes: document.getElementById("boxesSubTabBoxes"),
+  boxesSubTabCases: document.getElementById("boxesSubTabCases"),
+  boxesSubPanelBoxes: document.getElementById("boxesSubPanelBoxes"),
+  boxesSubPanelCases: document.getElementById("boxesSubPanelCases"),
   boxCreateToggleBtn: document.getElementById("boxCreateToggleBtn"),
   boxCreatePanel: document.getElementById("boxCreatePanel"),
   boxCreateCloseBtn: document.getElementById("boxCreateCloseBtn"),
@@ -432,6 +452,30 @@ const refs = {
   closeBoxFoundBtn: document.getElementById("closeBoxFoundBtn"),
   boxFoundSummary: document.getElementById("boxFoundSummary"),
   boxFoundList: document.getElementById("boxFoundList"),
+  caseSearchInput: document.getElementById("caseSearchInput"),
+  caseLocationForm: document.getElementById("caseLocationForm"),
+  caseNameInput: document.getElementById("caseNameInput"),
+  caseBarcodeInput: document.getElementById("caseBarcodeInput"),
+  caseRackInput: document.getElementById("caseRackInput"),
+  caseShelfInput: document.getElementById("caseShelfInput"),
+  caseSaveBtn: document.getElementById("caseSaveBtn"),
+  caseLocationsList: document.getElementById("caseLocationsList"),
+  boxKioskView: document.getElementById("boxKioskView"),
+  boxKioskScanInput: document.getElementById("boxKioskScanInput"),
+  boxKioskIdle: document.getElementById("boxKioskIdle"),
+  boxKioskLoading: document.getElementById("boxKioskLoading"),
+  boxKioskFound: document.getElementById("boxKioskFound"),
+  boxKioskFoundBarcode: document.getElementById("boxKioskFoundBarcode"),
+  boxKioskFoundName: document.getElementById("boxKioskFoundName"),
+  boxKioskFoundLocation: document.getElementById("boxKioskFoundLocation"),
+  boxKioskRacks: document.getElementById("boxKioskRacks"),
+  boxKioskBoxScan: document.getElementById("boxKioskBoxScan"),
+  boxKioskPickedRack: document.getElementById("boxKioskPickedRack"),
+  boxKioskNotFound: document.getElementById("boxKioskNotFound"),
+  boxKioskNotFoundCount: document.getElementById("boxKioskNotFoundCount"),
+  boxKioskSuccess: document.getElementById("boxKioskSuccess"),
+  boxKioskSuccessCount: document.getElementById("boxKioskSuccessCount"),
+  boxKioskCloseBtn: document.getElementById("boxKioskCloseBtn"),
   chatSearchInput: document.getElementById("chatSearchInput"),
   chatCreateBtn: document.getElementById("chatCreateBtn"),
   chatListCreateBtn: document.getElementById("chatListCreateBtn"),
@@ -5443,6 +5487,277 @@ function openBoxFoundModal(boxes = [], barcode = "") {
   openSimpleModal(refs.boxFoundModal);
 }
 
+function setBoxesMode(mode) {
+  const next = mode === "cases" ? "cases" : "boxes";
+  state.boxesMode = next;
+  const isCases = next === "cases";
+  refs.boxesSubTabBoxes?.classList.toggle("is-active", !isCases);
+  refs.boxesSubTabCases?.classList.toggle("is-active", isCases);
+  refs.boxesSubTabBoxes?.setAttribute("aria-selected", isCases ? "false" : "true");
+  refs.boxesSubTabCases?.setAttribute("aria-selected", isCases ? "true" : "false");
+  if (refs.boxesSubPanelBoxes) {
+    refs.boxesSubPanelBoxes.hidden = isCases;
+    refs.boxesSubPanelBoxes.classList.toggle("is-active", !isCases);
+  }
+  if (refs.boxesSubPanelCases) {
+    refs.boxesSubPanelCases.hidden = !isCases;
+    refs.boxesSubPanelCases.classList.toggle("is-active", isCases);
+  }
+  if (refs.boxCreateToggleBtn) {
+    refs.boxCreateToggleBtn.querySelector("span:last-child").textContent = isCases ? "Добавить" : "Создать";
+  }
+  hapticSelection();
+}
+
+function filteredCaseLocations() {
+  const search = String(state.caseFilters.search || "").trim().toLowerCase();
+  if (!search) return state.caseLocations || [];
+  return (state.caseLocations || []).filter((item) => {
+    return (
+      String(item.name || "").toLowerCase().includes(search) ||
+      String(item.barcode || "").toLowerCase().includes(search) ||
+      String(item.rack || "").toLowerCase().includes(search) ||
+      String(item.shelf || "").toLowerCase().includes(search)
+    );
+  });
+}
+
+function renderCaseLocationsList() {
+  if (!refs.caseLocationsList) return;
+  const items = filteredCaseLocations();
+  refs.caseLocationsList.innerHTML = "";
+  if (!items.length) {
+    refs.caseLocationsList.innerHTML = '<p class="muted">Пока нет чехлов с указанным местом.</p>';
+    return;
+  }
+  const page = paginateList(items, "cases");
+  page.items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "case-location-card";
+    card.innerHTML = `
+      <div class="case-location-main">
+        <div class="case-location-avatar">${escapeText(String(item.name || "Ч").trim().charAt(0) || "Ч")}</div>
+        <div>
+          <p class="case-location-title">${escapeText(item.name || "Чехол")}</p>
+          <div class="box-tracked-meta"><span>${escapeText(item.barcode || "")}</span></div>
+        </div>
+      </div>
+      <div class="case-location-place">Стеллаж ${escapeText(item.rack || "—")}, полка ${escapeText(item.shelf || "—")}</div>
+      <button class="box-delete-btn" type="button" data-case-delete="${escapeText(item.barcode || "")}">
+        ${iconSpan("trash")}<span>Удалить</span>
+      </button>
+    `;
+    refs.caseLocationsList.appendChild(card);
+  });
+}
+
+async function findCaseByBarcode(barcode) {
+  const needle = String(barcode || "").trim();
+  if (!needle) return null;
+  const data = await apiRequest(`/api/box-search?action=find-case&barcode=${encodeURIComponent(needle)}`);
+  return data?.item || null;
+}
+
+async function saveCaseLocation() {
+  if (!state.token) throw new Error("Требуется вход в систему");
+  if (!canAdmin()) throw new Error("Только для администратора");
+  const payload = {
+    name: String(refs.caseNameInput?.value || "").trim(),
+    barcode: String(refs.caseBarcodeInput?.value || "").trim(),
+    rack: String(refs.caseRackInput?.value || "").trim(),
+    shelf: String(refs.caseShelfInput?.value || "").trim(),
+  };
+  if (!payload.name) throw new Error("Укажите наименование чехла");
+  if (!payload.barcode) throw new Error("Укажите штрихкод");
+  if (!payload.rack) throw new Error("Укажите стеллаж");
+  if (!payload.shelf) throw new Error("Укажите полку");
+  await apiRequest("/api/box-search?action=case-upsert", {
+    method: "POST",
+    body: payload,
+  });
+  refs.caseLocationForm?.reset();
+  await loadBoxSearchData();
+  showToast("Чехол сохранен");
+}
+
+async function deleteCaseLocation(barcode) {
+  const needle = String(barcode || "").trim();
+  if (!needle) return;
+  await apiRequest("/api/box-search?action=case-delete", {
+    method: "POST",
+    body: { barcode: needle },
+  });
+  await loadBoxSearchData();
+  showToast("Чехол удален из поиска");
+}
+
+function clearBoxKioskCountdown() {
+  if (state.boxKiosk.countdownTimer) {
+    clearInterval(state.boxKiosk.countdownTimer);
+    state.boxKiosk.countdownTimer = null;
+  }
+}
+
+function showBoxKioskState(mode) {
+  state.boxKiosk.mode = mode;
+  [
+    refs.boxKioskIdle,
+    refs.boxKioskLoading,
+    refs.boxKioskFound,
+    refs.boxKioskBoxScan,
+    refs.boxKioskNotFound,
+    refs.boxKioskSuccess,
+  ].forEach((node) => node?.classList.add("is-hidden"));
+  const map = {
+    idle: refs.boxKioskIdle,
+    loading: refs.boxKioskLoading,
+    found: refs.boxKioskFound,
+    boxScan: refs.boxKioskBoxScan,
+    notFound: refs.boxKioskNotFound,
+    success: refs.boxKioskSuccess,
+  };
+  map[mode]?.classList.remove("is-hidden");
+  requestAnimationFrame(() => refs.boxKioskScanInput?.focus());
+}
+
+function startBoxKioskCountdown(kind, seconds = 5) {
+  clearBoxKioskCountdown();
+  let left = seconds;
+  const target = kind === "success" ? refs.boxKioskSuccessCount : refs.boxKioskNotFoundCount;
+  if (target) target.textContent = String(left);
+  state.boxKiosk.countdownTimer = setInterval(() => {
+    left -= 1;
+    if (target) target.textContent = String(Math.max(0, left));
+    if (left <= 0) {
+      clearBoxKioskCountdown();
+      showBoxKioskState("idle");
+    }
+  }, 1000);
+}
+
+function openBoxKiosk() {
+  state.boxKiosk.open = true;
+  clearBoxKioskCountdown();
+  refs.boxKioskView?.classList.remove("is-hidden");
+  document.body.classList.add("box-kiosk-open");
+  showBoxKioskState("idle");
+}
+
+function closeBoxKiosk() {
+  state.boxKiosk.open = false;
+  clearBoxKioskCountdown();
+  refs.boxKioskView?.classList.add("is-hidden");
+  document.body.classList.remove("box-kiosk-open");
+}
+
+function rackNumberFromText(value) {
+  const text = String(value || "").trim();
+  const match = text.match(/\d+/);
+  return match ? match[0] : text;
+}
+
+function renderBoxKioskFound({ barcode, caseItem, boxes }) {
+  const safeBoxes = Array.isArray(boxes) ? boxes : [];
+  const firstBoxItem = safeBoxes.flatMap((box) => box.items || [])[0] || {};
+  const name = String(caseItem?.name || firstBoxItem.name || "Товар найден").trim();
+  const rack = String(caseItem?.rack || "").trim();
+  const shelf = String(caseItem?.shelf || "").trim();
+  if (refs.boxKioskFoundBarcode) refs.boxKioskFoundBarcode.textContent = String(barcode || "");
+  if (refs.boxKioskFoundName) refs.boxKioskFoundName.textContent = name;
+  if (refs.boxKioskFoundLocation) {
+    refs.boxKioskFoundLocation.textContent = rack || shelf ? `Стеллаж ${rack || "—"}, полка ${shelf || "—"}` : "Место чехла не указано";
+    refs.boxKioskFoundLocation.hidden = !(rack || shelf);
+  }
+  const racks = [...new Set(safeBoxes.map((box) => rackNumberFromText(box.location)).filter(Boolean))];
+  if (refs.boxKioskRacks) {
+    refs.boxKioskRacks.innerHTML = "";
+    if (!racks.length) {
+      refs.boxKioskRacks.innerHTML = '<p class="box-kiosk-muted">Коробок с этим товаром сейчас нет.</p>';
+    } else {
+      racks.forEach((rackNo) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "box-kiosk-rack";
+        btn.textContent = rackNo;
+        btn.dataset.kioskRack = rackNo;
+        refs.boxKioskRacks.appendChild(btn);
+      });
+    }
+  }
+  state.boxKiosk.barcode = String(barcode || "");
+  state.boxKiosk.caseItem = caseItem || null;
+  state.boxKiosk.boxes = safeBoxes;
+  state.boxKiosk.selectedRack = "";
+  showBoxKioskState("found");
+}
+
+function showBoxKioskNotFound() {
+  showBoxKioskState("notFound");
+  startBoxKioskCountdown("notFound", 5);
+}
+
+function showBoxKioskSuccess() {
+  showBoxKioskState("success");
+  startBoxKioskCountdown("success", 5);
+}
+
+function extractBoxCodeFromScan(rawValue) {
+  const text = String(rawValue || "").trim();
+  if (!text) return "";
+  try {
+    const payload = JSON.parse(text);
+    return String(payload.box_code || payload.boxCode || payload.id || "").trim();
+  } catch {
+    return text;
+  }
+}
+
+async function processBoxKioskScanValue(rawValue) {
+  const value = String(rawValue || "").trim();
+  if (!value) return;
+  if (state.boxKiosk.mode === "boxScan") {
+    const boxCode = extractBoxCodeFromScan(value);
+    const selectedRack = String(state.boxKiosk.selectedRack || "").trim();
+    const allowed = (state.boxKiosk.boxes || []).some((box) => {
+      const sameBox = String(box.box_code || "") === boxCode;
+      const sameRack = !selectedRack || rackNumberFromText(box.location) === selectedRack;
+      return sameBox && sameRack;
+    });
+    if (!allowed) {
+      showBoxKioskNotFound();
+      return;
+    }
+    showBoxKioskState("loading");
+    await removeBoxFromTracking(boxCode);
+    showBoxKioskSuccess();
+    return;
+  }
+
+  const barcode = extractBarcodeFromScan(value);
+  if (!barcode) {
+    showBoxKioskNotFound();
+    return;
+  }
+  clearBoxKioskCountdown();
+  showBoxKioskState("loading");
+  try {
+    const [caseResult, boxesResult] = await Promise.allSettled([
+      findCaseByBarcode(barcode),
+      findBoxByBarcode(barcode),
+    ]);
+    const caseItem = caseResult.status === "fulfilled" ? caseResult.value : null;
+    const boxes = boxesResult.status === "fulfilled" ? boxesResult.value : [];
+    if (!caseItem && !boxes.length) {
+      showBoxKioskNotFound();
+      return;
+    }
+    renderBoxKioskFound({ barcode, caseItem, boxes });
+    hapticSuccess();
+  } catch {
+    showBoxKioskNotFound();
+  }
+}
+
 function closeBoxFoundModal() {
   closeSimpleModal(refs.boxFoundModal);
 }
@@ -5548,24 +5863,31 @@ async function loadBoxSearchData() {
   if (!state.token) {
     state.boxCatalog = [];
     state.boxTrackingEntries = [];
+    state.caseLocations = [];
     state.boxSearchResult = [];
     state.pages.boxTracked = 1;
+    state.pages.cases = 1;
     renderBoxTrackedList();
+    renderCaseLocationsList();
     renderBoxScanResult();
     renderBoxDraftItems();
     renderHomeSummary();
     return;
   }
 
-  const [catalogResult, boxesResult] = await Promise.allSettled([
+  const [catalogResult, boxesResult, casesResult] = await Promise.allSettled([
     apiRequest("/api/box-search?action=catalog&limit=5000"),
     apiRequest("/api/box-search?action=boxes&limit=5000"),
+    apiRequest("/api/box-search?action=cases&limit=5000"),
   ]);
   state.boxCatalog = catalogResult.status === "fulfilled" ? catalogResult.value.items || [] : [];
   state.boxTrackingEntries = boxesResult.status === "fulfilled" ? boxesResult.value.entries || [] : [];
+  state.caseLocations = casesResult.status === "fulfilled" ? casesResult.value.items || [] : [];
   state.pages.boxTracked = 1;
+  state.pages.cases = 1;
   renderBoxCatalogSuggestions();
   renderBoxTrackedList();
+  renderCaseLocationsList();
   renderBoxScanResult(state.boxSearchResult);
   renderBoxDraftItems();
   renderHomeSummary();
@@ -6110,18 +6432,23 @@ async function processBoxSearchScanValue(rawValue) {
     return false;
   }
 
-  setScanStatus("Ищем товар в коробках...", { busy: true });
-  const boxes = await findBoxByBarcode(barcode);
-  if (!boxes.length) {
+  setScanStatus("Ищем товар в коробках и чехлах...", { busy: true });
+  const [caseResult, boxesResult] = await Promise.allSettled([
+    findCaseByBarcode(barcode),
+    findBoxByBarcode(barcode),
+  ]);
+  const caseItem = caseResult.status === "fulfilled" ? caseResult.value : null;
+  const boxes = boxesResult.status === "fulfilled" ? boxesResult.value : [];
+  if (!boxes.length && !caseItem) {
     return false;
   }
 
   state.boxSearchResult = boxes;
   renderBoxScanResult(boxes);
-  setScanStatus(`Найдено коробок: ${boxes.length}`);
+  setScanStatus(caseItem ? `Чехол: стеллаж ${caseItem.rack}, полка ${caseItem.shelf}` : `Найдено коробок: ${boxes.length}`);
   closeScanModal();
-  openBoxFoundModal(boxes, barcode);
-  showToast(`Найдено коробок: ${boxes.length}`);
+  if (boxes.length) openBoxFoundModal(boxes, barcode);
+  showToast(caseItem ? `Чехол: стеллаж ${caseItem.rack}, полка ${caseItem.shelf}` : `Найдено коробок: ${boxes.length}`);
   hapticSuccess();
   return true;
 }
@@ -6168,8 +6495,8 @@ async function processScanValue(rawValue) {
   if (state.scanContext === "box-search") {
     const handledBox = await processBoxSearchScanValue(rawValue);
     if (handledBox) return;
-    setScanStatus("Товар не найден в коробках.");
-    showToast("Товар не найден в коробках");
+    setScanStatus("Товар не найден в коробках и чехлах.");
+    showToast("Товар не найден в коробках и чехлах");
     hapticWarning();
     return;
   }
@@ -8261,7 +8588,16 @@ if (refs.boxSearchBtn) refs.boxSearchBtn.addEventListener("click", () => {
     hapticWarning();
   });
 });
+if (refs.boxesSubTabBoxes) refs.boxesSubTabBoxes.addEventListener("click", () => setBoxesMode("boxes"));
+if (refs.boxesSubTabCases) refs.boxesSubTabCases.addEventListener("click", () => setBoxesMode("cases"));
+if (refs.openBoxKioskBtn) refs.openBoxKioskBtn.addEventListener("click", openBoxKiosk);
 if (refs.boxCreateToggleBtn) refs.boxCreateToggleBtn.addEventListener("click", () => {
+  if (state.boxesMode === "cases") {
+    refs.caseNameInput?.focus();
+    refs.boxesSubPanelCases?.scrollIntoView({ behavior: "smooth", block: "start" });
+    hapticSelection();
+    return;
+  }
   refs.boxCreatePanel?.classList.toggle("is-hidden");
   if (refs.boxCreatePanel && !refs.boxCreatePanel.classList.contains("is-hidden")) {
     refs.boxCreatePanel.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -8280,6 +8616,45 @@ if (refs.boxSearchInput) refs.boxSearchInput.addEventListener("keydown", (event)
     showToast(error.message);
     hapticWarning();
   });
+});
+if (refs.caseSearchInput) refs.caseSearchInput.addEventListener("input", () => {
+  state.caseFilters.search = String(refs.caseSearchInput?.value || "").trim().toLowerCase();
+  state.pages.cases = 1;
+  renderCaseLocationsList();
+});
+if (refs.caseLocationForm) refs.caseLocationForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!refs.caseLocationForm.reportValidity()) return;
+  const submitBtn = event.submitter instanceof HTMLButtonElement ? event.submitter : refs.caseSaveBtn;
+  try {
+    await runDbAction(() => saveCaseLocation(), {
+      button: submitBtn,
+      message: "Сохраняем чехол...",
+    });
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.caseLocationsList) refs.caseLocationsList.addEventListener("click", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const btn = target.closest("button[data-case-delete]");
+  if (!(btn instanceof HTMLButtonElement)) return;
+  const barcode = String(btn.getAttribute("data-case-delete") || "").trim();
+  if (!barcode) return;
+  if (!window.confirm("Удалить чехол из поиска?")) return;
+  try {
+    await runDbAction(() => deleteCaseLocation(barcode), {
+      button: btn,
+      message: "Удаляем чехол...",
+    });
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
 });
 if (refs.boxApplyFiltersBtn) refs.boxApplyFiltersBtn.addEventListener("click", () => {
   applyBoxFiltersFromInputs();
@@ -8408,6 +8783,24 @@ if (refs.boxScanBarcodeBtn) refs.boxScanBarcodeBtn.addEventListener("click", asy
   openScanModal();
   await startScanner();
 });
+if (refs.boxKioskCloseBtn) refs.boxKioskCloseBtn.addEventListener("click", closeBoxKiosk);
+if (refs.boxKioskScanInput) {
+  refs.boxKioskScanInput.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    const value = String(refs.boxKioskScanInput?.value || "").trim();
+    if (refs.boxKioskScanInput) refs.boxKioskScanInput.value = "";
+    processBoxKioskScanValue(value).catch(() => showBoxKioskNotFound());
+  });
+}
+if (refs.boxKioskRacks) refs.boxKioskRacks.addEventListener("click", (event) => {
+  const target = event.target instanceof HTMLElement ? event.target.closest("[data-kiosk-rack]") : null;
+  if (!(target instanceof HTMLElement)) return;
+  const rack = String(target.getAttribute("data-kiosk-rack") || "").trim();
+  state.boxKiosk.selectedRack = rack;
+  if (refs.boxKioskPickedRack) refs.boxKioskPickedRack.textContent = rack || "—";
+  showBoxKioskState("boxScan");
+});
 if (refs.boxTrackedList) refs.boxTrackedList.addEventListener("click", async (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
@@ -8502,6 +8895,7 @@ if (refs.boxFoundList) refs.boxFoundList.addEventListener("click", async (event)
       message: "Удаляем коробку из отслеживания...",
     });
     closeBoxFoundModal();
+    closeBoxKiosk();
     hapticSuccess();
   } catch (error) {
     showToast(error.message);
@@ -8794,6 +9188,7 @@ window.addEventListener("resize", () => {
   applyPrintAccess();
   renderTable();
   renderFilmsTable(filteredFilms());
+  renderCaseLocationsList();
 });
 
 setAuthTab("login");
@@ -8820,7 +9215,14 @@ startHomeNotificationsPolling();
 refreshHomeNotifications(true).catch(() => {});
 
 if (isAuthenticated()) {
-  loadAuthorizedWorkspaceData();
+  loadAuthorizedWorkspaceData().then(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tablet") === "boxes" || window.location.hash === "#tablet-boxes") {
+      setModuleView("inventory");
+      setInventoryTab("box-search");
+      openBoxKiosk();
+    }
+  });
 } else {
   setTimeout(() => refs.gateLoginEmail?.focus(), 60);
 }
