@@ -468,8 +468,10 @@ const refs = {
   boxKioskFoundBarcode: document.getElementById("boxKioskFoundBarcode"),
   boxKioskFoundName: document.getElementById("boxKioskFoundName"),
   boxKioskFoundLocation: document.getElementById("boxKioskFoundLocation"),
+  boxKioskFoundCount: document.getElementById("boxKioskFoundCount"),
   boxKioskRacks: document.getElementById("boxKioskRacks"),
   boxKioskBoxScan: document.getElementById("boxKioskBoxScan"),
+  boxKioskBoxScanCount: document.getElementById("boxKioskBoxScanCount"),
   boxKioskPickedRack: document.getElementById("boxKioskPickedRack"),
   boxKioskNotFound: document.getElementById("boxKioskNotFound"),
   boxKioskNotFoundCount: document.getElementById("boxKioskNotFoundCount"),
@@ -5401,6 +5403,28 @@ function applyCatalogSelectionFromSearch() {
   return true;
 }
 
+function applyCaseCatalogSelectionFromSearch() {
+  const typed = String(refs.caseNameInput?.value || "").trim().toLowerCase();
+  if (!typed) return false;
+  const found = state.boxCatalog.find((row) => String(row.name || "").trim().toLowerCase() === typed)
+    || state.boxCatalog.find((row) => String(row.barcode || "").trim() === typed);
+  if (!found) return false;
+  if (refs.caseNameInput) refs.caseNameInput.value = String(found.name || "");
+  if (refs.caseBarcodeInput && !String(refs.caseBarcodeInput.value || "").trim()) {
+    refs.caseBarcodeInput.value = String(found.barcode || "");
+  }
+  return true;
+}
+
+function applyCaseNameFromBarcode() {
+  const barcode = String(refs.caseBarcodeInput?.value || "").trim();
+  if (!barcode) return false;
+  const name = findCatalogNameByBarcode(barcode);
+  if (!name) return false;
+  if (refs.caseNameInput && !String(refs.caseNameInput.value || "").trim()) refs.caseNameInput.value = name;
+  return true;
+}
+
 function renderBoxTrackedList() {
   if (!refs.boxTrackedList) return;
   const groups = groupedBoxEntries(filteredBoxEntries());
@@ -5561,9 +5585,12 @@ async function findCaseByBarcode(barcode) {
 async function saveCaseLocation() {
   if (!state.token) throw new Error("Требуется вход в систему");
   if (!canAdmin()) throw new Error("Только для администратора");
+  applyCaseCatalogSelectionFromSearch();
+  applyCaseNameFromBarcode();
+  const barcode = String(refs.caseBarcodeInput?.value || "").trim();
   const payload = {
-    name: String(refs.caseNameInput?.value || "").trim(),
-    barcode: String(refs.caseBarcodeInput?.value || "").trim(),
+    name: String(refs.caseNameInput?.value || "").trim() || findCatalogNameByBarcode(barcode),
+    barcode,
     rack: String(refs.caseRackInput?.value || "").trim(),
     shelf: String(refs.caseShelfInput?.value || "").trim(),
   };
@@ -5623,7 +5650,13 @@ function showBoxKioskState(mode) {
 function startBoxKioskCountdown(kind, seconds = 5) {
   clearBoxKioskCountdown();
   let left = seconds;
-  const target = kind === "success" ? refs.boxKioskSuccessCount : refs.boxKioskNotFoundCount;
+  const targetMap = {
+    found: refs.boxKioskFoundCount,
+    boxScan: refs.boxKioskBoxScanCount,
+    notFound: refs.boxKioskNotFoundCount,
+    success: refs.boxKioskSuccessCount,
+  };
+  const target = targetMap[kind] || refs.boxKioskNotFoundCount;
   if (target) target.textContent = String(left);
   state.boxKiosk.countdownTimer = setInterval(() => {
     left -= 1;
@@ -5689,6 +5722,7 @@ function renderBoxKioskFound({ barcode, caseItem, boxes }) {
   state.boxKiosk.boxes = safeBoxes;
   state.boxKiosk.selectedRack = "";
   showBoxKioskState("found");
+  startBoxKioskCountdown("found", 30);
 }
 
 function showBoxKioskNotFound() {
@@ -5716,6 +5750,7 @@ async function processBoxKioskScanValue(rawValue) {
   const value = String(rawValue || "").trim();
   if (!value) return;
   if (state.boxKiosk.mode === "boxScan") {
+    clearBoxKioskCountdown();
     const boxCode = extractBoxCodeFromScan(value);
     const selectedRack = String(state.boxKiosk.selectedRack || "").trim();
     const allowed = (state.boxKiosk.boxes || []).some((box) => {
@@ -8734,6 +8769,12 @@ if (refs.boxPrintCodeBtn) refs.boxPrintCodeBtn.addEventListener("click", async (
 if (refs.boxCatalogSearchInput) refs.boxCatalogSearchInput.addEventListener("input", () => {
   applyCatalogSelectionFromSearch();
 });
+if (refs.caseNameInput) refs.caseNameInput.addEventListener("input", () => {
+  applyCaseCatalogSelectionFromSearch();
+});
+if (refs.caseBarcodeInput) refs.caseBarcodeInput.addEventListener("change", () => {
+  applyCaseNameFromBarcode();
+});
 if (refs.boxAddItemBtn) refs.boxAddItemBtn.addEventListener("click", () => {
   applyCatalogSelectionFromSearch();
   const barcode = String(refs.boxItemBarcodeInput?.value || "").trim();
@@ -8800,6 +8841,7 @@ if (refs.boxKioskRacks) refs.boxKioskRacks.addEventListener("click", (event) => 
   state.boxKiosk.selectedRack = rack;
   if (refs.boxKioskPickedRack) refs.boxKioskPickedRack.textContent = rack || "—";
   showBoxKioskState("boxScan");
+  startBoxKioskCountdown("boxScan", 30);
 });
 if (refs.boxTrackedList) refs.boxTrackedList.addEventListener("click", async (event) => {
   const target = event.target;

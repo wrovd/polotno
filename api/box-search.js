@@ -284,6 +284,10 @@ module.exports = async function handler(req, res) {
     try {
       const body = parseJsonBody(req);
       const item = normalizeCaseLocationInput(body);
+      if (!item.name && item.barcode) {
+        const known = await findBoxCatalogByBarcode(item.barcode);
+        item.name = String(known?.name || "").trim();
+      }
       if (!item.name) return send(res, 400, { error: "Нужно указать наименование чехла" });
       if (!item.barcode) return send(res, 400, { error: "Нужно указать штрихкод" });
       if (!item.rack) return send(res, 400, { error: "Нужно указать стеллаж" });

@@ -2199,6 +2199,240 @@ button:active {
     linear-gradient(#000 0 0) right bottom/10px 10px no-repeat;
 }
 
+.box-kiosk-view * {
+  box-sizing: border-box;
+}
+
+.box-kiosk-state {
+  overflow: hidden;
+}
+
+.box-kiosk-idle {
+  padding-inline: clamp(28px, 6vw, 92px);
+}
+
+.box-kiosk-idle h2 {
+  max-width: 1020px;
+  font-size: clamp(42px, 5vw, 72px);
+  line-height: 1.04;
+  text-wrap: balance;
+}
+
+.box-kiosk-idle p {
+  max-width: 980px;
+  font-size: clamp(28px, 3.6vw, 46px);
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+.box-kiosk-loading {
+  min-height: 100%;
+  gap: 34px;
+  padding: 0 40px;
+}
+
+.box-kiosk-loading h2 {
+  font-size: clamp(42px, 5.2vw, 72px);
+  text-align: center;
+}
+
+.box-kiosk-spinner {
+  flex: 0 0 auto;
+}
+
+.box-kiosk-chevrons {
+  width: 96px;
+  height: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.box-kiosk-chevrons span {
+  width: 62px;
+  height: 62px;
+  border-right: 10px solid #000;
+  border-bottom: 10px solid #000;
+  border-radius: 6px;
+  transform: rotate(45deg);
+  margin-top: -24px;
+}
+
+.box-kiosk-chevrons span:first-child {
+  margin-top: 0;
+}
+
+.box-kiosk-chevrons-small {
+  width: 76px;
+  height: 76px;
+  margin: 28px 0 0 128px;
+}
+
+.box-kiosk-chevrons-small span {
+  width: 50px;
+  height: 50px;
+  border-width: 8px;
+  margin-top: -20px;
+}
+
+.box-kiosk-barcode {
+  width: clamp(180px, 18vw, 250px);
+  height: clamp(76px, 8vw, 104px);
+}
+
+.box-kiosk-found,
+.box-kiosk-boxscan {
+  padding-right: clamp(210px, 18vw, 300px);
+}
+
+.box-kiosk-found::after,
+.box-kiosk-found::before,
+.box-kiosk-boxscan::after,
+.box-kiosk-boxscan::before {
+  content: none;
+  display: none;
+}
+
+.box-kiosk-top-countdown {
+  position: fixed;
+  top: clamp(28px, 4vw, 54px);
+  right: clamp(34px, 4.4vw, 64px);
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  color: #d74b05;
+  font-weight: 900;
+  line-height: 1.08;
+}
+
+.box-kiosk-top-countdown strong {
+  width: clamp(64px, 6vw, 84px);
+  height: clamp(64px, 6vw, 84px);
+  border-radius: 50%;
+  border: 6px solid rgba(215, 75, 5, 0.5);
+  color: #d74b05;
+  background: #f7f8fa;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(34px, 4vw, 48px);
+}
+
+.box-kiosk-top-countdown span {
+  width: 158px;
+  font-size: clamp(18px, 1.9vw, 26px);
+}
+
+.box-kiosk-found h2 {
+  font-size: clamp(42px, 4.5vw, 66px);
+}
+
+.box-kiosk-found h3 {
+  max-width: min(840px, 62vw);
+  font-size: clamp(34px, 4vw, 56px);
+}
+
+.box-kiosk-found h4 {
+  margin-top: clamp(48px, 8vh, 86px);
+  max-width: 640px;
+  font-size: clamp(30px, 3.4vw, 44px);
+}
+
+.box-kiosk-location-pill {
+  min-height: 88px;
+  min-width: min(430px, 70vw);
+  margin-top: clamp(28px, 5vh, 48px);
+  font-size: clamp(30px, 3.6vw, 46px);
+}
+
+.box-kiosk-rack {
+  width: clamp(72px, 7.4vw, 92px);
+  height: clamp(72px, 7.4vw, 92px);
+}
+
+.box-kiosk-message {
+  padding: 40px;
+}
+
+.box-kiosk-message-line h2 {
+  font-size: clamp(42px, 5.4vw, 80px);
+  text-align: center;
+}
+
+.box-kiosk-boxscan {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 500px);
+  align-items: center;
+  gap: clamp(36px, 6vw, 90px);
+  padding-top: clamp(28px, 5vh, 56px);
+  padding-bottom: clamp(28px, 5vh, 56px);
+}
+
+.box-kiosk-boxscan h2 {
+  margin: 0;
+  max-width: 790px;
+  font-size: clamp(46px, 6vw, 82px);
+  line-height: 1.08;
+}
+
+.box-kiosk-boxscan aside {
+  margin-top: 0;
+  align-self: center;
+}
+
+.box-kiosk-boxscan aside h3 {
+  font-size: clamp(34px, 3.8vw, 54px);
+}
+
+.box-kiosk-boxscan aside p {
+  max-width: 440px;
+  font-size: clamp(18px, 1.8vw, 25px);
+  line-height: 1.16;
+}
+
+.box-kiosk-rack-picked {
+  width: clamp(74px, 7vw, 96px);
+  height: clamp(74px, 7vw, 96px);
+  font-size: clamp(38px, 4.2vw, 58px);
+}
+
+.box-kiosk-box-icon {
+  width: clamp(220px, 26vw, 360px);
+  height: clamp(230px, 28vw, 390px);
+  margin: clamp(40px, 6vh, 78px) 0 0 clamp(20px, 5vw, 96px);
+}
+
+.box-kiosk-box-icon .box-lid {
+  left: 16%;
+  top: 0;
+  width: 72%;
+  height: 24%;
+  border-radius: 8px;
+  transform: skewY(-18deg);
+}
+
+.box-kiosk-box-icon .box-body {
+  left: 10%;
+  top: 28%;
+  width: 78%;
+  height: 58%;
+  border-radius: 18px 18px 62px 62px;
+}
+
+.box-kiosk-box-icon .box-qr {
+  left: 18%;
+  bottom: 18%;
+  width: clamp(58px, 6vw, 82px);
+  height: clamp(58px, 6vw, 82px);
+  border-radius: 18px;
+}
+
+.box-kiosk-close {
+  z-index: 4;
+}
+
 .films-head-row {
   display: flex;
   align-items: center;

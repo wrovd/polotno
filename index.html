@@ -920,7 +920,7 @@
                   </div>
                 </header>
                 <form class="stock-form films-inline-form" id="caseLocationForm" novalidate>
-                  <input id="caseNameInput" type="text" placeholder="Наименование чехла" required />
+                  <input id="caseNameInput" type="text" placeholder="Наименование чехла" list="boxCatalogOptions" autocomplete="off" required />
                   <div class="history-filters">
                     <input id="caseBarcodeInput" type="text" placeholder="Штрихкод" required />
                     <input id="caseRackInput" type="text" placeholder="Стеллаж, например 7" required />
@@ -958,6 +958,10 @@
             <div class="box-kiosk-spinner" aria-hidden="true"></div>
           </div>
           <div class="box-kiosk-state box-kiosk-found is-hidden" id="boxKioskFound">
+            <div class="box-kiosk-top-countdown">
+              <strong id="boxKioskFoundCount">30</strong>
+              <span>Закроем окно<br />самостоятельно</span>
+            </div>
             <div class="box-kiosk-found-head">
               <h2>Товар найден</h2>
               <span class="box-kiosk-barcode-pill" id="boxKioskFoundBarcode">0000</span>
@@ -968,6 +972,10 @@
             <div class="box-kiosk-racks" id="boxKioskRacks"></div>
           </div>
           <div class="box-kiosk-state box-kiosk-boxscan is-hidden" id="boxKioskBoxScan">
+            <div class="box-kiosk-top-countdown">
+              <strong id="boxKioskBoxScanCount">30</strong>
+              <span>Закроем окно<br />самостоятельно</span>
+            </div>
             <div>
               <h2>Отсканируйте QR-код<br />на коробке</h2>
               <div class="box-kiosk-box-icon" aria-hidden="true">
