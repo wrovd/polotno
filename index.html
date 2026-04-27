@@ -1182,141 +1182,244 @@
       </section>
 
       <section id="settingsView" class="view">
-        <section class="panel nav-panel">
-          <button class="primary-btn full btn-with-icon" id="settingsQrConfirmBtn" type="button">
-            <span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span><span>Подтвердить вход по QR</span>
-          </button>
-          <div class="segmented">
-            <button class="seg-btn btn-with-icon" id="settingsBackBtn" type="button">
+        <section class="settings-page">
+          <header class="settings-page-head">
+            <h2>Настройки</h2>
+            <button class="settings-qr-btn btn-with-icon" id="settingsQrConfirmBtn" type="button">
+              <span class="btn-icon" aria-hidden="true"><svg><use href="#i-camera"></use></svg></span><span>QR</span>
+            </button>
+            <button class="settings-back-link btn-with-icon" id="settingsBackBtn" type="button">
               <span class="btn-icon" aria-hidden="true"><svg><use href="#i-home"></use></svg></span><span>Назад</span>
             </button>
-            <div class="seg-btn active btn-with-icon" aria-hidden="true">
-              <span class="btn-icon" aria-hidden="true"><svg><use href="#i-toolbox"></use></svg></span><span>Настройки профиля</span>
-            </div>
-          </div>
-        </section>
+          </header>
 
-        <section class="layout-grid settings-layout">
-          <section class="panel panel-collapsible">
-            <div class="section-head">
-              <h3>Профиль пользователя</h3>
-              <p>Изменяйте личные данные самостоятельно, без администратора.</p>
-            </div>
-            <form class="stock-form" id="settingsForm" novalidate>
-              <label>
-                Имя
+          <nav class="settings-tabs" id="settingsTabs" aria-label="Вкладки настроек">
+            <button class="settings-tab-btn is-active btn-with-icon" id="settingsTabProfile" type="button">
+              <span class="btn-icon" aria-hidden="true"><svg><use href="#i-user"></use></svg></span><span>Профиль</span>
+            </button>
+            <button class="settings-tab-btn btn-with-icon" id="settingsTabNotifications" type="button">
+              <span class="btn-icon" aria-hidden="true"><svg><use href="#i-bell"></use></svg></span><span>Уведомления</span>
+            </button>
+            <button class="settings-tab-btn btn-with-icon admin-only" id="settingsTabAdmin" type="button">
+              <span class="btn-icon" aria-hidden="true"><svg><use href="#i-toolbox"></use></svg></span><span>Админка</span>
+            </button>
+          </nav>
+
+          <section class="settings-pane is-active" id="settingsPaneProfile">
+            <article class="settings-card settings-profile-card">
+              <div class="settings-profile-avatar" id="settingsProfileAvatar">A</div>
+              <div class="settings-profile-meta">
+                <p class="settings-profile-name" id="settingsProfileName">Пользователь</p>
+                <p class="settings-profile-email" id="settingsProfileEmail">name@company.com</p>
+                <span class="settings-role-badge" id="settingsProfileRole">staff</span>
+              </div>
+            </article>
+
+            <form class="settings-card settings-profile-form" id="settingsForm" novalidate>
+              <label class="settings-input-row">
+                <span>Имя</span>
                 <input type="text" id="settingsFirstName" placeholder="Имя" required />
               </label>
-              <label>
-                Фамилия
+              <label class="settings-input-row">
+                <span>Фамилия</span>
                 <input type="text" id="settingsLastName" placeholder="Фамилия" />
               </label>
-              <label>
-                Email
+              <label class="settings-input-row">
+                <span>Email</span>
                 <input type="email" id="settingsEmail" placeholder="name@company.com" required />
               </label>
-              <label>
-                Telegram Chat ID
+              <label class="settings-input-row">
+                <span>Telegram Chat ID</span>
                 <input type="text" id="settingsTelegramChatId" placeholder="123456789" />
               </label>
-              <label>
-                Новый пароль
+              <label class="settings-input-row">
+                <span>Новый пароль</span>
                 <input type="password" id="settingsPassword" placeholder="Оставьте пустым, чтобы не менять" minlength="6" />
               </label>
-              <button class="primary-btn full btn-with-icon" type="submit">
-                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Сохранить настройки</span>
-              </button>
+              <button class="settings-action-btn" type="submit">Сохранить профиль</button>
             </form>
-          </section>
 
-          <section class="panel panel-collapsible">
-            <div class="section-head">
-              <h3>Уведомления</h3>
-              <p>Личные уведомления, когда расходник ниже лимита.</p>
-            </div>
-            <label class="toggle-row" for="settingsLowStockToggle">
-              <span>Уведомления об остатках</span>
-              <input type="checkbox" id="settingsLowStockToggle" class="toggle-input" />
-              <span class="toggle-switch" aria-hidden="true"></span>
-            </label>
-            <p class="muted">Если выключено, бот не отправляет вам личные сообщения о низком остатке.</p>
-            <div class="settings-menu">
-              <div class="settings-menu-item">
-                <div>
-                  <strong>Напоминания</strong>
-                  <p class="muted">Периодичность и список товаров для напоминаний.</p>
-                </div>
-                <button class="secondary-btn btn-with-icon" id="openRemindersSettingsBtn" type="button">
-                  <span class="btn-icon" aria-hidden="true"><svg><use href="#i-toolbox"></use></svg></span><span>Настроить</span>
+            <article class="settings-card">
+              <h3>Настройки приложения</h3>
+              <div class="settings-list">
+                <label class="settings-toggle-row" for="settingsBrowserNotifyToggle">
+                  <span class="settings-list-copy">
+                    <strong>Уведомления в браузере</strong>
+                    <small>Push-уведомления о важных событиях</small>
+                  </span>
+                  <input type="checkbox" id="settingsBrowserNotifyToggle" class="toggle-input" />
+                  <span class="toggle-switch" aria-hidden="true"></span>
+                </label>
+                <label class="settings-toggle-row" for="settingsSoundNotifyToggle">
+                  <span class="settings-list-copy">
+                    <strong>Звуковые уведомления</strong>
+                    <small>Звук при новых сообщениях и задачах</small>
+                  </span>
+                  <input type="checkbox" id="settingsSoundNotifyToggle" class="toggle-input" />
+                  <span class="toggle-switch" aria-hidden="true"></span>
+                </label>
+                <button class="settings-list-row settings-link-row" id="openDisplaySettingsBtn" type="button">
+                  <span class="settings-list-copy">
+                    <strong>Язык интерфейса</strong>
+                    <small>Русский</small>
+                  </span>
+                  <span class="settings-chevron">›</span>
                 </button>
               </div>
-              <div class="settings-menu-item">
-                <div>
-                  <strong>Отображение списков</strong>
-                  <p class="muted">Общий лимит для всех страниц.</p>
-                </div>
-                <button class="secondary-btn btn-with-icon" id="openDisplaySettingsBtn" type="button">
-                  <span class="btn-icon" aria-hidden="true"><svg><use href="#i-grid"></use></svg></span><span>Настроить</span>
-                </button>
+            </article>
+
+            <article class="settings-card">
+              <h3>Управление чатами</h3>
+              <p class="muted">Настройте уведомления для каждой группы</p>
+              <div class="settings-list">
+                <label class="settings-toggle-row" for="settingsChatGeneralToggle">
+                  <span class="settings-list-copy">
+                    <strong>Общий чат</strong>
+                    <small id="settingsChatGeneralMeta">0 сообщений</small>
+                  </span>
+                  <input type="checkbox" id="settingsChatGeneralToggle" class="toggle-input" checked />
+                  <span class="toggle-switch" aria-hidden="true"></span>
+                </label>
+                <label class="settings-toggle-row" for="settingsChatWarehouseToggle">
+                  <span class="settings-list-copy">
+                    <strong>Склад</strong>
+                    <small id="settingsChatWarehouseMeta">0 сообщений</small>
+                  </span>
+                  <input type="checkbox" id="settingsChatWarehouseToggle" class="toggle-input" checked />
+                  <span class="toggle-switch" aria-hidden="true"></span>
+                </label>
+                <label class="settings-toggle-row" for="settingsChatSupportToggle">
+                  <span class="settings-list-copy">
+                    <strong>Поддержка</strong>
+                    <small id="settingsChatSupportMeta">0 сообщений</small>
+                  </span>
+                  <input type="checkbox" id="settingsChatSupportToggle" class="toggle-input" />
+                  <span class="toggle-switch" aria-hidden="true"></span>
+                </label>
               </div>
-            </div>
+            </article>
+
+            <article class="settings-card">
+              <h3>Управление задачами</h3>
+              <p class="muted">Настройте уведомления по задачам</p>
+              <div class="settings-list">
+                <label class="settings-toggle-row" for="settingsTaskAssignedToggle">
+                  <span class="settings-list-copy">
+                    <strong>Назначенные задачи</strong>
+                    <small>Когда вам назначили задачу</small>
+                  </span>
+                  <input type="checkbox" id="settingsTaskAssignedToggle" class="toggle-input" checked />
+                  <span class="toggle-switch" aria-hidden="true"></span>
+                </label>
+                <label class="settings-toggle-row" for="settingsTaskMentionToggle">
+                  <span class="settings-list-copy">
+                    <strong>Упоминания</strong>
+                    <small>Когда вас упоминают в комментариях</small>
+                  </span>
+                  <input type="checkbox" id="settingsTaskMentionToggle" class="toggle-input" checked />
+                  <span class="toggle-switch" aria-hidden="true"></span>
+                </label>
+                <label class="settings-toggle-row" for="settingsTaskDeadlineToggle">
+                  <span class="settings-list-copy">
+                    <strong>Напоминания о дедлайнах</strong>
+                    <small>За 1 день до срока выполнения</small>
+                  </span>
+                  <input type="checkbox" id="settingsTaskDeadlineToggle" class="toggle-input" checked />
+                  <span class="toggle-switch" aria-hidden="true"></span>
+                </label>
+              </div>
+            </article>
+
+            <button class="settings-secondary-link btn-with-icon" id="settingsDemoSessionBtn" type="button">
+              <span class="btn-icon" aria-hidden="true"><svg><use href="#i-clock2"></use></svg></span><span>Демо: показать экран истечения сессии</span>
+            </button>
+            <button class="settings-danger-link btn-with-icon" id="settingsLogoutBtn" type="button">
+              <span class="btn-icon" aria-hidden="true"><svg><use href="#i-login"></use></svg></span><span>Выйти из аккаунта</span>
+            </button>
           </section>
-        </section>
 
-        <section class="panel panel-collapsible admin-only is-hidden" id="adminPanel">
-          <div class="section-head">
-            <h3>Админка</h3>
-            <p>Пользователи, история действий и рассылка от имени бота.</p>
-          </div>
-
-          <div class="layout-grid admin-grid">
-            <section class="panel panel-collapsible">
-              <div class="section-head">
-                <h3>Пользователи</h3>
-                <p>Зарегистрированные аккаунты и роли.</p>
+          <section class="settings-pane" id="settingsPaneNotifications">
+            <article class="settings-card settings-card-highlight">
+              <h3>Уведомления в личку</h3>
+              <p class="muted">Бот отправит вам сообщение, если остаток ниже лимита</p>
+              <label class="settings-toggle-row" for="settingsLowStockToggle">
+                <span class="settings-list-copy">
+                  <strong>Включить личные уведомления</strong>
+                  <small>Если остаток ниже лимита, сообщение придет в Telegram</small>
+                </span>
+                <input type="checkbox" id="settingsLowStockToggle" class="toggle-input" />
+                <span class="toggle-switch" aria-hidden="true"></span>
+              </label>
+              <div class="settings-reminder-list" id="settingsLowStockList">
+                <p class="muted">Данные загрузятся после входа.</p>
               </div>
-              <div class="history-list" id="adminUsersList">
+            </article>
+
+            <article class="settings-card">
+              <h3>Напоминания</h3>
+              <p class="muted">Настройте периодические напоминания</p>
+              <div class="settings-reminder-list" id="settingsActiveRemindersList">
+                <p class="muted">Напоминания не настроены.</p>
+              </div>
+              <button class="settings-ghost-btn btn-with-icon" id="openRemindersSettingsBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Добавить напоминание</span>
+              </button>
+            </article>
+          </section>
+
+          <section class="settings-pane admin-only is-hidden" id="adminPanel">
+            <article class="settings-card">
+              <h3>Регистрация сотрудника</h3>
+              <p class="muted">Добавьте нового сотрудника в систему</p>
+              <button class="settings-action-btn btn-with-icon" id="settingsAddEmployeeBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-plus"></use></svg></span><span>Добавить сотрудника</span>
+              </button>
+            </article>
+
+            <article class="settings-card">
+              <h3>Пользователи</h3>
+              <div class="history-list settings-users-list" id="adminUsersList">
                 <p class="muted">Нет данных.</p>
               </div>
               <div class="pager" id="adminUsersPager" hidden></div>
-            </section>
+            </article>
 
-            <section class="panel panel-collapsible">
-              <div class="section-head">
-                <h3>История пользователя</h3>
-                <p>Показываются только действия выбранного пользователя.</p>
-              </div>
-              <div class="history-filters">
+            <article class="settings-card">
+              <h3>История пользователя</h3>
+              <p class="muted">Показываются только действия выбранного пользователя</p>
+              <div class="history-filters settings-admin-history-filters">
                 <select id="adminHistoryUser"></select>
-                <button class="secondary-btn btn-with-icon" id="adminHistoryLoadBtn" type="button"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-check"></use></svg></span><span>Загрузить</span></button>
+                <button class="secondary-btn btn-with-icon" id="adminHistoryLoadBtn" type="button">
+                  <span class="btn-icon" aria-hidden="true"><svg><use href="#i-check"></use></svg></span><span>Загрузить</span>
+                </button>
               </div>
               <div class="history-list" id="adminHistoryList">
                 <p class="muted">Выберите пользователя.</p>
               </div>
               <div class="pager" id="adminHistoryPager" hidden></div>
-            </section>
-          </div>
+            </article>
 
-          <section class="panel panel-collapsible">
-            <div class="section-head">
-              <h3>Анонс от бота</h3>
-              <p>Отправка сообщения сотрудникам от имени Telegram-бота.</p>
-            </div>
-            <form class="stock-form" id="adminAnnounceForm" novalidate>
-              <label>
-                Кому отправить
-                <select id="adminAnnounceRole">
-                  <option value="all">Всем</option>
-                  <option value="staff">Только сотрудникам (staff)</option>
-                  <option value="admin">Только администраторам (admin)</option>
-                </select>
-              </label>
-              <label>
-                Сообщение
-                <textarea id="adminAnnounceText" rows="4" placeholder="Текст анонса..." required></textarea>
-              </label>
-              <button class="primary-btn full btn-with-icon" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-bell"></use></svg></span><span>Отправить анонс</span></button>
-            </form>
+            <article class="settings-card">
+              <h3>Отправить анонс</h3>
+              <p class="muted">Отправьте сообщение всем пользователям</p>
+              <form class="stock-form" id="adminAnnounceForm" novalidate>
+                <label>
+                  Кому отправить
+                  <select id="adminAnnounceRole">
+                    <option value="all">Всем</option>
+                    <option value="staff">Только сотрудникам (staff)</option>
+                    <option value="admin">Только администраторам (admin)</option>
+                  </select>
+                </label>
+                <label>
+                  Сообщение
+                  <textarea id="adminAnnounceText" rows="4" placeholder="Текст анонса..." required></textarea>
+                </label>
+                <button class="settings-action-btn btn-with-icon" type="submit">
+                  <span class="btn-icon" aria-hidden="true"><svg><use href="#i-send"></use></svg></span><span>Отправить анонс</span>
+                </button>
+              </form>
+            </article>
           </section>
         </section>
       </section>

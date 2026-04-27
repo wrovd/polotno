@@ -3,6 +3,7 @@ const state = {
   moduleView: "home",
   inventoryTab: "main",
   inventoryContext: "consumables",
+  settingsTab: "profile",
   scanContext: "inventory",
   profileLoaded: false,
   token: localStorage.getItem("sf_token") || "",
@@ -279,6 +280,26 @@ const refs = {
   historyPager: document.getElementById("historyPager"),
   settingsQrConfirmBtn: document.getElementById("settingsQrConfirmBtn"),
   settingsBackBtn: document.getElementById("settingsBackBtn"),
+  settingsTabs: document.getElementById("settingsTabs"),
+  settingsTabProfile: document.getElementById("settingsTabProfile"),
+  settingsTabNotifications: document.getElementById("settingsTabNotifications"),
+  settingsTabAdmin: document.getElementById("settingsTabAdmin"),
+  settingsPaneProfile: document.getElementById("settingsPaneProfile"),
+  settingsPaneNotifications: document.getElementById("settingsPaneNotifications"),
+  settingsProfileAvatar: document.getElementById("settingsProfileAvatar"),
+  settingsProfileName: document.getElementById("settingsProfileName"),
+  settingsProfileEmail: document.getElementById("settingsProfileEmail"),
+  settingsProfileRole: document.getElementById("settingsProfileRole"),
+  settingsLowStockList: document.getElementById("settingsLowStockList"),
+  settingsActiveRemindersList: document.getElementById("settingsActiveRemindersList"),
+  settingsBrowserNotifyToggle: document.getElementById("settingsBrowserNotifyToggle"),
+  settingsSoundNotifyToggle: document.getElementById("settingsSoundNotifyToggle"),
+  settingsChatGeneralMeta: document.getElementById("settingsChatGeneralMeta"),
+  settingsChatWarehouseMeta: document.getElementById("settingsChatWarehouseMeta"),
+  settingsChatSupportMeta: document.getElementById("settingsChatSupportMeta"),
+  settingsAddEmployeeBtn: document.getElementById("settingsAddEmployeeBtn"),
+  settingsLogoutBtn: document.getElementById("settingsLogoutBtn"),
+  settingsDemoSessionBtn: document.getElementById("settingsDemoSessionBtn"),
   settingsForm: document.getElementById("settingsForm"),
   settingsFirstName: document.getElementById("settingsFirstName"),
   settingsLastName: document.getElementById("settingsLastName"),
@@ -951,6 +972,18 @@ function setAuthTab(tab) {
   refs.registerForm.classList.toggle("active", !isLogin);
 }
 
+function setSettingsTab(tab) {
+  const canManageUsers = canAdmin();
+  const nextTab = !canManageUsers && tab === "admin" ? "profile" : tab;
+  state.settingsTab = nextTab;
+  if (refs.settingsTabProfile) refs.settingsTabProfile.classList.toggle("is-active", nextTab === "profile");
+  if (refs.settingsTabNotifications) refs.settingsTabNotifications.classList.toggle("is-active", nextTab === "notifications");
+  if (refs.settingsTabAdmin) refs.settingsTabAdmin.classList.toggle("is-active", nextTab === "admin");
+  if (refs.settingsPaneProfile) refs.settingsPaneProfile.classList.toggle("is-active", nextTab === "profile");
+  if (refs.settingsPaneNotifications) refs.settingsPaneNotifications.classList.toggle("is-active", nextTab === "notifications");
+  if (refs.adminPanel) refs.adminPanel.classList.toggle("is-active", nextTab === "admin");
+}
+
 function setModuleView(view) {
   state.moduleView = view;
   const showHome = view === "home";
@@ -1301,23 +1334,25 @@ function getBrowserNotificationsPermission() {
 }
 
 function syncHomeNotificationsBrowserButton() {
-  if (!refs.homeNotificationsBrowserBtn) return;
   const permission = getBrowserNotificationsPermission();
-  refs.homeNotificationsBrowserBtn.classList.remove("is-enabled", "is-blocked");
-  if (permission === "granted") {
-    refs.homeNotificationsBrowserBtn.classList.add("is-enabled");
-  } else if (permission === "denied") {
-    refs.homeNotificationsBrowserBtn.classList.add("is-blocked");
+  if (refs.homeNotificationsBrowserBtn) {
+    refs.homeNotificationsBrowserBtn.classList.remove("is-enabled", "is-blocked");
+    if (permission === "granted") {
+      refs.homeNotificationsBrowserBtn.classList.add("is-enabled");
+    } else if (permission === "denied") {
+      refs.homeNotificationsBrowserBtn.classList.add("is-blocked");
+    }
+    if (refs.homeNotificationsBrowserBtnText) {
+      refs.homeNotificationsBrowserBtnText.textContent = permission === "granted"
+        ? "Вкл"
+        : permission === "denied"
+          ? "Blocked"
+          : permission === "unsupported"
+            ? "Нет API"
+            : "Включить";
+    }
   }
-  if (refs.homeNotificationsBrowserBtnText) {
-    refs.homeNotificationsBrowserBtnText.textContent = permission === "granted"
-      ? "Вкл"
-      : permission === "denied"
-        ? "Blocked"
-        : permission === "unsupported"
-          ? "Нет API"
-          : "Включить";
-  }
+  if (refs.settingsBrowserNotifyToggle) refs.settingsBrowserNotifyToggle.checked = permission === "granted";
 }
 
 async function requestBrowserNotificationsPermission() {
@@ -1576,6 +1611,110 @@ function userNotifyEnabled() {
   return String(value) !== "0";
 }
 
+function reminderIntervalLabel(value) {
+  const minutes = Number(value || 0);
+  if (!minutes) return "Выключено";
+  if (minutes < 60) return `Каждые ${minutes} мин`;
+  if (minutes % 43200 === 0) {
+    const months = Math.max(1, Math.round(minutes / 43200));
+    return months === 1 ? "Каждый месяц" : `Каждые ${months} месяца`;
+  }
+  if (minutes % 10080 === 0) {
+    const weeks = Math.max(1, Math.round(minutes / 10080));
+    return weeks === 1 ? "Каждую неделю" : `Каждые ${weeks} недели`;
+  }
+  if (minutes % 1440 === 0) {
+    const days = Math.max(1, Math.round(minutes / 1440));
+    return days === 1 ? "Каждый день" : `Каждые ${days} дня`;
+  }
+  if (minutes % 60 === 0) {
+    const hours = Math.max(1, Math.round(minutes / 60));
+    return hours === 1 ? "Каждый час" : `Каждые ${hours} ч`;
+  }
+  return `Каждые ${minutes} мин`;
+}
+
+function renderSettingsLowStockList() {
+  if (!refs.settingsLowStockList) return;
+  const low = state.items.filter((item) => Number(item.qty) <= Number(item.threshold));
+  refs.settingsLowStockList.innerHTML = "";
+  if (!low.length) {
+    refs.settingsLowStockList.innerHTML = '<p class="muted">Сейчас все позиции выше лимитов.</p>';
+    return;
+  }
+  low.slice(0, 12).forEach((item) => {
+    const row = document.createElement("article");
+    row.className = "settings-reminder-item";
+    row.innerHTML = `
+      <span class="settings-list-copy">
+        <strong>${escapeText(item.name)} — ${Number(item.qty)} шт, лимит ${Number(item.threshold)}</strong>
+      </span>
+    `;
+    refs.settingsLowStockList.appendChild(row);
+  });
+}
+
+function renderSettingsActiveReminders() {
+  if (!refs.settingsActiveRemindersList) return;
+  refs.settingsActiveRemindersList.innerHTML = "";
+  const selected = reminderSelectionFromUser();
+  const byId = new Map(state.items.map((item) => [String(item.id), item]));
+  const selectedIds = [...selected];
+  if (!selectedIds.length) {
+    refs.settingsActiveRemindersList.innerHTML = '<p class="muted">Напоминания не настроены.</p>';
+    return;
+  }
+  const label = reminderIntervalLabel(state.user?.reminder_interval_minutes);
+  selectedIds.forEach((id) => {
+    const item = byId.get(String(id));
+    const row = document.createElement("article");
+    row.className = "settings-reminder-item";
+    row.innerHTML = `
+      <span class="settings-list-copy">
+        <strong>${escapeText(item?.name || id)}</strong>
+        <small>${escapeText(label)}</small>
+      </span>
+      <button class="settings-reminder-delete" type="button" data-settings-reminder-remove="${escapeText(id)}" aria-label="Удалить напоминание">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M5 7h14M9 7V5h6v2M8 7l1 12h6l1-12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    `;
+    refs.settingsActiveRemindersList.appendChild(row);
+  });
+}
+
+function renderSettingsProfileMeta() {
+  if (!state.user) return;
+  const name = currentUserDisplayName();
+  if (refs.settingsProfileName) refs.settingsProfileName.textContent = name || "Пользователь";
+  if (refs.settingsProfileEmail) refs.settingsProfileEmail.textContent = String(state.user.email || "").trim();
+  if (refs.settingsProfileRole) refs.settingsProfileRole.textContent = String(state.user.role || "staff");
+  if (refs.settingsProfileAvatar) refs.settingsProfileAvatar.textContent = initialFromName(name || state.user.email || "P");
+}
+
+function renderSettingsChatMeta() {
+  if (refs.settingsChatGeneralMeta) {
+    const common = state.chatThreads.find((thread) => {
+      const title = String(thread.title || "").toLowerCase();
+      return title.includes("общ");
+    });
+    refs.settingsChatGeneralMeta.textContent = common ? `${Number(common.messageCount || 0)} сообщений` : "0 сообщений";
+  }
+  if (refs.settingsChatWarehouseMeta) {
+    const warehouse = state.chatThreads.find((thread) => {
+      const title = String(thread.title || "").toLowerCase();
+      return title.includes("склад");
+    });
+    refs.settingsChatWarehouseMeta.textContent = warehouse ? `${Number(warehouse.messageCount || 0)} сообщений` : "0 сообщений";
+  }
+  if (refs.settingsChatSupportMeta) {
+    const support = state.chatThreads.find((thread) => {
+      const title = String(thread.title || "").toLowerCase();
+      return title.includes("поддерж");
+    });
+    refs.settingsChatSupportMeta.textContent = support ? `${Number(support.messageCount || 0)} сообщений` : "0 сообщений";
+  }
+}
+
 function applyUserFromServer(nextUser, nextToken = "") {
   if (!nextUser) return;
   const reminderRaw = Array.isArray(nextUser.reminder_item_ids)
@@ -1620,7 +1759,18 @@ function fillSettingsForm() {
   refs.settingsPassword.value = "";
   refs.settingsLowStockToggle.checked = userNotifyEnabled();
   refs.settingsReminderInterval.value = String(state.user.reminder_interval_minutes || "0");
+  if (refs.settingsBrowserNotifyToggle) {
+    refs.settingsBrowserNotifyToggle.checked = getBrowserNotificationsPermission() === "granted";
+  }
+  if (refs.settingsSoundNotifyToggle) {
+    const soundEnabled = localStorage.getItem("polotno_sound_notifications") !== "0";
+    refs.settingsSoundNotifyToggle.checked = soundEnabled;
+  }
   renderReminderItems();
+  renderSettingsProfileMeta();
+  renderSettingsLowStockList();
+  renderSettingsActiveReminders();
+  renderSettingsChatMeta();
 }
 
 function reminderSelectionFromUser() {
@@ -1762,6 +1912,8 @@ async function saveNotificationsSettings(submitBtn = null) {
   );
   applyUserFromServer(data.user, data.token);
   fillSettingsForm();
+  renderSettingsActiveReminders();
+  renderSettingsLowStockList();
 }
 
 async function openSettingsView() {
@@ -1770,11 +1922,14 @@ async function openSettingsView() {
     return;
   }
   setModuleView("settings");
+  setSettingsTab("profile");
   if (!state.profileLoaded) {
     await runDbAction(() => loadProfile(), { message: "Загружаем профиль..." });
   } else {
     fillSettingsForm();
   }
+  await loadChatData().catch(() => {});
+  renderSettingsChatMeta();
   fillDisplayPrefsForm();
   if (canAdmin()) {
     await runDbAction(() => loadAdminUsers(), { message: "Загружаем админку..." });
@@ -1996,6 +2151,15 @@ function applyRoleAccess() {
   refs.adjustPanel.classList.toggle("is-hidden", !canManageUsers);
   if (refs.adminPanel) {
     refs.adminPanel.classList.toggle("is-hidden", !canManageUsers);
+  }
+  if (refs.settingsTabAdmin) {
+    refs.settingsTabAdmin.classList.toggle("is-hidden", !canManageUsers);
+  }
+  if (refs.settingsTabs) {
+    refs.settingsTabs.classList.toggle("admin-disabled", !canManageUsers);
+  }
+  if (!canManageUsers && state.settingsTab === "admin") {
+    setSettingsTab("profile");
   }
   if (refs.quickFilmIngestPanel) {
     refs.quickFilmIngestPanel.classList.add("is-hidden");
@@ -3501,12 +3665,14 @@ async function loadChatData() {
     renderChatReplyPreview();
     renderChatThreads([]);
     renderChatMessages();
+    renderSettingsChatMeta();
     return;
   }
   const search = String(refs.chatSearchInput?.value || "").trim();
   const data = await apiRequest(`/api/inventory/chat-list?search=${encodeURIComponent(search)}`);
   state.chatThreads = Array.isArray(data.threads) ? data.threads : [];
   renderChatThreads();
+  renderSettingsChatMeta();
   const activeId = String(state.chatActiveThreadId || "").trim();
   const activeStillExists = activeId && state.chatThreads.some((row) => String(row.id) === activeId);
   if (activeStillExists) {
@@ -4211,10 +4377,16 @@ function renderAdminUsers(users = state.adminUsers) {
   page.items.forEach((user) => {
     const item = document.createElement("article");
     item.className = "history-item";
+    const displayName = composeUserDisplayName(user) || user.email;
     item.innerHTML = `
-      <div><strong>${composeUserDisplayName(user) || user.email}</strong> <span class="history-reason">${user.role}</span></div>
-      <div class="history-meta">${user.email}</div>
-      <div class="history-meta">Chat ID: ${user.telegram_chat_id || "не указан"}</div>
+      <div class="settings-user-line">
+        <span class="settings-user-avatar">${initialFromName(displayName)}</span>
+        <span class="settings-list-copy">
+          <strong>${escapeText(displayName)}</strong>
+          <small>${escapeText(user.email || "")}</small>
+        </span>
+        <span class="settings-user-role">${escapeText(user.role || "staff")}</span>
+      </div>
     `;
     refs.adminUsersList.appendChild(item);
   });
@@ -4890,6 +5062,8 @@ async function loadItems() {
     renderGroupOptions();
     refreshAdjustItemOptions();
     renderHomeSummary();
+    renderSettingsLowStockList();
+    renderSettingsActiveReminders();
     return;
   }
 
@@ -4921,6 +5095,8 @@ async function loadItems() {
   renderAlerts();
   refreshAdjustItemOptions();
   renderHomeSummary();
+  renderSettingsLowStockList();
+  renderSettingsActiveReminders();
 }
 
 async function loadFilms() {
@@ -6585,6 +6761,60 @@ if (refs.settingsQrConfirmBtn) refs.settingsQrConfirmBtn.addEventListener("click
   }
 });
 refs.settingsBackBtn.addEventListener("click", () => setModuleView("inventory"));
+if (refs.settingsTabProfile) refs.settingsTabProfile.addEventListener("click", () => setSettingsTab("profile"));
+if (refs.settingsTabNotifications) refs.settingsTabNotifications.addEventListener("click", () => setSettingsTab("notifications"));
+if (refs.settingsTabAdmin) refs.settingsTabAdmin.addEventListener("click", () => setSettingsTab("admin"));
+if (refs.settingsLogoutBtn) refs.settingsLogoutBtn.addEventListener("click", () => openLogoutModal());
+if (refs.settingsAddEmployeeBtn) refs.settingsAddEmployeeBtn.addEventListener("click", () => {
+  openAuthModal();
+  setAuthTab("register");
+});
+if (refs.settingsDemoSessionBtn) refs.settingsDemoSessionBtn.addEventListener("click", () => {
+  showToast("Демо: сессия активна. Этот экран можно подключить позже.");
+});
+if (refs.settingsSoundNotifyToggle) refs.settingsSoundNotifyToggle.addEventListener("change", () => {
+  const enabled = refs.settingsSoundNotifyToggle.checked ? "1" : "0";
+  localStorage.setItem("polotno_sound_notifications", enabled);
+});
+if (refs.settingsBrowserNotifyToggle) refs.settingsBrowserNotifyToggle.addEventListener("change", async () => {
+  if (!refs.settingsBrowserNotifyToggle.checked) return;
+  await requestBrowserNotificationsPermission();
+  refs.settingsBrowserNotifyToggle.checked = getBrowserNotificationsPermission() === "granted";
+});
+if (refs.settingsLowStockToggle) refs.settingsLowStockToggle.addEventListener("change", async () => {
+  try {
+    await saveNotificationsSettings(refs.settingsLowStockToggle);
+    renderSettingsActiveReminders();
+    renderSettingsLowStockList();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.settingsActiveRemindersList) refs.settingsActiveRemindersList.addEventListener("click", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const btn = target.closest("button[data-settings-reminder-remove]");
+  if (!(btn instanceof HTMLButtonElement)) return;
+  const itemId = String(btn.getAttribute("data-settings-reminder-remove") || "").trim();
+  if (!itemId) return;
+  const checkboxes = refs.settingsReminderItems?.querySelectorAll("input[data-item-id]");
+  if (checkboxes) {
+    checkboxes.forEach((input) => {
+      if (!(input instanceof HTMLInputElement)) return;
+      if (String(input.getAttribute("data-item-id") || "").trim() === itemId) input.checked = false;
+    });
+  }
+  try {
+    await saveNotificationsSettings(btn);
+    renderSettingsActiveReminders();
+    showToast("Напоминание удалено");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
 if (refs.openRemindersSettingsBtn) refs.openRemindersSettingsBtn.addEventListener("click", () => {
   fillSettingsForm();
   openSimpleModal(refs.remindersSettingsModal);
