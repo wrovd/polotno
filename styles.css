@@ -1840,6 +1840,80 @@ button:active {
   gap: 28px;
 }
 
+.box-kiosk-action-row {
+  position: absolute;
+  top: 50px;
+  left: 54px;
+  z-index: 4002;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  pointer-events: auto;
+}
+
+.box-kiosk-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  min-height: 55px;
+  padding: 11px 13px;
+  border: 1px solid #cbc9c9;
+  border-radius: 999px;
+  background: #fff;
+  color: #000;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: none;
+  white-space: nowrap;
+}
+
+.box-kiosk-action-icon {
+  position: relative;
+  display: inline-flex;
+  width: 33px;
+  height: 33px;
+  flex: 0 0 33px;
+  align-items: center;
+  justify-content: center;
+}
+
+.box-kiosk-action-icon-plus {
+  border-radius: 50%;
+  background: #000;
+}
+
+.box-kiosk-action-icon-plus::before,
+.box-kiosk-action-icon-plus::after {
+  content: "";
+  position: absolute;
+  border-radius: 2px;
+  background: #fff;
+}
+
+.box-kiosk-action-icon-plus::before {
+  width: 17px;
+  height: 4px;
+}
+
+.box-kiosk-action-icon-plus::after {
+  width: 4px;
+  height: 17px;
+}
+
+.box-kiosk-action-icon-box {
+  background: center / contain no-repeat url("data:image/svg+xml,%3Csvg width='33' height='33' viewBox='0 0 33 33' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M16.5 3L29 8.4L16.5 14L4 8.4L16.5 3Z' fill='black'/%3E%3Cpath d='M3 11.4L14.5 16.8V30L3 24.2V11.4Z' fill='black'/%3E%3Cpath d='M30 11.4L18.5 16.8V30L30 24.2V11.4Z' fill='black'/%3E%3Cpath d='M8.3 10.3L20.8 4.8' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3Cpath d='M24.7 10.3L12.2 4.8' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+.box-kiosk-idle-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 25px;
+  transform: translateY(30px);
+}
+
 .box-kiosk-ready {
   display: inline-flex;
   align-items: center;
@@ -2288,6 +2362,65 @@ button:active {
 .box-kiosk-barcode {
   width: clamp(180px, 18vw, 250px);
   height: clamp(76px, 8vw, 104px);
+}
+
+.box-kiosk-idle {
+  justify-content: center;
+  padding-inline: clamp(28px, 6vw, 92px);
+}
+
+.box-kiosk-idle .box-kiosk-ready {
+  gap: 12px;
+  color: #6ec905;
+  font-size: clamp(14px, 1.45vw, 18px);
+  font-weight: 800;
+}
+
+.box-kiosk-idle .box-kiosk-ready span {
+  width: 24px;
+  height: 24px;
+  font-size: 16px;
+}
+
+.box-kiosk-idle .box-kiosk-idle-content h2 {
+  max-width: 860px;
+  font-size: clamp(34px, 3.9vw, 42px);
+  line-height: 1.12;
+  font-weight: 800;
+  text-wrap: balance;
+}
+
+.box-kiosk-idle .box-kiosk-idle-content p {
+  max-width: 760px;
+  font-size: clamp(20px, 2.35vw, 26px);
+  line-height: 1.1;
+  font-weight: 800;
+  text-wrap: balance;
+}
+
+.box-kiosk-idle .box-kiosk-chevrons {
+  width: 67px;
+  height: 64px;
+  margin-top: 20px;
+}
+
+.box-kiosk-idle .box-kiosk-chevrons span {
+  width: 44px;
+  height: 44px;
+  border-right-width: 8px;
+  border-bottom-width: 8px;
+  border-radius: 5px;
+  margin-top: -18px;
+}
+
+.box-kiosk-idle .box-kiosk-chevrons span:first-child {
+  margin-top: 0;
+}
+
+.box-kiosk-idle .box-kiosk-barcode {
+  width: clamp(180px, 21vw, 216px);
+  height: clamp(80px, 10vw, 111px);
+  margin-top: 2px;
 }
 
 .box-kiosk-found,

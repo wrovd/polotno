@@ -947,11 +947,23 @@
         <section class="box-kiosk-view is-hidden" id="boxKioskView" aria-live="polite">
           <input class="box-kiosk-scan-input" id="boxKioskScanInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="none" aria-label="Сканирование штрихкода или QR-кода" />
           <div class="box-kiosk-state box-kiosk-idle" id="boxKioskIdle">
-            <div class="box-kiosk-ready"><span>✓</span>Устройство готово к сканированию</div>
-            <h2>Поиск коробок и чехлов</h2>
-            <p>Отсканируйте штрихкод или QR код ниже</p>
-            <div class="box-kiosk-chevrons" aria-hidden="true"><span></span><span></span></div>
-            <div class="box-kiosk-barcode" aria-hidden="true"></div>
+            <div class="box-kiosk-action-row" aria-label="Действия планшета">
+              <button class="box-kiosk-action" id="boxKioskNewBoxAction" type="button">
+                <span class="box-kiosk-action-icon box-kiosk-action-icon-plus" aria-hidden="true"></span>
+                <span>Новая коробка</span>
+              </button>
+              <button class="box-kiosk-action" id="boxKioskPositionAction" type="button">
+                <span class="box-kiosk-action-icon box-kiosk-action-icon-box" aria-hidden="true"></span>
+                <span>Место позиции</span>
+              </button>
+            </div>
+            <div class="box-kiosk-idle-content">
+              <div class="box-kiosk-ready"><span>✓</span>Устройство готово к сканированию</div>
+              <h2>Поиск коробок и чехлов</h2>
+              <p>Отсканируйте штрихкод товара</p>
+              <div class="box-kiosk-chevrons" aria-hidden="true"><span></span><span></span></div>
+              <div class="box-kiosk-barcode" aria-hidden="true"></div>
+            </div>
           </div>
           <div class="box-kiosk-state is-hidden" id="boxKioskLoading">
             <h2>Поиск товара</h2>
