@@ -1006,8 +1006,68 @@
             <div class="box-kiosk-countdown"><strong id="boxKioskNotFoundCount">5</strong><span>Закроем окно<br />самостоятельно</span></div>
           </div>
           <div class="box-kiosk-state box-kiosk-message is-hidden" id="boxKioskSuccess">
-            <div class="box-kiosk-message-line"><span class="box-kiosk-dark-icon">✓</span><h2>Коробка удалена из системы</h2></div>
+            <div class="box-kiosk-message-line"><span class="box-kiosk-dark-icon">✓</span><h2 id="boxKioskSuccessTitle">Коробка удалена из системы</h2></div>
             <div class="box-kiosk-countdown"><strong id="boxKioskSuccessCount">5</strong><span>Закроем окно<br />самостоятельно</span></div>
+          </div>
+          <div class="box-kiosk-state box-kiosk-create box-kiosk-choice-step is-hidden" id="boxKioskNewMode">
+            <header class="box-kiosk-stage-head">
+              <span>Этап 1.</span>
+              <h2>Вариант добавления</h2>
+            </header>
+            <div class="box-kiosk-choice-grid">
+              <button class="box-kiosk-choice-card" type="button" data-kiosk-create-mode="single">
+                <span class="box-kiosk-choice-icon box-kiosk-choice-icon-single" aria-hidden="true"></span>
+                <strong>Одна<br />коробка</strong>
+              </button>
+              <button class="box-kiosk-choice-card" type="button" data-kiosk-create-mode="multi">
+                <span class="box-kiosk-choice-icon box-kiosk-choice-icon-multi" aria-hidden="true"></span>
+                <strong>Много<br />коробок</strong>
+              </button>
+            </div>
+          </div>
+          <div class="box-kiosk-state box-kiosk-create box-kiosk-rack-step is-hidden" id="boxKioskRackPick">
+            <header class="box-kiosk-stage-head">
+              <span>Этап 2.</span>
+              <h2 id="boxKioskRackTitle">Выбор места для новой коробки</h2>
+            </header>
+            <section class="box-kiosk-rack-pick">
+              <h3>Доступные стеллажи</h3>
+              <div class="box-kiosk-rack-choices" id="boxKioskRackChoices"></div>
+            </section>
+          </div>
+          <div class="box-kiosk-state box-kiosk-create box-kiosk-multi-step is-hidden" id="boxKioskMultiList">
+            <header class="box-kiosk-stage-head">
+              <span>Этап 2.</span>
+              <h2>Создание коробок и их наполнения</h2>
+            </header>
+            <div class="box-kiosk-multi-cards" id="boxKioskMultiCards"></div>
+            <button class="box-kiosk-add-card" id="boxKioskAddBoxBtn" type="button" aria-label="Добавить коробку">+</button>
+            <button class="box-kiosk-primary-create is-hidden" id="boxKioskCreateBoxesBtn" type="button">
+              <span>Создать</span><strong>✓</strong>
+            </button>
+          </div>
+          <div class="box-kiosk-state box-kiosk-create box-kiosk-config-step is-hidden" id="boxKioskBoxConfig">
+            <header class="box-kiosk-stage-head">
+              <span id="boxKioskConfigStage">Этап 3.</span>
+              <h2 id="boxKioskConfigTitle">Занесение коробки в систему</h2>
+            </header>
+            <section class="box-kiosk-config-card">
+              <div class="box-kiosk-config-number">
+                <span class="box-kiosk-config-box-icon" aria-hidden="true"></span>
+                <strong id="boxKioskConfigBoxNo">1</strong>
+              </div>
+              <label class="box-kiosk-config-field">
+                <span>Введите наименование товара или штрихкод</span>
+                <input id="boxKioskProductInput" type="text" list="boxCatalogOptions" autocomplete="off" placeholder="Наименование или штрихкод" />
+              </label>
+              <div class="box-kiosk-config-field">
+                <span>Количество (штук)</span>
+                <div class="box-kiosk-qty-choices" id="boxKioskQtyChoices"></div>
+              </div>
+            </section>
+            <button class="box-kiosk-primary-create" id="boxKioskFillBoxBtn" type="button">
+              <span id="boxKioskFillBoxText">Создать</span><strong>✓</strong>
+            </button>
           </div>
           <button class="box-kiosk-close" id="boxKioskCloseBtn" type="button" aria-label="Закрыть режим планшета">×</button>
         </section>

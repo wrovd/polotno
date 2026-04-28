@@ -87,6 +87,11 @@ const state = {
     scanBuffer: "",
     scanBufferTimer: null,
     inputDebounceTimer: null,
+    createMode: "",
+    createRack: "",
+    createBoxes: [],
+    createActiveBoxId: "",
+    createQuantity: 18,
   },
   filmsFilters: {
     search: "",
@@ -480,6 +485,23 @@ const refs = {
   boxKioskNotFoundCount: document.getElementById("boxKioskNotFoundCount"),
   boxKioskSuccess: document.getElementById("boxKioskSuccess"),
   boxKioskSuccessCount: document.getElementById("boxKioskSuccessCount"),
+  boxKioskSuccessTitle: document.getElementById("boxKioskSuccessTitle"),
+  boxKioskNewMode: document.getElementById("boxKioskNewMode"),
+  boxKioskRackPick: document.getElementById("boxKioskRackPick"),
+  boxKioskRackTitle: document.getElementById("boxKioskRackTitle"),
+  boxKioskRackChoices: document.getElementById("boxKioskRackChoices"),
+  boxKioskMultiList: document.getElementById("boxKioskMultiList"),
+  boxKioskMultiCards: document.getElementById("boxKioskMultiCards"),
+  boxKioskAddBoxBtn: document.getElementById("boxKioskAddBoxBtn"),
+  boxKioskCreateBoxesBtn: document.getElementById("boxKioskCreateBoxesBtn"),
+  boxKioskBoxConfig: document.getElementById("boxKioskBoxConfig"),
+  boxKioskConfigStage: document.getElementById("boxKioskConfigStage"),
+  boxKioskConfigTitle: document.getElementById("boxKioskConfigTitle"),
+  boxKioskConfigBoxNo: document.getElementById("boxKioskConfigBoxNo"),
+  boxKioskProductInput: document.getElementById("boxKioskProductInput"),
+  boxKioskQtyChoices: document.getElementById("boxKioskQtyChoices"),
+  boxKioskFillBoxBtn: document.getElementById("boxKioskFillBoxBtn"),
+  boxKioskFillBoxText: document.getElementById("boxKioskFillBoxText"),
   boxKioskCloseBtn: document.getElementById("boxKioskCloseBtn"),
   chatSearchInput: document.getElementById("chatSearchInput"),
   chatCreateBtn: document.getElementById("chatCreateBtn"),
@@ -5643,8 +5665,19 @@ function clearBoxKioskScanBuffer() {
   state.boxKiosk.scanBuffer = "";
 }
 
+const BOX_KIOSK_RACKS = ["1", "2", "3", "4", "9", "5", "6", "7", "8", "10"];
+const BOX_KIOSK_QUANTITIES = [22, 20, 18, 8, 6];
+
+function isBoxKioskScanMode() {
+  return ["idle", "boxScan"].includes(state.boxKiosk.mode);
+}
+
 function focusBoxKioskScanner() {
   if (!state.boxKiosk.open || !refs.boxKioskScanInput) return;
+  if (!isBoxKioskScanMode()) {
+    refs.boxKioskScanInput.blur();
+    return;
+  }
   try {
     refs.boxKioskScanInput.focus({ preventScroll: true });
   } catch {
@@ -5653,9 +5686,209 @@ function focusBoxKioskScanner() {
 }
 
 function refocusBoxKioskScannerSoon() {
+  if (!isBoxKioskScanMode()) return;
   [0, 120, 360].forEach((delay) => {
     setTimeout(focusBoxKioskScanner, delay);
   });
+}
+
+function resetBoxKioskCreateFlow() {
+  state.boxKiosk.createMode = "";
+  state.boxKiosk.createRack = "";
+  state.boxKiosk.createBoxes = [];
+  state.boxKiosk.createActiveBoxId = "";
+  state.boxKiosk.createQuantity = 18;
+  if (refs.boxKioskProductInput) refs.boxKioskProductInput.value = "";
+}
+
+function kioskBoxIconMarkup() {
+  return '<span class="box-kiosk-config-box-icon" aria-hidden="true"></span>';
+}
+
+function boxKioskNewBox(index = 1) {
+  return {
+    id: `kiosk-box-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    number: index,
+    rack: "",
+    productName: "",
+    barcode: "",
+    qty: 18,
+    filled: false,
+  };
+}
+
+function findBoxCatalogMatch(value) {
+  const text = String(value || "").trim();
+  if (!text) return null;
+  const lower = text.toLowerCase();
+  return state.boxCatalog.find((row) => String(row.barcode || "").trim() === text)
+    || state.boxCatalog.find((row) => String(row.name || "").trim().toLowerCase() === lower)
+    || state.boxCatalog.find((row) => String(row.name || "").toLowerCase().includes(lower));
+}
+
+function boxKioskProductFromInput() {
+  const typed = String(refs.boxKioskProductInput?.value || "").trim();
+  const match = findBoxCatalogMatch(typed);
+  const normalizedBarcode = typed.replace(/\s+/g, "");
+  return {
+    name: String(match?.name || typed).trim(),
+    barcode: String(match?.barcode || (/^\d{6,}$/.test(normalizedBarcode) ? normalizedBarcode : "")).trim(),
+  };
+}
+
+function renderBoxKioskRackChoices() {
+  if (!refs.boxKioskRackChoices) return;
+  refs.boxKioskRackChoices.innerHTML = "";
+  BOX_KIOSK_RACKS.forEach((rack) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "box-kiosk-rack-choice";
+    button.dataset.kioskCreateRack = rack;
+    button.textContent = rack;
+    if (rack === state.boxKiosk.createRack) button.classList.add("is-active");
+    refs.boxKioskRackChoices.appendChild(button);
+  });
+}
+
+function renderBoxKioskQtyChoices() {
+  if (!refs.boxKioskQtyChoices) return;
+  refs.boxKioskQtyChoices.innerHTML = "";
+  BOX_KIOSK_QUANTITIES.forEach((qty) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "box-kiosk-qty-choice";
+    button.dataset.kioskQty = String(qty);
+    button.textContent = String(qty);
+    if (Number(state.boxKiosk.createQuantity) === qty) button.classList.add("is-active");
+    refs.boxKioskQtyChoices.appendChild(button);
+  });
+}
+
+function renderBoxKioskMultiCards() {
+  if (!refs.boxKioskMultiCards) return;
+  refs.boxKioskMultiCards.innerHTML = "";
+  state.boxKiosk.createBoxes.forEach((box) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `box-kiosk-multi-card${box.filled ? " is-filled" : ""}`;
+    button.dataset.kioskEditBox = box.id;
+    const title = box.filled ? escapeText(box.productName || "Товар") : "Не заполнена";
+    const meta = box.filled ? `${Math.max(1, Number(box.qty || 1))} штук   ${escapeText(box.rack || "—")} стеллаж` : "";
+    button.innerHTML = `
+      <span class="box-kiosk-multi-icon">${kioskBoxIconMarkup()}<strong>${box.number}</strong></span>
+      <span class="box-kiosk-multi-info">
+        <strong>${title}</strong>
+        ${meta ? `<small>${meta}</small>` : ""}
+      </span>
+    `;
+    refs.boxKioskMultiCards.appendChild(button);
+  });
+  const canCreate = state.boxKiosk.createBoxes.length > 0 && state.boxKiosk.createBoxes.every((box) => box.filled);
+  refs.boxKioskCreateBoxesBtn?.classList.toggle("is-hidden", !canCreate);
+  if (refs.boxKioskCreateBoxesBtn) refs.boxKioskCreateBoxesBtn.disabled = !canCreate;
+}
+
+function showBoxKioskCreateMode() {
+  resetBoxKioskCreateFlow();
+  clearBoxKioskCountdown();
+  showBoxKioskState("newMode");
+}
+
+function openBoxKioskRackStep() {
+  clearBoxKioskCountdown();
+  if (refs.boxKioskRackTitle) {
+    refs.boxKioskRackTitle.textContent = state.boxKiosk.createMode === "multi"
+      ? "Выбор места для коробки"
+      : "Выбор места для новой коробки";
+  }
+  renderBoxKioskRackChoices();
+  showBoxKioskState("rackPick");
+}
+
+function openBoxKioskConfigStep(boxId = "") {
+  clearBoxKioskCountdown();
+  const isMulti = state.boxKiosk.createMode === "multi";
+  const box = isMulti ? state.boxKiosk.createBoxes.find((item) => item.id === boxId) : null;
+  state.boxKiosk.createActiveBoxId = box?.id || "";
+  state.boxKiosk.createQuantity = Math.max(1, Number(box?.qty || state.boxKiosk.createQuantity || 18));
+  if (refs.boxKioskConfigStage) refs.boxKioskConfigStage.textContent = isMulti ? "Этап 3." : "Этап 3.";
+  if (refs.boxKioskConfigTitle) {
+    refs.boxKioskConfigTitle.textContent = isMulti ? "Настройка коробки" : "Занесение коробки в систему";
+  }
+  if (refs.boxKioskConfigBoxNo) refs.boxKioskConfigBoxNo.textContent = String(box?.number || 1);
+  if (refs.boxKioskProductInput) refs.boxKioskProductInput.value = String(box?.productName || box?.barcode || "");
+  if (refs.boxKioskFillBoxText) refs.boxKioskFillBoxText.textContent = isMulti ? "Заполнить" : "Создать";
+  renderBoxKioskQtyChoices();
+  showBoxKioskState("boxConfig");
+  setTimeout(() => refs.boxKioskProductInput?.focus({ preventScroll: true }), 80);
+}
+
+async function suggestUniqueBoxCodeOnly() {
+  const data = await apiRequest("/api/box-search?action=suggest-box-code");
+  const code = String(data?.boxCode || "").trim();
+  if (!code) throw new Error("Не удалось сгенерировать номер коробки");
+  return code;
+}
+
+async function saveBoxKioskBoxes(boxes) {
+  if (!state.token) throw new Error("Требуется вход в систему");
+  const list = Array.isArray(boxes) ? boxes : [];
+  if (!list.length) throw new Error("Нет коробок для создания");
+  for (const box of list) {
+    const boxCode = await suggestUniqueBoxCodeOnly();
+    const location = `Стеллаж ${box.rack}`;
+    await apiRequest("/api/box-search?action=create-box", {
+      method: "POST",
+      body: {
+        boxCode,
+        location,
+        items: [{
+          barcode: box.barcode,
+          name: box.productName,
+          qty: Math.max(1, Number(box.qty || 1)),
+        }],
+      },
+    });
+  }
+  await loadBoxSearchData();
+  await loadHistory();
+}
+
+async function fillBoxKioskCurrentBox() {
+  const product = boxKioskProductFromInput();
+  if (!product.name) throw new Error("Введите наименование товара или штрихкод");
+  if (!product.barcode) throw new Error("Выберите товар из базы или введите штрихкод");
+  const qty = Math.max(1, Number(state.boxKiosk.createQuantity || 18));
+  if (state.boxKiosk.createMode === "single") {
+    await saveBoxKioskBoxes([{
+      id: "single",
+      number: 1,
+      rack: state.boxKiosk.createRack,
+      productName: product.name,
+      barcode: product.barcode,
+      qty,
+      filled: true,
+    }]);
+    showBoxKioskSuccess("Коробка успешно создана");
+    return;
+  }
+  const box = state.boxKiosk.createBoxes.find((item) => item.id === state.boxKiosk.createActiveBoxId);
+  if (!box) throw new Error("Коробка не выбрана");
+  box.productName = product.name;
+  box.barcode = product.barcode;
+  box.qty = qty;
+  box.filled = true;
+  renderBoxKioskMultiCards();
+  showBoxKioskState("multiList");
+}
+
+async function createBoxKioskAllBoxes() {
+  const boxes = state.boxKiosk.createBoxes.filter((box) => box.filled);
+  if (!boxes.length || boxes.length !== state.boxKiosk.createBoxes.length) {
+    throw new Error("Заполните все коробки");
+  }
+  await saveBoxKioskBoxes(boxes);
+  showBoxKioskSuccess(boxes.length > 1 ? "Коробки успешно созданы" : "Коробка успешно создана");
 }
 
 function submitBoxKioskScan(rawValue) {
@@ -5676,6 +5909,10 @@ function showBoxKioskState(mode) {
     refs.boxKioskBoxScan,
     refs.boxKioskNotFound,
     refs.boxKioskSuccess,
+    refs.boxKioskNewMode,
+    refs.boxKioskRackPick,
+    refs.boxKioskMultiList,
+    refs.boxKioskBoxConfig,
   ].forEach((node) => node?.classList.add("is-hidden"));
   const map = {
     idle: refs.boxKioskIdle,
@@ -5684,9 +5921,17 @@ function showBoxKioskState(mode) {
     boxScan: refs.boxKioskBoxScan,
     notFound: refs.boxKioskNotFound,
     success: refs.boxKioskSuccess,
+    newMode: refs.boxKioskNewMode,
+    rackPick: refs.boxKioskRackPick,
+    multiList: refs.boxKioskMultiList,
+    boxConfig: refs.boxKioskBoxConfig,
   };
   map[mode]?.classList.remove("is-hidden");
-  refocusBoxKioskScannerSoon();
+  if (isBoxKioskScanMode()) {
+    refocusBoxKioskScannerSoon();
+  } else {
+    refs.boxKioskScanInput?.blur();
+  }
 }
 
 function startBoxKioskCountdown(kind, seconds = 5) {
@@ -5713,6 +5958,7 @@ function startBoxKioskCountdown(kind, seconds = 5) {
 function openBoxKiosk() {
   state.boxKiosk.open = true;
   clearBoxKioskCountdown();
+  resetBoxKioskCreateFlow();
   refs.boxKioskView?.classList.remove("is-hidden");
   document.body.classList.add("box-kiosk-open");
   showBoxKioskState("idle");
@@ -5724,6 +5970,7 @@ function closeBoxKiosk() {
   clearBoxKioskCountdown();
   clearBoxKioskInputDebounce();
   clearBoxKioskScanBuffer();
+  resetBoxKioskCreateFlow();
   refs.boxKioskView?.classList.add("is-hidden");
   document.body.classList.remove("box-kiosk-open");
 }
@@ -5775,7 +6022,8 @@ function showBoxKioskNotFound() {
   startBoxKioskCountdown("notFound", 5);
 }
 
-function showBoxKioskSuccess() {
+function showBoxKioskSuccess(message = "Коробка удалена из системы") {
+  if (refs.boxKioskSuccessTitle) refs.boxKioskSuccessTitle.textContent = message;
   showBoxKioskState("success");
   startBoxKioskCountdown("success", 5);
 }
@@ -8882,6 +9130,9 @@ if (refs.boxScanBarcodeBtn) refs.boxScanBarcodeBtn.addEventListener("click", asy
   openScanModal();
   await startScanner();
 });
+if (refs.boxKioskNewBoxAction) refs.boxKioskNewBoxAction.addEventListener("click", () => {
+  showBoxKioskCreateMode();
+});
 if (refs.boxKioskCloseBtn) refs.boxKioskCloseBtn.addEventListener("click", closeBoxKiosk);
 if (refs.boxKioskView) {
   refs.boxKioskView.addEventListener("pointerdown", () => {
@@ -8908,6 +9159,82 @@ if (refs.boxKioskScanInput) {
     setTimeout(focusBoxKioskScanner, 60);
   });
 }
+if (refs.boxKioskNewMode) refs.boxKioskNewMode.addEventListener("click", (event) => {
+  const target = event.target instanceof HTMLElement ? event.target.closest("[data-kiosk-create-mode]") : null;
+  if (!(target instanceof HTMLElement)) return;
+  state.boxKiosk.createMode = String(target.getAttribute("data-kiosk-create-mode") || "single");
+  state.boxKiosk.createRack = "";
+  state.boxKiosk.createBoxes = [];
+  if (state.boxKiosk.createMode === "multi") {
+    state.boxKiosk.createBoxes = [boxKioskNewBox(1)];
+    renderBoxKioskMultiCards();
+    showBoxKioskState("multiList");
+    return;
+  }
+  openBoxKioskRackStep();
+});
+if (refs.boxKioskRackChoices) refs.boxKioskRackChoices.addEventListener("click", (event) => {
+  const target = event.target instanceof HTMLElement ? event.target.closest("[data-kiosk-create-rack]") : null;
+  if (!(target instanceof HTMLElement)) return;
+  const rack = String(target.getAttribute("data-kiosk-create-rack") || "").trim();
+  state.boxKiosk.createRack = rack;
+  renderBoxKioskRackChoices();
+  if (state.boxKiosk.createMode === "multi") {
+    const box = state.boxKiosk.createBoxes.find((item) => item.id === state.boxKiosk.createActiveBoxId);
+    if (box) box.rack = rack;
+  }
+  openBoxKioskConfigStep(state.boxKiosk.createActiveBoxId);
+});
+if (refs.boxKioskMultiCards) refs.boxKioskMultiCards.addEventListener("click", (event) => {
+  const target = event.target instanceof HTMLElement ? event.target.closest("[data-kiosk-edit-box]") : null;
+  if (!(target instanceof HTMLElement)) return;
+  const boxId = String(target.getAttribute("data-kiosk-edit-box") || "");
+  state.boxKiosk.createActiveBoxId = boxId;
+  const box = state.boxKiosk.createBoxes.find((item) => item.id === boxId);
+  state.boxKiosk.createRack = String(box?.rack || "");
+  if (!state.boxKiosk.createRack) {
+    openBoxKioskRackStep();
+    return;
+  }
+  openBoxKioskConfigStep(boxId);
+});
+if (refs.boxKioskAddBoxBtn) refs.boxKioskAddBoxBtn.addEventListener("click", () => {
+  const next = boxKioskNewBox(state.boxKiosk.createBoxes.length + 1);
+  state.boxKiosk.createBoxes.push(next);
+  state.boxKiosk.createActiveBoxId = next.id;
+  state.boxKiosk.createRack = "";
+  renderBoxKioskMultiCards();
+  openBoxKioskRackStep();
+});
+if (refs.boxKioskQtyChoices) refs.boxKioskQtyChoices.addEventListener("click", (event) => {
+  const target = event.target instanceof HTMLElement ? event.target.closest("[data-kiosk-qty]") : null;
+  if (!(target instanceof HTMLElement)) return;
+  state.boxKiosk.createQuantity = Math.max(1, Number(target.getAttribute("data-kiosk-qty") || 18));
+  renderBoxKioskQtyChoices();
+});
+if (refs.boxKioskProductInput) refs.boxKioskProductInput.addEventListener("keydown", (event) => {
+  if (!["Enter", "NumpadEnter"].includes(event.key)) return;
+  event.preventDefault();
+  refs.boxKioskFillBoxBtn?.click();
+});
+if (refs.boxKioskFillBoxBtn) refs.boxKioskFillBoxBtn.addEventListener("click", async () => {
+  try {
+    await fillBoxKioskCurrentBox();
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message || "Не удалось заполнить коробку");
+    hapticWarning();
+  }
+});
+if (refs.boxKioskCreateBoxesBtn) refs.boxKioskCreateBoxesBtn.addEventListener("click", async () => {
+  try {
+    await createBoxKioskAllBoxes();
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message || "Не удалось создать коробки");
+    hapticWarning();
+  }
+});
 document.addEventListener("visibilitychange", () => {
   if (document.hidden || !state.boxKiosk.open) return;
   refocusBoxKioskScannerSoon();
@@ -8918,6 +9245,7 @@ window.addEventListener("focus", () => {
 });
 document.addEventListener("keydown", (event) => {
   if (!state.boxKiosk.open) return;
+  if (!isBoxKioskScanMode()) return;
   if (event.metaKey || event.ctrlKey || event.altKey) return;
   if (event.target === refs.boxKioskScanInput) return;
   if (["Enter", "NumpadEnter", "Tab"].includes(event.key)) {
