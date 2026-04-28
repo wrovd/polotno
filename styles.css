@@ -2716,20 +2716,20 @@ button:active {
   display: block;
   overflow: hidden;
   background: #f7f8fa;
-  padding: clamp(44px, 6.7vw, 88px) clamp(40px, 6.1vw, 86px);
+  padding: clamp(34px, 4.5vw, 46px) clamp(34px, 4.5vw, 46px);
 }
 
 .box-kiosk-stage-head {
   display: flex;
   align-items: baseline;
-  gap: clamp(28px, 4.1vw, 58px);
-  width: min(100%, 1260px);
+  gap: clamp(24px, 3.9vw, 39px);
+  width: min(100%, 980px);
 }
 
 .box-kiosk-stage-head span {
   flex: 0 0 auto;
   color: #696969;
-  font-size: clamp(46px, 5.85vw, 82px);
+  font-size: clamp(36px, 4.7vw, 48px);
   line-height: 1;
   font-weight: 800;
   letter-spacing: -0.06em;
@@ -2738,7 +2738,7 @@ button:active {
 .box-kiosk-stage-head h2 {
   margin: 0;
   color: #000;
-  font-size: clamp(46px, 5.85vw, 82px);
+  font-size: clamp(36px, 4.7vw, 48px);
   line-height: 1.03;
   font-weight: 800;
   letter-spacing: -0.06em;
@@ -2747,24 +2747,24 @@ button:active {
 .box-kiosk-choice-grid {
   position: absolute;
   left: 50%;
-  top: 52%;
+  top: 50.5%;
   display: flex;
-  gap: clamp(18px, 2vw, 28px);
+  gap: clamp(10px, 1.1vw, 13px);
   transform: translate(-50%, -50%);
 }
 
 .box-kiosk-choice-card {
-  width: clamp(250px, 20.6vw, 292px);
-  height: clamp(250px, 20.6vw, 292px);
+  width: clamp(190px, 22.3vw, 228px);
+  height: clamp(190px, 22.3vw, 228px);
   border: 1.5px solid #d5d5d5;
-  border-radius: clamp(42px, 4.1vw, 58px);
+  border-radius: clamp(42px, 5.9vw, 60px);
   background: #fff;
   color: #000;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 24px;
+  gap: clamp(22px, 3.3vw, 32px);
   cursor: pointer;
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
@@ -2779,7 +2779,7 @@ button:active {
 }
 
 .box-kiosk-choice-card strong {
-  font-size: clamp(42px, 4.2vw, 58px);
+  font-size: clamp(28px, 3.15vw, 32px);
   line-height: 1.06;
   font-weight: 800;
   letter-spacing: -0.06em;
@@ -2787,33 +2787,33 @@ button:active {
 
 .box-kiosk-choice-icon,
 .box-kiosk-config-box-icon {
-  width: clamp(56px, 5.2vw, 74px);
-  height: clamp(56px, 5.2vw, 74px);
+  width: clamp(38px, 4.3vw, 44px);
+  height: clamp(38px, 4.3vw, 44px);
   display: inline-block;
-  background: url("https://www.figma.com/api/mcp/asset/94bbd36c-60fa-41c4-a5b5-7b6e1608148d") center/contain no-repeat;
+  background: url("https://www.figma.com/api/mcp/asset/d4885816-1b96-4d02-8660-7ae122cedd94") center/contain no-repeat;
   filter: brightness(0);
 }
 
 .box-kiosk-choice-icon-multi {
   position: relative;
-  width: clamp(92px, 8.2vw, 116px);
-  background-size: 54px 54px;
+  width: clamp(96px, 11vw, 113px);
+  background-size: 44px 44px;
 }
 
 .box-kiosk-choice-icon-multi::before,
 .box-kiosk-choice-icon-multi::after {
   content: "";
   position: absolute;
-  top: 10px;
-  width: 52px;
-  height: 52px;
+  top: 0;
+  width: 44px;
+  height: 44px;
   background: inherit;
   background-size: contain;
 }
 
 .box-kiosk-choice-icon-multi::before {
   left: 0;
-  transform: scale(0.62) translate(8px, 28px);
+  transform: scale(0.62) translate(6px, 31px);
 }
 
 .box-kiosk-choice-icon-multi::after {
