@@ -5986,6 +5986,17 @@ function closeBoxKiosk() {
   document.body.classList.remove("box-kiosk-open");
 }
 
+function returnBoxKioskToStart(event) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  clearBoxKioskCountdown();
+  clearBoxKioskInputDebounce();
+  clearBoxKioskScanBuffer();
+  resetBoxKioskCreateFlow();
+  showBoxKioskState("idle");
+  refocusBoxKioskScannerSoon();
+}
+
 function rackNumberFromText(value) {
   const text = String(value || "").trim();
   const match = text.match(/\d+/);
@@ -9155,7 +9166,7 @@ document.addEventListener("click", (event) => {
   if (!(target instanceof HTMLElement)) return;
   handleBoxKioskNewBoxAction(event);
 }, true);
-if (refs.boxKioskCloseBtn) refs.boxKioskCloseBtn.addEventListener("click", closeBoxKiosk);
+if (refs.boxKioskCloseBtn) refs.boxKioskCloseBtn.addEventListener("click", returnBoxKioskToStart);
 if (refs.boxKioskView) {
   refs.boxKioskView.addEventListener("pointerdown", (event) => {
     if (shouldKeepBoxKioskInteraction(event.target)) return;

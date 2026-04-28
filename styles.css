@@ -3131,6 +3131,795 @@ button:active {
   }
 }
 
+.box-kiosk-state {
+  padding: clamp(28px, 4.1vw, 42px) clamp(34px, 4.8vw, 56px);
+}
+
+.box-kiosk-action-row {
+  top: clamp(34px, 5.1vh, 50px);
+  left: clamp(34px, 5.2vw, 54px);
+  gap: 10px;
+}
+
+.box-kiosk-action {
+  min-height: 48px;
+  gap: 10px;
+  padding: 9px 14px 9px 10px;
+  font-size: 14px;
+}
+
+.box-kiosk-action-icon {
+  width: 30px;
+  height: 30px;
+  flex-basis: 30px;
+}
+
+.box-kiosk-idle-content {
+  gap: 20px;
+  transform: translateY(18px);
+}
+
+.box-kiosk-idle .box-kiosk-ready {
+  font-size: clamp(13px, 1.35vw, 16px);
+}
+
+.box-kiosk-idle .box-kiosk-ready span {
+  width: 22px;
+  height: 22px;
+}
+
+.box-kiosk-idle .box-kiosk-idle-content h2 {
+  font-size: clamp(30px, 3.55vw, 38px);
+}
+
+.box-kiosk-idle .box-kiosk-idle-content p {
+  font-size: clamp(18px, 2.1vw, 23px);
+}
+
+.box-kiosk-idle .box-kiosk-chevrons {
+  width: 58px;
+  height: 56px;
+  margin-top: 10px;
+}
+
+.box-kiosk-idle .box-kiosk-chevrons span {
+  width: 38px;
+  height: 38px;
+  border-right-width: 7px;
+  border-bottom-width: 7px;
+  margin-top: -16px;
+}
+
+.box-kiosk-idle .box-kiosk-barcode {
+  width: clamp(156px, 18vw, 190px);
+  height: clamp(68px, 8.4vw, 92px);
+}
+
+.box-kiosk-top-countdown {
+  top: clamp(34px, 5.2vh, 54px);
+  right: clamp(132px, 12.4vw, 164px);
+  gap: 14px;
+}
+
+.box-kiosk-top-countdown strong {
+  width: clamp(54px, 5.4vw, 68px);
+  height: clamp(54px, 5.4vw, 68px);
+  border-width: 5px;
+  font-size: clamp(28px, 3.25vw, 40px);
+}
+
+.box-kiosk-top-countdown span {
+  width: 132px;
+  font-size: clamp(15px, 1.55vw, 21px);
+}
+
+.box-kiosk-found,
+.box-kiosk-boxscan {
+  padding-right: clamp(200px, 17vw, 260px);
+}
+
+.box-kiosk-found h2 {
+  font-size: clamp(34px, 4.1vw, 54px);
+}
+
+.box-kiosk-found h3 {
+  margin-top: 14px;
+  max-width: min(780px, 58vw);
+  font-size: clamp(28px, 3.35vw, 44px);
+}
+
+.box-kiosk-found h4 {
+  margin-top: clamp(34px, 5.8vh, 58px);
+  margin-bottom: 18px;
+  font-size: clamp(24px, 2.75vw, 34px);
+}
+
+.box-kiosk-location-pill {
+  min-width: min(360px, 58vw);
+  min-height: 76px;
+  margin-top: clamp(24px, 4vh, 38px);
+  border-radius: 34px;
+  padding: 0 28px;
+  font-size: clamp(25px, 2.9vw, 36px);
+}
+
+.box-kiosk-racks {
+  max-width: 480px;
+  gap: 12px;
+}
+
+.box-kiosk-rack {
+  width: clamp(60px, 6.3vw, 76px);
+  height: clamp(60px, 6.3vw, 76px);
+  font-size: clamp(25px, 2.8vw, 34px);
+}
+
+.box-kiosk-message {
+  gap: 34px;
+}
+
+.box-kiosk-message-line {
+  gap: 22px;
+}
+
+.box-kiosk-message-line h2 {
+  font-size: clamp(34px, 4.7vw, 64px);
+}
+
+.box-kiosk-dark-icon {
+  width: clamp(56px, 5.8vw, 68px);
+  height: clamp(56px, 5.8vw, 68px);
+  font-size: clamp(40px, 4.4vw, 52px);
+}
+
+.box-kiosk-countdown {
+  gap: 18px;
+  font-size: clamp(16px, 1.7vw, 20px);
+}
+
+.box-kiosk-countdown strong {
+  width: clamp(60px, 6.1vw, 72px);
+  height: clamp(60px, 6.1vw, 72px);
+  font-size: clamp(34px, 3.7vw, 42px);
+}
+
+.box-kiosk-boxscan h2 {
+  left: clamp(34px, 4.6vw, 52px);
+  top: clamp(28px, 5vh, 38px);
+  width: min(430px, 43vw);
+  font-size: clamp(32px, 3.75vw, 42px);
+}
+
+.box-kiosk-boxscan aside {
+  left: clamp(520px, 58vw, 650px);
+  top: clamp(44px, 7vh, 56px);
+  width: clamp(290px, 31vw, 350px);
+  grid-template-columns: clamp(62px, 6.6vw, 76px) 1fr;
+}
+
+.box-kiosk-boxscan aside h3 {
+  font-size: clamp(23px, 2.45vw, 29px);
+}
+
+.box-kiosk-boxscan aside p {
+  max-width: 340px;
+  font-size: clamp(13px, 1.28vw, 15px);
+}
+
+.box-kiosk-rack-picked {
+  width: clamp(62px, 6.6vw, 76px);
+  height: clamp(62px, 6.6vw, 76px);
+  font-size: clamp(25px, 2.6vw, 30px);
+}
+
+.box-kiosk-box-icon {
+  left: clamp(44px, 5vw, 56px);
+  top: clamp(170px, 28vh, 215px);
+  width: clamp(220px, 24.6vw, 275px);
+  height: clamp(220px, 24.6vw, 275px);
+}
+
+.box-kiosk-box-icon .box-qr {
+  width: clamp(48px, 5.3vw, 60px);
+  height: clamp(48px, 5.3vw, 60px);
+  border-radius: 16px;
+}
+
+.box-kiosk-boxscan .box-kiosk-chevrons-small {
+  left: clamp(118px, 14.4vw, 160px);
+  top: clamp(445px, 72vh, 540px);
+  width: 54px;
+  height: 52px;
+}
+
+.box-kiosk-view .box-kiosk-close {
+  right: clamp(34px, 4.5vw, 54px);
+  bottom: clamp(38px, 7.8vh, 64px);
+  width: clamp(74px, 7.6vw, 88px);
+  height: clamp(74px, 7.6vw, 88px);
+  font-size: clamp(42px, 4.55vw, 52px);
+}
+
+.box-kiosk-boxscan ~ .box-kiosk-close::before {
+  inset: 17px;
+}
+
+.box-kiosk-create {
+  padding: clamp(30px, 4vw, 42px) clamp(32px, 4.4vw, 50px);
+}
+
+.box-kiosk-stage-head {
+  gap: clamp(22px, 3.2vw, 34px);
+  width: min(100%, 930px);
+}
+
+.box-kiosk-stage-head span,
+.box-kiosk-stage-head h2 {
+  font-size: clamp(32px, 4.05vw, 44px);
+}
+
+.box-kiosk-choice-grid {
+  top: 49.5%;
+  gap: 12px;
+}
+
+.box-kiosk-choice-card {
+  width: clamp(176px, 20vw, 206px);
+  height: clamp(176px, 20vw, 206px);
+  border-radius: clamp(38px, 5vw, 54px);
+  gap: clamp(20px, 2.8vw, 28px);
+}
+
+.box-kiosk-choice-card strong {
+  font-size: clamp(26px, 2.9vw, 30px);
+}
+
+.box-kiosk-choice-icon,
+.box-kiosk-config-box-icon {
+  width: clamp(34px, 3.8vw, 40px);
+  height: clamp(34px, 3.8vw, 40px);
+}
+
+.box-kiosk-choice-icon-multi {
+  width: clamp(84px, 9.8vw, 100px);
+  background-size: 40px 40px;
+}
+
+.box-kiosk-choice-icon-multi::before,
+.box-kiosk-choice-icon-multi::after {
+  width: 40px;
+  height: 40px;
+}
+
+.box-kiosk-rack-pick {
+  width: min(660px, 64vw);
+  transform: translate(-50%, -38%);
+}
+
+.box-kiosk-rack-pick h3 {
+  margin-bottom: clamp(34px, 5vh, 48px);
+  font-size: clamp(32px, 3.55vw, 44px);
+}
+
+.box-kiosk-rack-choices {
+  grid-template-columns: repeat(5, clamp(72px, 7.5vw, 90px));
+  gap: clamp(18px, 2.5vh, 26px) clamp(16px, 1.8vw, 22px);
+}
+
+.box-kiosk-rack-choice {
+  width: clamp(72px, 7.5vw, 90px);
+  height: clamp(72px, 7.5vw, 90px);
+  font-size: clamp(32px, 3.45vw, 42px);
+}
+
+.box-kiosk-multi-cards {
+  left: clamp(44px, 5vw, 66px);
+  top: clamp(215px, 25vh, 275px);
+  max-width: calc(100vw - 190px);
+  gap: 12px;
+}
+
+.box-kiosk-multi-card {
+  flex-basis: clamp(330px, 36vw, 480px);
+  height: clamp(100px, 11vw, 124px);
+  grid-template-columns: 126px 1fr;
+  border-radius: clamp(28px, 3.3vw, 40px);
+  padding: 0 clamp(20px, 2.5vw, 32px);
+}
+
+.box-kiosk-multi-icon {
+  gap: 14px;
+}
+
+.box-kiosk-multi-icon .box-kiosk-config-box-icon {
+  width: clamp(42px, 4.3vw, 54px);
+  height: clamp(42px, 4.3vw, 54px);
+}
+
+.box-kiosk-multi-icon strong {
+  font-size: clamp(50px, 6vw, 70px);
+}
+
+.box-kiosk-multi-info {
+  gap: 8px;
+}
+
+.box-kiosk-multi-info strong {
+  font-size: clamp(18px, 1.9vw, 24px);
+}
+
+.box-kiosk-multi-info small {
+  font-size: clamp(17px, 1.75vw, 22px);
+}
+
+.box-kiosk-add-card {
+  left: min(calc(100vw - 158px), 880px);
+  top: clamp(244px, 28.8vh, 318px);
+  width: clamp(54px, 5.4vw, 66px);
+  height: clamp(54px, 5.4vw, 66px);
+  border-width: 7px;
+  font-size: clamp(34px, 3.6vw, 44px);
+}
+
+.box-kiosk-primary-create {
+  bottom: clamp(60px, 8vh, 82px);
+  min-width: clamp(305px, 30vw, 390px);
+  height: clamp(82px, 9.4vw, 104px);
+  gap: clamp(18px, 2.4vw, 28px);
+}
+
+.box-kiosk-primary-create span {
+  font-size: clamp(34px, 4.2vw, 48px);
+}
+
+.box-kiosk-primary-create strong {
+  width: clamp(58px, 6.1vw, 76px);
+  height: clamp(58px, 6.1vw, 76px);
+  border-radius: clamp(20px, 2.3vw, 28px);
+  font-size: clamp(36px, 4.2vw, 52px);
+}
+
+.box-kiosk-config-card {
+  top: clamp(190px, 24vh, 260px);
+  width: min(780px, 70vw);
+  gap: clamp(18px, 2.7vh, 26px);
+}
+
+.box-kiosk-config-number {
+  gap: 18px;
+}
+
+.box-kiosk-config-number strong {
+  font-size: clamp(48px, 5.8vw, 70px);
+}
+
+.box-kiosk-config-field {
+  gap: 14px;
+  font-size: clamp(18px, 2.1vw, 24px);
+}
+
+.box-kiosk-config-field input {
+  height: clamp(62px, 7.2vw, 78px);
+  padding: 0 34px;
+  font-size: clamp(28px, 3.35vw, 40px);
+}
+
+.box-kiosk-qty-choices {
+  gap: clamp(10px, 1.4vw, 16px);
+}
+
+.box-kiosk-qty-choice {
+  min-width: clamp(92px, 9.8vw, 126px);
+  height: clamp(58px, 6.2vw, 74px);
+  font-size: clamp(30px, 3.5vw, 42px);
+}
+
+/* Final 11-inch tablet pass: every kiosk step must fit without cropping. */
+.box-kiosk-state {
+  padding: clamp(24px, 3.2vw, 36px) clamp(28px, 4vw, 44px);
+}
+
+.box-kiosk-action-row {
+  top: clamp(26px, 4vh, 38px);
+  left: clamp(28px, 4vw, 42px);
+  gap: 10px;
+}
+
+.box-kiosk-action {
+  min-height: 44px;
+  padding: 7px 11px;
+  gap: 9px;
+  border-width: 1px;
+  font-size: 13px;
+}
+
+.box-kiosk-action-icon {
+  width: 28px;
+  height: 28px;
+  flex-basis: 28px;
+}
+
+.box-kiosk-idle-content {
+  gap: 18px;
+  transform: translateY(12px);
+}
+
+.box-kiosk-ready {
+  gap: 8px;
+  font-size: 13px;
+}
+
+.box-kiosk-ready span {
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
+}
+
+.box-kiosk-idle .box-kiosk-idle-content h2 {
+  max-width: min(720px, 78vw);
+  font-size: clamp(28px, 3.3vw, 36px);
+}
+
+.box-kiosk-idle .box-kiosk-idle-content p {
+  font-size: clamp(16px, 1.9vw, 21px);
+}
+
+.box-kiosk-idle .box-kiosk-chevrons {
+  width: 50px;
+  height: 48px;
+  margin-top: 8px;
+}
+
+.box-kiosk-idle .box-kiosk-chevrons span {
+  width: 32px;
+  height: 32px;
+  margin-top: -14px;
+  border-right-width: 6px;
+  border-bottom-width: 6px;
+}
+
+.box-kiosk-idle .box-kiosk-barcode {
+  width: clamp(140px, 16vw, 172px);
+  height: clamp(62px, 7.4vw, 82px);
+}
+
+.box-kiosk-loading h2 {
+  font-size: clamp(30px, 3.6vw, 42px);
+}
+
+.box-kiosk-spinner {
+  width: 50px;
+  height: 50px;
+  border-width: 6px;
+}
+
+.box-kiosk-top-countdown {
+  top: clamp(28px, 4.5vh, 42px);
+  right: clamp(145px, 14vw, 180px);
+  gap: 10px;
+}
+
+.box-kiosk-top-countdown strong {
+  width: clamp(50px, 5.2vw, 60px);
+  height: clamp(50px, 5.2vw, 60px);
+  border-width: 5px;
+  font-size: clamp(25px, 2.75vw, 34px);
+}
+
+.box-kiosk-top-countdown span {
+  width: 124px;
+  font-size: clamp(14px, 1.4vw, 17px);
+  line-height: 1.12;
+}
+
+.box-kiosk-found,
+.box-kiosk-boxscan {
+  padding-right: clamp(200px, 20vw, 260px);
+}
+
+.box-kiosk-found h2 {
+  font-size: clamp(34px, 3.9vw, 48px);
+}
+
+.box-kiosk-barcode-pill {
+  padding: 6px 16px;
+  font-size: clamp(14px, 1.45vw, 18px);
+}
+
+.box-kiosk-found h3 {
+  max-width: min(690px, 60vw);
+  margin-top: 12px;
+  font-size: clamp(27px, 3.05vw, 38px);
+  line-height: 1.16;
+}
+
+.box-kiosk-location-pill {
+  min-width: 250px;
+  min-height: 62px;
+  margin-top: clamp(20px, 3.4vh, 32px);
+  padding: 0 24px;
+  border-radius: 28px;
+  font-size: clamp(23px, 2.7vw, 32px);
+}
+
+.box-kiosk-found h4 {
+  max-width: 520px;
+  margin-top: clamp(30px, 5vh, 48px);
+  margin-bottom: 16px;
+  font-size: clamp(22px, 2.6vw, 31px);
+  line-height: 1.18;
+}
+
+.box-kiosk-racks {
+  gap: 14px;
+}
+
+.box-kiosk-rack {
+  width: clamp(56px, 5.7vw, 68px);
+  height: clamp(56px, 5.7vw, 68px);
+  font-size: clamp(23px, 2.55vw, 30px);
+}
+
+.box-kiosk-message {
+  gap: 28px;
+  padding: 24px;
+}
+
+.box-kiosk-message-line {
+  gap: 18px;
+}
+
+.box-kiosk-dark-icon {
+  width: 52px;
+  height: 52px;
+  font-size: 36px;
+}
+
+.box-kiosk-message-line h2 {
+  font-size: clamp(34px, 4.1vw, 50px);
+}
+
+.box-kiosk-countdown {
+  gap: 14px;
+  font-size: 15px;
+}
+
+.box-kiosk-countdown strong {
+  width: 54px;
+  height: 54px;
+  border-width: 5px;
+  font-size: 30px;
+}
+
+.box-kiosk-boxscan h2 {
+  left: clamp(32px, 4vw, 48px);
+  top: clamp(28px, 4.6vh, 38px);
+  width: min(390px, 39vw);
+  font-size: clamp(28px, 3.35vw, 38px);
+  line-height: 1.16;
+}
+
+.box-kiosk-boxscan aside {
+  left: clamp(490px, 56vw, 620px);
+  top: clamp(44px, 7vh, 56px);
+  width: clamp(270px, 29vw, 330px);
+  gap: 16px;
+  grid-template-columns: clamp(54px, 5.8vw, 68px) 1fr;
+}
+
+.box-kiosk-boxscan aside h3 {
+  font-size: clamp(21px, 2.3vw, 27px);
+  line-height: 1.12;
+}
+
+.box-kiosk-boxscan aside p {
+  margin-top: clamp(14px, 2.4vh, 22px);
+  max-width: 300px;
+  font-size: clamp(12px, 1.18vw, 14px);
+  line-height: 1.25;
+}
+
+.box-kiosk-rack-picked {
+  width: clamp(54px, 5.8vw, 68px);
+  height: clamp(54px, 5.8vw, 68px);
+  font-size: clamp(23px, 2.45vw, 29px);
+}
+
+.box-kiosk-box-icon {
+  left: clamp(38px, 4.5vw, 52px);
+  top: clamp(150px, 27vh, 195px);
+  width: clamp(190px, 22vw, 246px);
+  height: clamp(190px, 22vw, 246px);
+}
+
+.box-kiosk-boxscan .box-kiosk-chevrons-small {
+  left: clamp(104px, 13vw, 140px);
+  top: clamp(394px, 68vh, 500px);
+  width: 46px;
+  height: 44px;
+}
+
+.box-kiosk-view .box-kiosk-close {
+  right: clamp(36px, 5vw, 58px);
+  bottom: clamp(34px, 6.6vh, 54px);
+  width: clamp(64px, 6.6vw, 78px);
+  height: clamp(64px, 6.6vw, 78px);
+  font-size: clamp(34px, 3.8vw, 44px);
+}
+
+.box-kiosk-boxscan ~ .box-kiosk-close::before {
+  inset: 15px;
+}
+
+.box-kiosk-create {
+  padding: clamp(28px, 3.8vw, 40px) clamp(28px, 4vw, 46px);
+}
+
+.box-kiosk-stage-head {
+  gap: clamp(18px, 2.6vw, 28px);
+  width: min(100%, 820px);
+}
+
+.box-kiosk-stage-head span,
+.box-kiosk-stage-head h2 {
+  font-size: clamp(30px, 3.65vw, 40px);
+  line-height: 1.02;
+}
+
+.box-kiosk-choice-grid {
+  top: 50%;
+  gap: 12px;
+}
+
+.box-kiosk-choice-card {
+  width: clamp(152px, 17.8vw, 184px);
+  height: clamp(152px, 17.8vw, 184px);
+  border-radius: clamp(30px, 4.2vw, 46px);
+  gap: clamp(14px, 2.1vw, 22px);
+}
+
+.box-kiosk-choice-card strong {
+  font-size: clamp(23px, 2.55vw, 28px);
+  line-height: 1.08;
+}
+
+.box-kiosk-choice-icon,
+.box-kiosk-config-box-icon {
+  width: clamp(30px, 3.3vw, 36px);
+  height: clamp(30px, 3.3vw, 36px);
+}
+
+.box-kiosk-choice-icon-multi {
+  width: clamp(74px, 8.8vw, 88px);
+  background-size: 34px 34px;
+}
+
+.box-kiosk-choice-icon-multi::before,
+.box-kiosk-choice-icon-multi::after {
+  width: 34px;
+  height: 34px;
+}
+
+.box-kiosk-rack-pick {
+  width: min(580px, 58vw);
+  transform: translate(-50%, -36%);
+}
+
+.box-kiosk-rack-pick h3 {
+  margin-bottom: clamp(28px, 4.1vh, 40px);
+  font-size: clamp(28px, 3.2vw, 38px);
+}
+
+.box-kiosk-rack-choices {
+  grid-template-columns: repeat(5, clamp(62px, 6.5vw, 78px));
+  gap: clamp(14px, 2vh, 22px) clamp(12px, 1.6vw, 18px);
+}
+
+.box-kiosk-rack-choice {
+  width: clamp(62px, 6.5vw, 78px);
+  height: clamp(62px, 6.5vw, 78px);
+  font-size: clamp(28px, 3.1vw, 38px);
+}
+
+.box-kiosk-multi-cards {
+  left: clamp(38px, 4.5vw, 60px);
+  top: clamp(195px, 23.5vh, 250px);
+  gap: 10px;
+  max-width: calc(100vw - 170px);
+}
+
+.box-kiosk-multi-card {
+  flex-basis: clamp(300px, 34vw, 430px);
+  height: clamp(88px, 9.7vw, 112px);
+  grid-template-columns: 108px 1fr;
+  border-radius: clamp(24px, 3vw, 36px);
+  padding: 0 clamp(16px, 2vw, 26px);
+}
+
+.box-kiosk-multi-icon {
+  gap: 12px;
+}
+
+.box-kiosk-multi-icon .box-kiosk-config-box-icon {
+  width: clamp(36px, 3.8vw, 48px);
+  height: clamp(36px, 3.8vw, 48px);
+}
+
+.box-kiosk-multi-icon strong {
+  font-size: clamp(42px, 5vw, 62px);
+}
+
+.box-kiosk-multi-info strong {
+  font-size: clamp(16px, 1.7vw, 21px);
+}
+
+.box-kiosk-multi-info small {
+  font-size: clamp(14px, 1.55vw, 18px);
+}
+
+.box-kiosk-add-card {
+  left: min(calc(100vw - 138px), 810px);
+  top: clamp(220px, 27vh, 288px);
+  width: clamp(48px, 5vw, 60px);
+  height: clamp(48px, 5vw, 60px);
+  border-width: 6px;
+  font-size: clamp(30px, 3.1vw, 38px);
+}
+
+.box-kiosk-config-card {
+  top: clamp(170px, 22vh, 230px);
+  width: min(700px, 68vw);
+  gap: clamp(14px, 2.1vh, 22px);
+}
+
+.box-kiosk-config-number {
+  gap: 14px;
+}
+
+.box-kiosk-config-number strong {
+  font-size: clamp(40px, 5vw, 60px);
+}
+
+.box-kiosk-config-field {
+  gap: 10px;
+  font-size: clamp(16px, 1.85vw, 22px);
+}
+
+.box-kiosk-config-field input {
+  height: clamp(54px, 6.4vw, 68px);
+  padding: 0 28px;
+  border-radius: clamp(24px, 3.1vw, 34px);
+  font-size: clamp(24px, 3vw, 34px);
+}
+
+.box-kiosk-qty-choices {
+  gap: clamp(8px, 1.1vw, 14px);
+}
+
+.box-kiosk-qty-choice {
+  min-width: clamp(78px, 8.5vw, 108px);
+  height: clamp(50px, 5.5vw, 64px);
+  font-size: clamp(26px, 3vw, 36px);
+}
+
+.box-kiosk-primary-create {
+  bottom: clamp(48px, 6.8vh, 68px);
+  min-width: clamp(260px, 26vw, 340px);
+  height: clamp(66px, 7.8vw, 86px);
+  gap: clamp(14px, 1.8vw, 22px);
+}
+
+.box-kiosk-primary-create span {
+  font-size: clamp(28px, 3.5vw, 40px);
+}
+
+.box-kiosk-primary-create strong {
+  width: clamp(48px, 5vw, 62px);
+  height: clamp(48px, 5vw, 62px);
+  border-radius: clamp(16px, 1.8vw, 22px);
+  font-size: clamp(30px, 3.4vw, 42px);
+}
+
 .films-head-row {
   display: flex;
   align-items: center;
