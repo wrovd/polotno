@@ -5692,6 +5692,17 @@ function refocusBoxKioskScannerSoon() {
   });
 }
 
+function shouldKeepBoxKioskInteraction(target) {
+  if (!(target instanceof HTMLElement)) return false;
+  return Boolean(target.closest("button, input, textarea, select, a, [role='button'], [data-kiosk-create-mode], [data-kiosk-create-rack], [data-kiosk-edit-box], [data-kiosk-qty]"));
+}
+
+function handleBoxKioskNewBoxAction(event) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  showBoxKioskCreateMode();
+}
+
 function resetBoxKioskCreateFlow() {
   state.boxKiosk.createMode = "";
   state.boxKiosk.createRack = "";
@@ -9130,15 +9141,18 @@ if (refs.boxScanBarcodeBtn) refs.boxScanBarcodeBtn.addEventListener("click", asy
   openScanModal();
   await startScanner();
 });
-if (refs.boxKioskNewBoxAction) refs.boxKioskNewBoxAction.addEventListener("click", () => {
-  showBoxKioskCreateMode();
-});
+if (refs.boxKioskNewBoxAction) {
+  refs.boxKioskNewBoxAction.addEventListener("pointerdown", handleBoxKioskNewBoxAction);
+  refs.boxKioskNewBoxAction.addEventListener("click", handleBoxKioskNewBoxAction);
+}
 if (refs.boxKioskCloseBtn) refs.boxKioskCloseBtn.addEventListener("click", closeBoxKiosk);
 if (refs.boxKioskView) {
-  refs.boxKioskView.addEventListener("pointerdown", () => {
+  refs.boxKioskView.addEventListener("pointerdown", (event) => {
+    if (shouldKeepBoxKioskInteraction(event.target)) return;
     refocusBoxKioskScannerSoon();
   }, { passive: true });
-  refs.boxKioskView.addEventListener("touchstart", () => {
+  refs.boxKioskView.addEventListener("touchstart", (event) => {
+    if (shouldKeepBoxKioskInteraction(event.target)) return;
     refocusBoxKioskScannerSoon();
   }, { passive: true });
 }
