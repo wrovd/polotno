@@ -9145,6 +9145,16 @@ if (refs.boxKioskNewBoxAction) {
   refs.boxKioskNewBoxAction.addEventListener("pointerdown", handleBoxKioskNewBoxAction);
   refs.boxKioskNewBoxAction.addEventListener("click", handleBoxKioskNewBoxAction);
 }
+document.addEventListener("pointerup", (event) => {
+  const target = event.target instanceof HTMLElement ? event.target.closest("#boxKioskNewBoxAction") : null;
+  if (!(target instanceof HTMLElement)) return;
+  handleBoxKioskNewBoxAction(event);
+}, true);
+document.addEventListener("click", (event) => {
+  const target = event.target instanceof HTMLElement ? event.target.closest("#boxKioskNewBoxAction") : null;
+  if (!(target instanceof HTMLElement)) return;
+  handleBoxKioskNewBoxAction(event);
+}, true);
 if (refs.boxKioskCloseBtn) refs.boxKioskCloseBtn.addEventListener("click", closeBoxKiosk);
 if (refs.boxKioskView) {
   refs.boxKioskView.addEventListener("pointerdown", (event) => {

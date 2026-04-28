@@ -1806,10 +1806,11 @@ button:active {
 
 .box-kiosk-scan-input {
   position: fixed;
-  inset: 0;
-  z-index: 4001;
-  width: 100vw;
-  height: 100vh;
+  left: 0;
+  top: 0;
+  z-index: -1;
+  width: 1px;
+  height: 1px;
   border: 0;
   padding: 0;
   opacity: 0;
