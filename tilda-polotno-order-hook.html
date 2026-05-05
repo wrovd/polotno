@@ -2,8 +2,10 @@
   Polotno Tilda order hook.
 
   1. Replace POLOTNO_SECRET with the same value as TILDA_ORDER_WEBHOOK_SECRET in Vercel.
-  2. Put this block in Tilda: Site Settings -> More -> HTML code before </body>.
-  3. Keep TELEGRAM_BOT_TOKEN and TILDA_ORDER_CHAT_ID only in Vercel environment variables.
+  2. Stable option: use Tilda Webhook URL instead of this script:
+     https://polotno-three.vercel.app/api/alerts/tilda-order?secret=PASTE_TILDA_ORDER_WEBHOOK_SECRET_HERE
+  3. Script option: put this block in Tilda -> Site Settings -> More -> HTML code before </body>.
+  4. Keep TELEGRAM_BOT_TOKEN and TILDA_ORDER_CHAT_ID only in Vercel environment variables.
 -->
 <script>
 (function () {
@@ -138,7 +140,7 @@
   function rememberFingerprint(key) {
     sentFingerprints[key] = Date.now();
     Object.keys(sentFingerprints).forEach(function (item) {
-      if (Date.now() - sentFingerprints[item] > 30000) {
+      if (Date.now() - sentFingerprints[item] > 3000) {
         delete sentFingerprints[item];
       }
     });

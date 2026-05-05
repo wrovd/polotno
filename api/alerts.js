@@ -1,10 +1,21 @@
 const { listItems, listUsers } = require("../lib/sheets");
 const { requireAuth } = require("../lib/auth");
 const { sendTelegramMessage } = require("../lib/telegram");
-const { send, methodNotAllowed, parseJsonBody } = require("../lib/http");
+const { send, methodNotAllowed } = require("../lib/http");
 
 function actionFromReq(req) {
   return String(req.query?.action || "").trim().toLowerCase();
+}
+
+function queryValue(req, key) {
+  const direct = req.query?.[key];
+  if (direct) return Array.isArray(direct) ? direct[0] : direct;
+  try {
+    const url = new URL(req.url || "", "http://localhost");
+    return url.searchParams.get(key) || "";
+  } catch {
+    return "";
+  }
 }
 
 function setTildaCorsHeaders(req, res) {
@@ -48,9 +59,92 @@ function getField(fields, names) {
   return "";
 }
 
+function parseMaybeJson(value) {
+  if (typeof value !== "string") return value;
+  const textValue = value.trim();
+  if (!textValue) return "";
+  if (!/^[\[{]/.test(textValue)) return value;
+  try {
+    return JSON.parse(textValue);
+  } catch {
+    return value;
+  }
+}
+
+function parseUrlEncoded(value) {
+  const params = new URLSearchParams(value);
+  const result = {};
+  for (const [key, itemValue] of params.entries()) {
+    if (!Object.prototype.hasOwnProperty.call(result, key)) {
+      result[key] = parseMaybeJson(itemValue);
+    } else if (Array.isArray(result[key])) {
+      result[key].push(parseMaybeJson(itemValue));
+    } else {
+      result[key] = [result[key], parseMaybeJson(itemValue)];
+    }
+  }
+  return result;
+}
+
+function readRawBody(req) {
+  return new Promise((resolve, reject) => {
+    let raw = "";
+    req.setEncoding("utf8");
+    req.on("data", (chunk) => {
+      raw += chunk;
+      if (raw.length > 1024 * 1024) {
+        reject(new Error("Request body is too large"));
+        req.destroy();
+      }
+    });
+    req.on("end", () => resolve(raw));
+    req.on("error", reject);
+  });
+}
+
+async function parseTildaBody(req) {
+  if (req.body && typeof req.body === "object") return req.body;
+  if (typeof req.body === "string") {
+    const contentType = String(req.headers["content-type"] || "").toLowerCase();
+    if (contentType.includes("application/x-www-form-urlencoded")) return parseUrlEncoded(req.body);
+    const parsed = parseMaybeJson(req.body);
+    return parsed && typeof parsed === "object" ? parsed : parseUrlEncoded(req.body);
+  }
+
+  const raw = await readRawBody(req);
+  if (!raw) return {};
+  const contentType = String(req.headers["content-type"] || "").toLowerCase();
+  if (contentType.includes("application/json")) {
+    const parsed = parseMaybeJson(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  }
+  return parseUrlEncoded(raw);
+}
+
+function normalizeBodyFields(body) {
+  const fields = body.fields && typeof body.fields === "object" && !Array.isArray(body.fields) ? body.fields : {};
+  const ignored = new Set(["fields", "meta", "products"]);
+  const result = { ...fields };
+  for (const [key, value] of Object.entries(body || {})) {
+    if (ignored.has(key)) continue;
+    if (value == null || typeof value === "object") continue;
+    if (!Object.prototype.hasOwnProperty.call(result, key)) {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
 function normalizeProducts(products) {
-  if (!Array.isArray(products)) return [];
-  return products
+  const parsedProducts = parseMaybeJson(products);
+  if (typeof parsedProducts === "string" && parsedProducts.trim()) {
+    return parsedProducts
+      .split(/\n|;/)
+      .map((line) => ({ name: cleanText(line), quantity: 1, price: "" }))
+      .filter((product) => product.name);
+  }
+  if (!Array.isArray(parsedProducts)) return [];
+  return parsedProducts
     .map((product) => ({
       name: firstNonEmpty(product?.name, product?.title, product?.product),
       quantity: firstNonEmpty(product?.quantity, product?.qty, product?.amount, 1),
@@ -76,13 +170,16 @@ function appendItalicLine(lines, label, value) {
 }
 
 function buildTildaOrderMessage(body) {
-  const fields = body.fields && typeof body.fields === "object" ? body.fields : {};
+  const fields = normalizeBodyFields(body);
   const meta = body.meta && typeof body.meta === "object" ? body.meta : {};
-  const products = normalizeProducts(body.products);
+  const productsSource = Array.isArray(body.products) || (body.products && typeof body.products === "object")
+    ? body.products
+    : firstNonEmpty(body.products, getField(fields, ["products", "Products", "Товары", "order"]));
+  const products = normalizeProducts(productsSource);
   const orderId = firstNonEmpty(
     body.orderId,
     body.order_id,
-    getField(fields, ["orderid", "Order ID", "Код платежа", "payment_id"]),
+    getField(fields, ["orderid", "Order ID", "Код платежа", "payment_id", "tranid", "requestid"]),
     Date.now()
   );
   const amount = firstNonEmpty(body.amount, getField(fields, ["amount", "Сумма платежа", "payment_amount"]));
@@ -145,22 +242,31 @@ async function handleTildaOrder(req, res) {
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return methodNotAllowed(req, res, ["POST", "OPTIONS"]);
 
-  const body = parseJsonBody(req);
+  const body = await parseTildaBody(req);
   const expectedSecret = String(process.env.TILDA_ORDER_WEBHOOK_SECRET || "").trim();
-  const actualSecret = String(req.headers["x-polotno-tilda-secret"] || body._polotnoSecret || "").trim();
+  const actualSecret = String(req.headers["x-polotno-tilda-secret"] || body._polotnoSecret || queryValue(req, "secret")).trim();
   if (!expectedSecret) return send(res, 500, { error: "TILDA_ORDER_WEBHOOK_SECRET is required" });
   if (!actualSecret || actualSecret !== expectedSecret) return send(res, 401, { error: "Invalid Tilda webhook secret" });
 
-  const chatId = String(process.env.TILDA_ORDER_CHAT_ID || "").trim();
-  if (!chatId) return send(res, 500, { error: "TILDA_ORDER_CHAT_ID is required" });
+  const chatIds = String(process.env.TILDA_ORDER_CHAT_ID || "")
+    .split(/[,\s;]+/)
+    .map((chatId) => chatId.trim())
+    .filter(Boolean);
+  if (!chatIds.length) return send(res, 500, { error: "TILDA_ORDER_CHAT_ID is required" });
 
   try {
     const text = buildTildaOrderMessage(body);
-    await sendTelegramMessage(chatId, text, {
+    const results = await Promise.allSettled(chatIds.map((chatId) => sendTelegramMessage(chatId, text, {
       parse_mode: "HTML",
       disable_web_page_preview: true,
-    });
-    return send(res, 200, { ok: true });
+    })));
+    const sent = results.filter((result) => result.status === "fulfilled").length;
+    const failed = results.length - sent;
+    if (!sent) {
+      const firstError = results.find((result) => result.status === "rejected")?.reason;
+      throw firstError || new Error("Telegram delivery failed");
+    }
+    return send(res, 200, { ok: true, sent, failed });
   } catch (error) {
     return send(res, 500, { error: error.message || "Failed to send Tilda order notification" });
   }
