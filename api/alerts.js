@@ -1,7 +1,16 @@
+const crypto = require("crypto");
+const { sql } = require("@vercel/postgres");
 const { listItems, listUsers } = require("../lib/sheets");
 const { requireAuth } = require("../lib/auth");
-const { sendTelegramMessage } = require("../lib/telegram");
+const {
+  sendTelegramMessage,
+  answerCallbackQuery,
+  editTelegramMessageReplyMarkup,
+} = require("../lib/telegram");
 const { send, methodNotAllowed } = require("../lib/http");
+
+let tildaOrderSchemaReady = false;
+let tildaOrderSchemaPromise = null;
 
 function actionFromReq(req) {
   return String(req.query?.action || "").trim().toLowerCase();
@@ -153,6 +162,41 @@ function normalizeProducts(products) {
     .filter((product) => product.name);
 }
 
+async function ensureTildaOrderSchema() {
+  if (tildaOrderSchemaReady) return;
+  if (tildaOrderSchemaPromise) return tildaOrderSchemaPromise;
+
+  tildaOrderSchemaPromise = (async () => {
+    await sql`
+      CREATE TABLE IF NOT EXISTS tilda_order_calls (
+        order_key TEXT PRIMARY KEY,
+        order_id TEXT NOT NULL DEFAULT '',
+        phone TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'new',
+        updated_by TEXT NOT NULL DEFAULT '',
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS tilda_order_messages (
+        order_key TEXT NOT NULL REFERENCES tilda_order_calls(order_key) ON DELETE CASCADE,
+        chat_id TEXT NOT NULL,
+        message_id TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (order_key, chat_id, message_id)
+      )
+    `;
+    tildaOrderSchemaReady = true;
+  })();
+
+  try {
+    await tildaOrderSchemaPromise;
+  } finally {
+    tildaOrderSchemaPromise = null;
+  }
+}
+
 function formatProductLine(product, index) {
   const name = escapeHtml(product.name);
   const price = cleanText(product.price);
@@ -236,6 +280,81 @@ function buildTildaOrderMessage(body) {
   return lines.join("\n");
 }
 
+function getTildaOrderMeta(body) {
+  const fields = normalizeBodyFields(body);
+  const meta = body.meta && typeof body.meta === "object" ? body.meta : {};
+  const productsSource = Array.isArray(body.products) || (body.products && typeof body.products === "object")
+    ? body.products
+    : firstNonEmpty(body.products, getField(fields, ["products", "Products", "Товары", "order"]));
+  const products = normalizeProducts(productsSource)
+    .map((product) => [product.name, product.quantity, product.price, product.sku].join(":"))
+    .join("|");
+  const orderId = firstNonEmpty(
+    body.orderId,
+    body.order_id,
+    getField(fields, ["orderid", "Order ID", "Код платежа", "payment_id", "tranid", "requestid"]),
+    body.clientEventId
+  );
+  const phone = firstNonEmpty(body.phone, getField(fields, ["Phone", "phone", "Телефон"]));
+  const email = firstNonEmpty(body.email, getField(fields, ["Email", "email", "E-mail", "ma_email"]));
+  const amount = firstNonEmpty(body.amount, getField(fields, ["amount", "Сумма платежа", "payment_amount"]));
+  const requestId = firstNonEmpty(body.requestId, meta.requestId, getField(fields, ["tildaspec-formid", "formid", "Код заявки"]));
+  const rawKey = firstNonEmpty(orderId, requestId, [phone, email, amount, products].join("::"), body.clientEventId, Date.now());
+  const orderKey = crypto.createHash("sha256").update(String(rawKey)).digest("hex").slice(0, 24);
+  return { orderKey, orderId, phone };
+}
+
+function normalizePhoneForTel(phone) {
+  const raw = cleanText(phone);
+  if (!raw) return "";
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  if (raw.startsWith("+")) return `+${digits}`;
+  if (digits.length === 11 && digits.startsWith("8")) return `+7${digits.slice(1)}`;
+  if (digits.length === 11 && digits.startsWith("7")) return `+${digits}`;
+  return digits.length >= 10 ? `+${digits}` : digits;
+}
+
+function buildTildaOrderKeyboard(meta, status = "new") {
+  const rows = [];
+  const phone = normalizePhoneForTel(meta.phone);
+  if (phone) {
+    rows.push([{ text: "Позвонить", url: `tel:${phone}` }]);
+  }
+  rows.push([{
+    text: status === "called" ? "Уже обзвонили" : "Новый",
+    callback_data: `tilda_called:${meta.orderKey}`,
+  }]);
+  return { inline_keyboard: rows };
+}
+
+async function upsertTildaOrderCall(meta) {
+  await ensureTildaOrderSchema();
+  await sql`
+    INSERT INTO tilda_order_calls (order_key, order_id, phone, status)
+    VALUES (${meta.orderKey}, ${meta.orderId || ""}, ${meta.phone || ""}, 'new')
+    ON CONFLICT (order_key) DO UPDATE SET
+      order_id = COALESCE(NULLIF(EXCLUDED.order_id, ''), tilda_order_calls.order_id),
+      phone = COALESCE(NULLIF(EXCLUDED.phone, ''), tilda_order_calls.phone)
+  `;
+  const { rows } = await sql`
+    SELECT status
+    FROM tilda_order_calls
+    WHERE order_key = ${meta.orderKey}
+    LIMIT 1
+  `;
+  return rows[0]?.status || "new";
+}
+
+async function saveTildaOrderMessage(orderKey, chatId, messageId) {
+  if (!orderKey || !chatId || !messageId) return;
+  await sql`
+    INSERT INTO tilda_order_messages (order_key, chat_id, message_id)
+    VALUES (${orderKey}, ${String(chatId)}, ${String(messageId)})
+    ON CONFLICT DO NOTHING
+  `;
+}
+
 const recentTildaOrderFingerprints = new Map();
 
 function tildaOrderFingerprint(body) {
@@ -292,10 +411,19 @@ async function handleTildaOrder(req, res) {
 
   try {
     const text = buildTildaOrderMessage(body);
-    const results = await Promise.allSettled(chatIds.map((chatId) => sendTelegramMessage(chatId, text, {
-      parse_mode: "HTML",
-      disable_web_page_preview: true,
-    })));
+    const meta = getTildaOrderMeta(body);
+    const status = await upsertTildaOrderCall(meta);
+    const replyMarkup = buildTildaOrderKeyboard(meta, status);
+    const results = await Promise.allSettled(chatIds.map(async (chatId) => {
+      const result = await sendTelegramMessage(chatId, text, {
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+        reply_markup: replyMarkup,
+      });
+      const messageId = result?.result?.message_id;
+      await saveTildaOrderMessage(meta.orderKey, chatId, messageId);
+      return result;
+    }));
     const sent = results.filter((result) => result.status === "fulfilled").length;
     const failed = results.length - sent;
     if (!sent) {
@@ -305,6 +433,68 @@ async function handleTildaOrder(req, res) {
     return send(res, 200, { ok: true, sent, failed });
   } catch (error) {
     return send(res, 500, { error: error.message || "Failed to send Tilda order notification" });
+  }
+}
+
+function telegramCallbackSenderName(callbackQuery) {
+  const from = callbackQuery?.from || {};
+  const fullName = [from.first_name, from.last_name].map(cleanText).filter(Boolean).join(" ");
+  return firstNonEmpty(fullName, from.username ? `@${from.username}` : "", from.id);
+}
+
+async function handleTelegramCallback(req, res) {
+  if (req.method !== "POST") return methodNotAllowed(req, res, ["POST"]);
+
+  const body = await parseTildaBody(req);
+  const expectedSecret = String(process.env.TELEGRAM_CALLBACK_SECRET || process.env.TILDA_ORDER_WEBHOOK_SECRET || "").trim();
+  const actualSecret = String(body.secret || queryValue(req, "secret")).trim();
+  if (!expectedSecret) return send(res, 500, { error: "TELEGRAM_CALLBACK_SECRET or TILDA_ORDER_WEBHOOK_SECRET is required" });
+  if (!actualSecret || actualSecret !== expectedSecret) return send(res, 401, { error: "Invalid Telegram callback secret" });
+
+  const callbackQuery = body.callback_query;
+  const callbackId = callbackQuery?.id;
+  const data = String(callbackQuery?.data || "");
+  if (!data.startsWith("tilda_called:")) {
+    await answerCallbackQuery(callbackId, "Действие не поддерживается").catch(() => null);
+    return send(res, 200, { ok: true, ignored: true });
+  }
+
+  const orderKey = data.replace("tilda_called:", "").trim();
+  if (!orderKey) {
+    await answerCallbackQuery(callbackId, "Заказ не найден").catch(() => null);
+    return send(res, 200, { ok: false, error: "Missing order key" });
+  }
+
+  try {
+    await ensureTildaOrderSchema();
+    const updatedBy = telegramCallbackSenderName(callbackQuery);
+    const { rows: orderRows } = await sql`
+      UPDATE tilda_order_calls
+      SET status = 'called', updated_by = ${updatedBy}, updated_at = NOW()
+      WHERE order_key = ${orderKey}
+      RETURNING order_key, phone, status
+    `;
+
+    const order = orderRows[0];
+    if (!order) {
+      await answerCallbackQuery(callbackId, "Заказ не найден").catch(() => null);
+      return send(res, 200, { ok: false, error: "Order not found" });
+    }
+
+    const replyMarkup = buildTildaOrderKeyboard(order, "called");
+    const { rows: messageRows } = await sql`
+      SELECT chat_id, message_id
+      FROM tilda_order_messages
+      WHERE order_key = ${orderKey}
+    `;
+    await Promise.allSettled(messageRows.map((message) => (
+      editTelegramMessageReplyMarkup(message.chat_id, message.message_id, replyMarkup)
+    )));
+    await answerCallbackQuery(callbackId, "Статус обновлен: уже обзвонили").catch(() => null);
+    return send(res, 200, { ok: true, updated: messageRows.length });
+  } catch (error) {
+    await answerCallbackQuery(callbackId, "Не получилось обновить статус").catch(() => null);
+    return send(res, 500, { error: error.message || "Failed to process Telegram callback" });
   }
 }
 
@@ -361,5 +551,6 @@ module.exports = async function handler(req, res) {
   if (action === "low-stock") return handleLowStock(req, res);
   if (action === "notify") return handleNotify(req, res);
   if (action === "tilda-order") return handleTildaOrder(req, res);
+  if (action === "telegram-callback") return handleTelegramCallback(req, res);
   return send(res, 404, { error: "Unknown alerts action" });
 };
