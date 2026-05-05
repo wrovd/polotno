@@ -1,0 +1,186 @@
+<!--
+  Polotno Tilda order hook.
+
+  1. Replace POLOTNO_SECRET with the same value as TILDA_ORDER_WEBHOOK_SECRET in Vercel.
+  2. Put this block in Tilda: Site Settings -> More -> HTML code before </body>.
+  3. Keep TELEGRAM_BOT_TOKEN and TILDA_ORDER_CHAT_ID only in Vercel environment variables.
+-->
+<script>
+(function () {
+  "use strict";
+
+  var POLOTNO_ENDPOINT = "https://polotno-three.vercel.app/api/alerts/tilda-order";
+  var POLOTNO_SECRET = "hfisudfhiIFJEW4OY9HIU289y398khj";
+  var sentFingerprints = {};
+
+  function text(value) {
+    return value == null ? "" : String(value).replace(/\s+/g, " ").trim();
+  }
+
+  function fieldKey(input) {
+    return text(
+      input.getAttribute("name") ||
+      input.getAttribute("data-tilda-name") ||
+      input.getAttribute("placeholder") ||
+      input.getAttribute("id")
+    );
+  }
+
+  function collectFormFields(form) {
+    var fields = {};
+    var controls = form.querySelectorAll("input, textarea, select");
+
+    controls.forEach(function (input) {
+      var key = fieldKey(input);
+      if (!key) return;
+
+      if (input.type === "checkbox") {
+        fields[key] = input.checked ? "yes" : "no";
+        return;
+      }
+
+      if (input.type === "radio" && !input.checked) return;
+      fields[key] = text(input.value);
+    });
+
+    return fields;
+  }
+
+  function getField(fields, names) {
+    var keys = Object.keys(fields || {});
+    for (var i = 0; i < names.length; i += 1) {
+      var target = String(names[i]).toLowerCase();
+      for (var j = 0; j < keys.length; j += 1) {
+        if (keys[j].toLowerCase() === target && text(fields[keys[j]])) {
+          return text(fields[keys[j]]);
+        }
+      }
+    }
+    return "";
+  }
+
+  function collectCart() {
+    var cart = window.tcart || {};
+    var rawProducts = Array.isArray(cart.products) ? cart.products : [];
+    var products = rawProducts.map(function (product) {
+      return {
+        name: text(product.name || product.title || product.product),
+        quantity: text(product.quantity || product.qty || product.amount || 1),
+        price: text(product.price || product.sum || product.total),
+        sku: text(product.sku || product.code || product.barcode)
+      };
+    }).filter(function (product) {
+      return product.name;
+    });
+
+    return {
+      orderId: text(cart.orderid || cart.orderId || cart.paymentid),
+      amount: text(cart.amount || cart.total || cart.prodamount),
+      currency: text(cart.currency || "RUB"),
+      products: products,
+      delivery: cart.delivery || {}
+    };
+  }
+
+  function closestBlockId(form) {
+    var block = form.closest("[id^='rec']");
+    return block ? block.id : "";
+  }
+
+  function isOrderForm(form) {
+    if (!form || !form.querySelectorAll) return false;
+    if (form.closest(".t706, .t-popup, .t-form")) return true;
+    return Boolean(form.querySelector("[name='Name'], [name='Email'], [name='Phone'], [name='Телефон']"));
+  }
+
+  function buildPayload(form) {
+    var fields = collectFormFields(form);
+    var cart = collectCart();
+    var customerName = getField(fields, ["Name", "name", "Имя", "ФИО"]);
+
+    return {
+      source: "tilda",
+      _polotnoSecret: POLOTNO_SECRET,
+      pageUrl: window.location.href,
+      pageTitle: document.title,
+      formName: text(form.getAttribute("data-formname") || getField(fields, ["Form", "formname"])) || "Cart",
+      blockId: closestBlockId(form),
+      requestId: getField(fields, ["tildaspec-formid", "formid", "Код заявки"]),
+      orderId: cart.orderId || getField(fields, ["orderid", "Order ID", "payment_id"]),
+      customerName: customerName,
+      email: getField(fields, ["Email", "email", "E-mail", "ma_email"]),
+      phone: getField(fields, ["Phone", "phone", "Телефон"]),
+      comment: getField(fields, ["Comment", "comment", "Комментарий"]),
+      delivery: getField(fields, ["Delivery", "delivery", "Способ доставки"]) || text(cart.delivery.name),
+      deliveryAddress: getField(fields, ["Address", "address", "Адрес доставки"]) || text(cart.delivery.address),
+      amount: cart.amount || getField(fields, ["amount", "Сумма платежа", "payment_amount"]),
+      currency: cart.currency || "RUB",
+      paymentProvider: getField(fields, ["paymentProvider", "payment_system", "payment"]) || "Tilda",
+      paymentCode: getField(fields, ["payment_id", "paymentid", "Код платежа"]) || cart.orderId,
+      paymentStatus: getField(fields, ["paymentStatus", "payment_status"]),
+      products: cart.products,
+      fields: fields
+    };
+  }
+
+  function fingerprint(payload) {
+    return JSON.stringify({
+      orderId: payload.orderId,
+      phone: payload.phone,
+      email: payload.email,
+      amount: payload.amount,
+      products: payload.products.map(function (product) {
+        return [product.name, product.quantity, product.price];
+      })
+    });
+  }
+
+  function rememberFingerprint(key) {
+    sentFingerprints[key] = Date.now();
+    Object.keys(sentFingerprints).forEach(function (item) {
+      if (Date.now() - sentFingerprints[item] > 30000) {
+        delete sentFingerprints[item];
+      }
+    });
+  }
+
+  function sendOrder(form) {
+    if (!POLOTNO_SECRET || POLOTNO_SECRET.indexOf("PASTE_") === 0) {
+      console.warn("[Polotno] Set POLOTNO_SECRET in Tilda script.");
+      return;
+    }
+
+    var payload = buildPayload(form);
+    var key = fingerprint(payload);
+    if (sentFingerprints[key]) return;
+    rememberFingerprint(key);
+
+    fetch(POLOTNO_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      keepalive: true
+    }).catch(function (error) {
+      console.warn("[Polotno] Failed to send order notification", error);
+    });
+  }
+
+  document.addEventListener("submit", function (event) {
+    var form = event.target;
+    if (!(form instanceof HTMLFormElement) || !isOrderForm(form)) return;
+    setTimeout(function () {
+      sendOrder(form);
+    }, 250);
+  }, true);
+
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest(".t-submit, .t706__submit, button[type='submit'], input[type='submit']");
+    if (!button) return;
+    var form = button.closest("form");
+    if (!form || !isOrderForm(form)) return;
+    setTimeout(function () {
+      sendOrder(form);
+    }, 450);
+  }, true);
+})();
+</script>
