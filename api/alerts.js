@@ -114,10 +114,9 @@ async function parseTildaBody(req) {
   const raw = await readRawBody(req);
   if (!raw) return {};
   const contentType = String(req.headers["content-type"] || "").toLowerCase();
-  if (contentType.includes("application/json")) {
-    const parsed = parseMaybeJson(raw);
-    return parsed && typeof parsed === "object" ? parsed : {};
-  }
+  const parsed = parseMaybeJson(raw);
+  if (parsed && typeof parsed === "object") return parsed;
+  if (contentType.includes("application/json")) return {};
   return parseUrlEncoded(raw);
 }
 
@@ -237,6 +236,42 @@ function buildTildaOrderMessage(body) {
   return lines.join("\n");
 }
 
+const recentTildaOrderFingerprints = new Map();
+
+function tildaOrderFingerprint(body) {
+  const fields = normalizeBodyFields(body);
+  const productsSource = Array.isArray(body.products) || (body.products && typeof body.products === "object")
+    ? body.products
+    : firstNonEmpty(body.products, getField(fields, ["products", "Products", "Товары", "order"]));
+  const products = normalizeProducts(productsSource)
+    .map((product) => [product.name, product.quantity, product.price].join(":"))
+    .join("|");
+
+  const stableKey = [
+    firstNonEmpty(body.orderId, body.order_id),
+    firstNonEmpty(body.email, getField(fields, ["Email", "email", "E-mail", "ma_email"])),
+    firstNonEmpty(body.phone, getField(fields, ["Phone", "phone", "Телефон"])),
+    firstNonEmpty(body.amount, getField(fields, ["amount", "Сумма платежа", "payment_amount"])),
+    products,
+  ].join("::");
+  if (cleanText(stableKey).replace(/:+/g, "")) return stableKey;
+  return firstNonEmpty(body.clientEventId);
+}
+
+function isRecentTildaDuplicate(body) {
+  const ttlMs = 10000;
+  const now = Date.now();
+  for (const [key, timestamp] of recentTildaOrderFingerprints.entries()) {
+    if (now - timestamp > ttlMs) recentTildaOrderFingerprints.delete(key);
+  }
+
+  const key = tildaOrderFingerprint(body);
+  if (!cleanText(key).replace(/:+/g, "")) return false;
+  if (recentTildaOrderFingerprints.has(key)) return true;
+  recentTildaOrderFingerprints.set(key, now);
+  return false;
+}
+
 async function handleTildaOrder(req, res) {
   setTildaCorsHeaders(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -244,9 +279,10 @@ async function handleTildaOrder(req, res) {
 
   const body = await parseTildaBody(req);
   const expectedSecret = String(process.env.TILDA_ORDER_WEBHOOK_SECRET || "").trim();
-  const actualSecret = String(req.headers["x-polotno-tilda-secret"] || body._polotnoSecret || queryValue(req, "secret")).trim();
+  const actualSecret = String(req.headers["x-polotno-tilda-secret"] || body._polotnoSecret || body.secret || queryValue(req, "secret")).trim();
   if (!expectedSecret) return send(res, 500, { error: "TILDA_ORDER_WEBHOOK_SECRET is required" });
   if (!actualSecret || actualSecret !== expectedSecret) return send(res, 401, { error: "Invalid Tilda webhook secret" });
+  if (isRecentTildaDuplicate(body)) return send(res, 200, { ok: true, duplicate: true, sent: 0 });
 
   const chatIds = String(process.env.TILDA_ORDER_CHAT_ID || "")
     .split(/[,\s;]+/)

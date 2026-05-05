@@ -1,17 +1,21 @@
 <!--
   Polotno Tilda order hook.
 
+  What it does:
+  - sends an order notification immediately when the buyer presses checkout/payment buttons;
+  - works before Robokassa opens, so abandoned unpaid checkout attempts are also delivered;
+  - uses navigator.sendBeacon first, then fetch keepalive fallback.
+
+  Setup:
   1. Replace POLOTNO_SECRET with the same value as TILDA_ORDER_WEBHOOK_SECRET in Vercel.
-  2. Stable option: use Tilda Webhook URL instead of this script:
-     https://polotno-three.vercel.app/api/alerts/tilda-order?secret=PASTE_TILDA_ORDER_WEBHOOK_SECRET_HERE
-  3. Script option: put this block in Tilda -> Site Settings -> More -> HTML code before </body>.
-  4. Keep TELEGRAM_BOT_TOKEN and TILDA_ORDER_CHAT_ID only in Vercel environment variables.
+  2. Put this block in Tilda -> Site Settings -> More -> HTML code before </body>.
+  3. Keep TELEGRAM_BOT_TOKEN and TILDA_ORDER_CHAT_ID only in Vercel environment variables.
 -->
 <script>
 (function () {
   "use strict";
 
-  var POLOTNO_ENDPOINT = "https://polotno-three.vercel.app/api/alerts/tilda-order";
+  var POLOTNO_ENDPOINT = "https://polotno-three.vercel.app/api/alerts?action=tilda-order";
   var POLOTNO_SECRET = "hfisudfhiIFJEW4OY9HIU289y398khj";
   var sentFingerprints = {};
 
@@ -30,9 +34,9 @@
 
   function collectFormFields(form) {
     var fields = {};
-    var controls = form.querySelectorAll("input, textarea, select");
+    if (!form || !form.querySelectorAll) return fields;
 
-    controls.forEach(function (input) {
+    form.querySelectorAll("input, textarea, select").forEach(function (input) {
       var key = fieldKey(input);
       if (!key) return;
 
@@ -61,10 +65,9 @@
     return "";
   }
 
-  function collectCart() {
-    var cart = window.tcart || {};
+  function collectTildaCartProducts(cart) {
     var rawProducts = Array.isArray(cart.products) ? cart.products : [];
-    var products = rawProducts.map(function (product) {
+    return rawProducts.map(function (product) {
       return {
         name: text(product.name || product.title || product.product),
         quantity: text(product.quantity || product.qty || product.amount || 1),
@@ -74,6 +77,30 @@
     }).filter(function (product) {
       return product.name;
     });
+  }
+
+  function collectDomProducts() {
+    var products = [];
+    document.querySelectorAll(".t706__cartwin-product, .t706__product").forEach(function (row) {
+      var nameNode = row.querySelector(".t706__cartwin-product-title, .t706__product-title, .t-name, .js-product-name");
+      var quantityNode = row.querySelector(".t706__product-quantity, .t706__cartwin-prodamount, input[name='quantity']");
+      var priceNode = row.querySelector(".t706__cartwin-product-price, .t706__product-price, .t-price");
+      var name = text(nameNode && nameNode.textContent);
+      if (!name) return;
+      products.push({
+        name: name,
+        quantity: text(quantityNode && (quantityNode.value || quantityNode.textContent)) || "1",
+        price: text(priceNode && priceNode.textContent),
+        sku: ""
+      });
+    });
+    return products;
+  }
+
+  function collectCart() {
+    var cart = window.tcart || {};
+    var products = collectTildaCartProducts(cart);
+    if (!products.length) products = collectDomProducts();
 
     return {
       orderId: text(cart.orderid || cart.orderId || cart.paymentid),
@@ -84,8 +111,8 @@
     };
   }
 
-  function closestBlockId(form) {
-    var block = form.closest("[id^='rec']");
+  function closestBlockId(element) {
+    var block = element && element.closest ? element.closest("[id^='rec']") : null;
     return block ? block.id : "";
   }
 
@@ -95,17 +122,45 @@
     return Boolean(form.querySelector("[name='Name'], [name='Email'], [name='Phone'], [name='Телефон']"));
   }
 
-  function buildPayload(form) {
+  function findCheckoutForm(element) {
+    var form = element && element.closest ? element.closest("form") : null;
+    if (form && isOrderForm(form)) return form;
+
+    var visibleForms = Array.prototype.slice.call(document.querySelectorAll(".t706 form, .t-popup_show form, form"));
+    return visibleForms.find(function (candidate) {
+      if (!isOrderForm(candidate)) return false;
+      var rect = candidate.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    }) || visibleForms.find(isOrderForm) || null;
+  }
+
+  function isCheckoutButton(element) {
+    if (!element || !element.closest) return null;
+    var button = element.closest("button, a, input[type='button'], input[type='submit'], .t-submit, .t706__submit, [role='button']");
+    if (!button) return null;
+
+    var label = text(button.innerText || button.value || button.getAttribute("aria-label") || button.getAttribute("title"));
+    var className = String(button.className || "");
+    var isKnownTildaButton = /t-submit|t706__submit/.test(className) || button.matches("button[type='submit'], input[type='submit']");
+    var isCheckoutLabel = /оформить|заказ|оплат|robokassa|перейти|купить/i.test(label);
+    return isKnownTildaButton || isCheckoutLabel ? button : null;
+  }
+
+  function buildPayload(form, reason) {
     var fields = collectFormFields(form);
     var cart = collectCart();
     var customerName = getField(fields, ["Name", "name", "Имя", "ФИО"]);
+    var eventId = String(Date.now()) + "-" + Math.random().toString(36).slice(2);
 
     return {
-      source: "tilda",
+      source: "tilda-checkout-click",
+      checkoutReason: reason || "checkout",
+      clientEventId: eventId,
       _polotnoSecret: POLOTNO_SECRET,
+      secret: POLOTNO_SECRET,
       pageUrl: window.location.href,
       pageTitle: document.title,
-      formName: text(form.getAttribute("data-formname") || getField(fields, ["Form", "formname"])) || "Cart",
+      formName: text((form && form.getAttribute("data-formname")) || getField(fields, ["Form", "formname"])) || "Cart",
       blockId: closestBlockId(form),
       requestId: getField(fields, ["tildaspec-formid", "formid", "Код заявки"]),
       orderId: cart.orderId || getField(fields, ["orderid", "Order ID", "payment_id"]),
@@ -131,7 +186,7 @@
       phone: payload.phone,
       email: payload.email,
       amount: payload.amount,
-      products: payload.products.map(function (product) {
+      products: (payload.products || []).map(function (product) {
         return [product.name, product.quantity, product.price];
       })
     });
@@ -140,49 +195,67 @@
   function rememberFingerprint(key) {
     sentFingerprints[key] = Date.now();
     Object.keys(sentFingerprints).forEach(function (item) {
-      if (Date.now() - sentFingerprints[item] > 3000) {
+      if (Date.now() - sentFingerprints[item] > 8000) {
         delete sentFingerprints[item];
       }
     });
   }
 
-  function sendOrder(form) {
-    if (!POLOTNO_SECRET || POLOTNO_SECRET.indexOf("PASTE_") === 0) {
-      console.warn("[Polotno] Set POLOTNO_SECRET in Tilda script.");
-      return;
+  function postPayload(payload) {
+    var json = JSON.stringify(payload);
+    var sentByBeacon = false;
+
+    if (navigator.sendBeacon) {
+      try {
+        var blob = new Blob([json], { type: "text/plain;charset=UTF-8" });
+        sentByBeacon = navigator.sendBeacon(POLOTNO_ENDPOINT, blob);
+      } catch (error) {
+        sentByBeacon = false;
+      }
     }
 
-    var payload = buildPayload(form);
-    var key = fingerprint(payload);
-    if (sentFingerprints[key]) return;
-    rememberFingerprint(key);
+    if (sentByBeacon) return;
 
     fetch(POLOTNO_ENDPOINT, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      headers: { "Content-Type": "text/plain;charset=UTF-8" },
+      body: json,
       keepalive: true
     }).catch(function (error) {
       console.warn("[Polotno] Failed to send order notification", error);
     });
   }
 
+  function sendOrder(form, reason) {
+    if (!POLOTNO_SECRET || POLOTNO_SECRET.indexOf("PASTE_") === 0) {
+      console.warn("[Polotno] Set POLOTNO_SECRET in Tilda script.");
+      return;
+    }
+    if (!form || !isOrderForm(form)) return;
+
+    var payload = buildPayload(form, reason);
+    var key = fingerprint(payload);
+    if (sentFingerprints[key]) return;
+    rememberFingerprint(key);
+    postPayload(payload);
+  }
+
+  function handleCheckoutIntent(event) {
+    var button = isCheckoutButton(event.target);
+    if (!button) return;
+    var form = findCheckoutForm(button);
+    if (!form) return;
+    sendOrder(form, event.type);
+  }
+
+  ["pointerdown", "touchstart", "mousedown", "click"].forEach(function (eventName) {
+    document.addEventListener(eventName, handleCheckoutIntent, true);
+  });
+
   document.addEventListener("submit", function (event) {
     var form = event.target;
     if (!(form instanceof HTMLFormElement) || !isOrderForm(form)) return;
-    setTimeout(function () {
-      sendOrder(form);
-    }, 250);
-  }, true);
-
-  document.addEventListener("click", function (event) {
-    var button = event.target.closest(".t-submit, .t706__submit, button[type='submit'], input[type='submit']");
-    if (!button) return;
-    var form = button.closest("form");
-    if (!form || !isOrderForm(form)) return;
-    setTimeout(function () {
-      sendOrder(form);
-    }, 450);
+    sendOrder(form, "submit");
   }, true);
 })();
 </script>
