@@ -27,6 +27,19 @@ function queryValue(req, key) {
   }
 }
 
+function getRequestBaseUrl(req) {
+  const host = String(req.headers["x-forwarded-host"] || req.headers.host || process.env.VERCEL_URL || "").trim();
+  if (!host) return "";
+  const protocol = String(req.headers["x-forwarded-proto"] || "https").split(",")[0].trim() || "https";
+  return `${protocol}://${host.replace(/^https?:\/\//, "")}`;
+}
+
+function getPublicBaseUrl(req) {
+  const configured = cleanText(process.env.PUBLIC_APP_URL || process.env.NEXT_PUBLIC_APP_URL);
+  if (configured) return configured.replace(/\/+$/, "");
+  return getRequestBaseUrl(req).replace(/\/+$/, "");
+}
+
 function setTildaCorsHeaders(req, res) {
   const allowedOrigin = String(process.env.TILDA_ALLOWED_ORIGIN || "*").trim();
   const requestOrigin = String(req.headers.origin || "").trim();
@@ -315,17 +328,33 @@ function normalizePhoneForTel(phone) {
   return digits.length >= 10 ? `+${digits}` : digits;
 }
 
-function buildTildaOrderKeyboard(meta, status = "new") {
+function buildTildaOrderKeyboard(meta, status = "new", baseUrl = "") {
   const rows = [];
   const phone = normalizePhoneForTel(meta.phone);
-  if (phone) {
-    rows.push([{ text: "Позвонить", url: `tel:${phone}` }]);
+  const orderKey = cleanText(meta.orderKey || meta.order_key);
+  if (phone && baseUrl) {
+    const callUrl = `${baseUrl}/api/alerts?action=call-link&phone=${encodeURIComponent(phone)}`;
+    rows.push([{ text: "Позвонить", url: callUrl }]);
   }
-  rows.push([{
-    text: status === "called" ? "Уже обзвонили" : "Новый",
-    callback_data: `tilda_called:${meta.orderKey}`,
-  }]);
+  if (orderKey) {
+    rows.push([{
+      text: status === "called" ? "Уже обзвонили" : "Новый",
+      callback_data: `tilda_called:${orderKey}`,
+    }]);
+  }
   return { inline_keyboard: rows };
+}
+
+function handleCallLink(req, res) {
+  if (req.method !== "GET") return methodNotAllowed(req, res, ["GET"]);
+
+  const phone = normalizePhoneForTel(queryValue(req, "phone"));
+  if (!phone) return send(res, 400, { error: "Phone is required" });
+
+  res.statusCode = 302;
+  res.setHeader("Location", `tel:${phone}`);
+  res.setHeader("Cache-Control", "no-store");
+  return res.end();
 }
 
 async function upsertTildaOrderCall(meta) {
@@ -413,7 +442,7 @@ async function handleTildaOrder(req, res) {
     const text = buildTildaOrderMessage(body);
     const meta = getTildaOrderMeta(body);
     const status = await upsertTildaOrderCall(meta);
-    const replyMarkup = buildTildaOrderKeyboard(meta, status);
+    const replyMarkup = buildTildaOrderKeyboard(meta, status, getPublicBaseUrl(req));
     const results = await Promise.allSettled(chatIds.map(async (chatId) => {
       const result = await sendTelegramMessage(chatId, text, {
         parse_mode: "HTML",
@@ -481,7 +510,7 @@ async function handleTelegramCallback(req, res) {
       return send(res, 200, { ok: false, error: "Order not found" });
     }
 
-    const replyMarkup = buildTildaOrderKeyboard(order, "called");
+    const replyMarkup = buildTildaOrderKeyboard(order, "called", getPublicBaseUrl(req));
     const { rows: messageRows } = await sql`
       SELECT chat_id, message_id
       FROM tilda_order_messages
@@ -550,6 +579,7 @@ module.exports = async function handler(req, res) {
   const action = actionFromReq(req);
   if (action === "low-stock") return handleLowStock(req, res);
   if (action === "notify") return handleNotify(req, res);
+  if (action === "call-link") return handleCallLink(req, res);
   if (action === "tilda-order") return handleTildaOrder(req, res);
   if (action === "telegram-callback") return handleTelegramCallback(req, res);
   return send(res, 404, { error: "Unknown alerts action" });
