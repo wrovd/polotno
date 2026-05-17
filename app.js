@@ -130,8 +130,10 @@ const state = {
   },
   qrLogin: {
     pollTimer: null,
+    countdownTimer: null,
     pollKey: "",
     expiresAt: "",
+    mode: "modal",
   },
 };
 
@@ -197,7 +199,7 @@ async function loginAndBootstrap(email, password, button = null) {
           password: String(password || ""),
         },
       }),
-    { button, message: "Проверяем вход..." }
+    { button, message: "Проверяем вход...", showOverlay: false }
   );
 
   applyUserFromServer(data.user, data.token);
@@ -207,7 +209,7 @@ async function loginAndBootstrap(email, password, button = null) {
     async () => {
       await loadAuthorizedWorkspaceData();
     },
-    { message: "Загружаем данные аккаунта..." }
+    { message: "Входим в аккаунт" }
   );
 }
 
@@ -218,6 +220,17 @@ const refs = {
   gateLoginEmail: document.getElementById("gateLoginEmail"),
   gateLoginPassword: document.getElementById("gateLoginPassword"),
   gateLoginSubmitBtn: document.getElementById("gateLoginSubmitBtn"),
+  gateOpenQrLoginBtn: document.getElementById("gateOpenQrLoginBtn"),
+  gateYandexLoginBtn: document.getElementById("gateYandexLoginBtn"),
+  gateQrPanel: document.getElementById("gateQrPanel"),
+  gateQrImage: document.getElementById("gateQrImage"),
+  gateQrStatus: document.getElementById("gateQrStatus"),
+  gateQrTimer: document.getElementById("gateQrTimer"),
+  gateQrRefreshBtn: document.getElementById("gateQrRefreshBtn"),
+  gateProfileLoading: document.getElementById("gateProfileLoading"),
+  gateLoadingAvatar: document.getElementById("gateLoadingAvatar"),
+  gateLoadingName: document.getElementById("gateLoadingName"),
+  gateLoadingText: document.getElementById("gateLoadingText"),
   openAuthBtn: document.getElementById("openAuthBtn"),
   accountMenu: document.getElementById("accountMenu"),
   openSettingsBtn: document.getElementById("openSettingsBtn"),
@@ -317,6 +330,8 @@ const refs = {
   settingsActiveRemindersList: document.getElementById("settingsActiveRemindersList"),
   settingsBrowserNotifyToggle: document.getElementById("settingsBrowserNotifyToggle"),
   settingsSoundNotifyToggle: document.getElementById("settingsSoundNotifyToggle"),
+  settingsYandexLinkBtn: document.getElementById("settingsYandexLinkBtn"),
+  settingsYandexStatus: document.getElementById("settingsYandexStatus"),
   settingsChatGeneralMeta: document.getElementById("settingsChatGeneralMeta"),
   settingsChatWarehouseMeta: document.getElementById("settingsChatWarehouseMeta"),
   settingsChatSupportMeta: document.getElementById("settingsChatSupportMeta"),
@@ -709,6 +724,8 @@ const refs = {
   confirmLogoutBtn: document.getElementById("confirmLogoutBtn"),
   loadingOverlay: document.getElementById("loadingOverlay"),
   loadingText: document.getElementById("loadingText"),
+  loadingAvatar: document.getElementById("loadingAvatar"),
+  loadingProfileName: document.getElementById("loadingProfileName"),
   mobileScanFab: document.getElementById("mobileScanFab"),
   filmFoundModal: document.getElementById("filmFoundModal"),
   filmFoundBackdrop: document.getElementById("filmFoundBackdrop"),
@@ -831,6 +848,10 @@ function setLoadingOverlay(visible, message = "Загрузка...") {
   if (!refs.loadingOverlay || !refs.loadingText) return;
   refs.loadingOverlay.hidden = !visible;
   refs.loadingText.textContent = message;
+  const displayName = composeUserDisplayName(state.user) || String(state.user?.name || state.user?.email || "Александр").trim();
+  const firstName = displayName.split(/\s+/).filter(Boolean)[0] || displayName || "Александр";
+  if (refs.loadingProfileName) refs.loadingProfileName.textContent = firstName;
+  if (refs.loadingAvatar) refs.loadingAvatar.textContent = initialFromName(firstName);
 }
 
 function setButtonLoading(button, isLoading) {
@@ -938,15 +959,46 @@ function clearQrLoginPolling() {
     clearInterval(state.qrLogin.pollTimer);
     state.qrLogin.pollTimer = null;
   }
+  if (state.qrLogin.countdownTimer) {
+    clearInterval(state.qrLogin.countdownTimer);
+    state.qrLogin.countdownTimer = null;
+  }
   state.qrLogin.pollKey = "";
   state.qrLogin.expiresAt = "";
+  state.qrLogin.mode = "modal";
+}
+
+function qrLoginElements() {
+  const useGate = state.qrLogin.mode === "gate";
+  return {
+    image: useGate ? refs.gateQrImage : refs.qrLoginImage,
+    status: useGate ? refs.gateQrStatus : refs.qrLoginStatus,
+    timer: useGate ? refs.gateQrTimer : null,
+  };
+}
+
+function updateQrCountdown() {
+  if (!refs.gateQrTimer || !state.qrLogin.expiresAt) return;
+  const expiresAt = Date.parse(state.qrLogin.expiresAt);
+  if (!Number.isFinite(expiresAt)) {
+    refs.gateQrTimer.textContent = "2:00";
+    return;
+  }
+  const seconds = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+  const minutes = Math.floor(seconds / 60);
+  const rest = String(seconds % 60).padStart(2, "0");
+  refs.gateQrTimer.textContent = `${minutes}:${rest}`;
 }
 
 function closeQrLoginModal() {
-  if (!refs.qrLoginModal) return;
-  refs.qrLoginModal.hidden = true;
+  if (refs.qrLoginModal) refs.qrLoginModal.hidden = true;
   if (refs.qrLoginImage) refs.qrLoginImage.removeAttribute("src");
   if (refs.qrLoginStatus) refs.qrLoginStatus.textContent = "Готовим QR-код...";
+  if (refs.loginGate) refs.loginGate.classList.remove("is-qr-open");
+  if (refs.gateQrPanel) refs.gateQrPanel.hidden = true;
+  if (refs.gateQrImage) refs.gateQrImage.removeAttribute("src");
+  if (refs.gateQrStatus) refs.gateQrStatus.textContent = "Готовим QR-код...";
+  if (refs.gateQrTimer) refs.gateQrTimer.textContent = "2:00";
   clearQrLoginPolling();
   document.body.style.overflow = "";
 }
@@ -1760,6 +1812,10 @@ function renderSettingsProfileMeta() {
   if (refs.settingsProfileEmail) refs.settingsProfileEmail.textContent = String(state.user.email || "").trim();
   if (refs.settingsProfileRole) refs.settingsProfileRole.textContent = String(state.user.role || "staff");
   if (refs.settingsProfileAvatar) refs.settingsProfileAvatar.textContent = initialFromName(name || state.user.email || "P");
+  const yandexKey = `polotno_yandex_linked_${String(state.user.email || "").trim().toLowerCase()}`;
+  const linked = localStorage.getItem(yandexKey) === "1";
+  if (refs.settingsYandexStatus) refs.settingsYandexStatus.textContent = linked ? "Аккаунт связан" : "Аккаунт не связан";
+  if (refs.settingsYandexLinkBtn) refs.settingsYandexLinkBtn.textContent = linked ? "Переподключить" : "Связать аккаунт";
 }
 
 function renderSettingsChatMeta() {
@@ -6884,9 +6940,10 @@ async function pollQrLoginStatus() {
     auth: false,
   });
   const status = String(data.status || "pending");
+  const qr = qrLoginElements();
 
   if (status === "pending") {
-    if (refs.qrLoginStatus) refs.qrLoginStatus.textContent = "Ожидаем подтверждение на телефоне...";
+    if (qr.status) qr.status.textContent = "Ожидаем подтверждение на телефоне...";
     return;
   }
 
@@ -6901,7 +6958,7 @@ async function pollQrLoginStatus() {
       async () => {
         await loadAuthorizedWorkspaceData();
       },
-      { message: "Загружаем данные аккаунта..." }
+      { message: "Входим в аккаунт" }
     );
     showToast("Вход по QR выполнен");
     hapticSuccess();
@@ -6909,26 +6966,36 @@ async function pollQrLoginStatus() {
   }
 
   clearQrLoginPolling();
-  if (!refs.qrLoginStatus) return;
+  if (!qr.status) return;
   if (status === "expired") {
-    refs.qrLoginStatus.textContent = "QR-код истек. Нажмите «Войти по QR (ПК)» снова.";
+    qr.status.textContent = "QR-код истек. Обновите код.";
     return;
   }
   if (status === "consumed") {
-    refs.qrLoginStatus.textContent = "Этот QR уже использован. Сгенерируйте новый.";
+    qr.status.textContent = "Этот QR уже использован. Сгенерируйте новый.";
     return;
   }
-  refs.qrLoginStatus.textContent = "Сессия входа неактивна. Создайте новый QR.";
+  qr.status.textContent = "Сессия входа неактивна. Создайте новый QR.";
 }
 
 async function startQrDesktopLogin(button = null) {
-  if (!refs.qrLoginModal || !refs.qrLoginImage || !refs.qrLoginStatus) return;
+  const useGate = button?.id === "gateOpenQrLoginBtn" || button?.id === "gateQrRefreshBtn";
+  if (useGate && (!refs.gateQrPanel || !refs.gateQrImage || !refs.gateQrStatus)) return;
+  if (!useGate && (!refs.qrLoginModal || !refs.qrLoginImage || !refs.qrLoginStatus)) return;
   closeScanModal();
   clearQrLoginPolling();
-  refs.qrLoginModal.hidden = false;
-  document.body.style.overflow = "hidden";
-  refs.qrLoginStatus.textContent = "Готовим QR-код...";
-  refs.qrLoginImage.removeAttribute("src");
+  state.qrLogin.mode = useGate ? "gate" : "modal";
+  const qr = qrLoginElements();
+  if (useGate) {
+    refs.loginGate?.classList.add("is-qr-open");
+    refs.gateQrPanel.hidden = false;
+  } else {
+    refs.qrLoginModal.hidden = false;
+    document.body.style.overflow = "hidden";
+  }
+  if (qr.status) qr.status.textContent = "Готовим QR-код...";
+  if (qr.image) qr.image.removeAttribute("src");
+  if (qr.timer) qr.timer.textContent = "2:00";
 
   const data = await runDbAction(
     () =>
@@ -6936,20 +7003,23 @@ async function startQrDesktopLogin(button = null) {
         method: "POST",
         auth: false,
       }),
-    { button, message: "Создаем QR-сессию..." }
+    { button, message: "Создаем QR-сессию...", showOverlay: false }
   );
 
   const pollKey = String(data.pollKey || "").trim();
   const qrPayload = String(data.qrPayload || "").trim();
   if (!pollKey || !qrPayload) throw new Error("Не удалось получить QR-код входа");
 
-  refs.qrLoginImage.src = await qrImageSrc(qrPayload, 260);
-  refs.qrLoginStatus.textContent = "Отсканируйте QR в Polotno на телефоне и подтвердите вход.";
+  if (qr.image) qr.image.src = await qrImageSrc(qrPayload, useGate ? 300 : 260);
+  if (qr.status) qr.status.textContent = useGate ? "" : "Отсканируйте QR в Polotno на телефоне и подтвердите вход.";
   state.qrLogin.pollKey = pollKey;
   state.qrLogin.expiresAt = String(data.expiresAt || "");
+  updateQrCountdown();
+  state.qrLogin.countdownTimer = setInterval(updateQrCountdown, 1000);
   state.qrLogin.pollTimer = setInterval(() => {
     pollQrLoginStatus().catch((error) => {
-      if (refs.qrLoginStatus) refs.qrLoginStatus.textContent = `Ошибка проверки QR: ${error.message}`;
+      const target = qrLoginElements().status;
+      if (target) target.textContent = `Ошибка проверки QR: ${error.message}`;
     });
   }, 2000);
 }
@@ -7245,6 +7315,30 @@ if (refs.openQrDesktopLoginBtn) refs.openQrDesktopLoginBtn.addEventListener("cli
     hapticWarning();
   }
 });
+if (refs.gateOpenQrLoginBtn) refs.gateOpenQrLoginBtn.addEventListener("click", async (event) => {
+  const button = event.currentTarget instanceof HTMLButtonElement ? event.currentTarget : null;
+  try {
+    await startQrDesktopLogin(button);
+  } catch (error) {
+    closeQrLoginModal();
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.gateQrRefreshBtn) refs.gateQrRefreshBtn.addEventListener("click", async (event) => {
+  const button = event.currentTarget instanceof HTMLButtonElement ? event.currentTarget : null;
+  try {
+    await startQrDesktopLogin(button);
+  } catch (error) {
+    closeQrLoginModal();
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.gateYandexLoginBtn) refs.gateYandexLoginBtn.addEventListener("click", () => {
+  showToast("Вход через Яндекс ID появится после настройки OAuth.");
+  hapticSelection();
+});
 if (refs.openQrMobileConfirmBtn) refs.openQrMobileConfirmBtn.addEventListener("click", async () => {
   try {
     await startQrMobileConfirm();
@@ -7465,6 +7559,18 @@ if (refs.settingsDemoSessionBtn) refs.settingsDemoSessionBtn.addEventListener("c
 if (refs.settingsSoundNotifyToggle) refs.settingsSoundNotifyToggle.addEventListener("change", () => {
   const enabled = refs.settingsSoundNotifyToggle.checked ? "1" : "0";
   localStorage.setItem("polotno_sound_notifications", enabled);
+});
+if (refs.settingsYandexLinkBtn) refs.settingsYandexLinkBtn.addEventListener("click", () => {
+  const email = String(state.user?.email || "").trim().toLowerCase();
+  if (!email) {
+    showToast("Сначала войдите в аккаунт Polotno");
+    hapticWarning();
+    return;
+  }
+  localStorage.setItem(`polotno_yandex_linked_${email}`, "1");
+  renderSettingsProfileMeta();
+  showToast("Связь с Яндекс ID отмечена. Для реального входа нужен OAuth callback.");
+  hapticSuccess();
 });
 if (refs.settingsBrowserNotifyToggle) refs.settingsBrowserNotifyToggle.addEventListener("change", async () => {
   if (!refs.settingsBrowserNotifyToggle.checked) return;

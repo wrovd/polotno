@@ -18,6 +18,10 @@
         <rect x="5" y="10" width="14" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.8" />
         <circle cx="12" cy="15.5" r="1.4" fill="currentColor" />
       </symbol>
+      <symbol id="i-mail" viewBox="0 0 24 24">
+        <rect x="4" y="6.5" width="16" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <path d="M5.5 8.5l6.5 5 6.5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
       <symbol id="i-user" viewBox="0 0 24 24">
         <circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8" />
         <path d="M5 19a7 7 0 0 1 14 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
@@ -176,29 +180,74 @@
 
     <section class="login-gate" id="loginGate" hidden>
       <div class="login-gate-bg" aria-hidden="true"></div>
-      <article class="login-gate-card">
-        <header class="login-gate-head">
-          <div class="login-gate-brand">
-            <span class="login-gate-mark">P</span>
-            <div>
-              <p class="login-gate-eyebrow">POLOTNO</p>
+      <div class="login-gate-stage">
+        <div class="polotno-wordmark login-gate-logo" aria-label="Polotno">
+          <span class="polotno-mark" aria-hidden="true">
+            <span class="polotno-mark-part is-red"></span>
+            <span class="polotno-mark-part is-blue"></span>
+            <span class="polotno-mark-part is-navy"></span>
+            <span class="polotno-mark-part is-green"></span>
+          </span>
+          <span>Polotno</span>
+        </div>
+
+        <div class="login-gate-layout">
+          <article class="login-gate-card">
+            <form id="gateLoginForm" class="login-gate-form" novalidate>
               <h2>Вход в систему</h2>
-            </div>
-          </div>
-          <p>Авторизуйтесь, чтобы открыть рабочее пространство.</p>
-        </header>
-        <form id="gateLoginForm" class="login-gate-form" novalidate>
-          <label>
-            Email
-            <input id="gateLoginEmail" type="email" placeholder="name@company.com" autocomplete="email" required />
-          </label>
-          <label>
-            Пароль
-            <input id="gateLoginPassword" type="password" placeholder="••••••••" autocomplete="current-password" required minlength="6" />
-          </label>
-          <button id="gateLoginSubmitBtn" class="login-gate-submit" type="submit">Войти</button>
-        </form>
-      </article>
+
+              <label class="login-gate-input">
+                <span class="login-gate-input-icon" aria-hidden="true"><svg><use href="#i-mail"></use></svg></span>
+                <span class="visually-hidden">Электронная почта</span>
+                <input id="gateLoginEmail" type="email" placeholder="Электронная почта" autocomplete="email" required />
+              </label>
+
+              <label class="login-gate-input">
+                <span class="login-gate-input-icon" aria-hidden="true"><svg><use href="#i-lock"></use></svg></span>
+                <span class="visually-hidden">Пароль</span>
+                <input id="gateLoginPassword" type="password" placeholder="Пароль" autocomplete="current-password" required minlength="6" />
+              </label>
+
+              <p class="login-gate-alt-title">Другие способы входа</p>
+
+              <div class="login-gate-methods">
+                <button class="login-gate-method login-gate-phone" id="gateOpenQrLoginBtn" type="button">
+                  <span>С помощью смартфона</span>
+                  <span class="login-gate-method-icon" aria-hidden="true"><svg><use href="#i-qr"></use></svg></span>
+                </button>
+                <button class="login-gate-method login-gate-yandex" id="gateYandexLoginBtn" type="button">
+                  <span>Александр<br />Красников</span>
+                  <span class="yandex-mark" aria-hidden="true">Я</span>
+                </button>
+              </div>
+
+              <button class="login-gate-forgot" type="button">Забыли пароль?</button>
+              <button id="gateLoginSubmitBtn" class="login-gate-submit" type="submit">Войти</button>
+            </form>
+          </article>
+
+          <article class="login-gate-qr-card" id="gateQrPanel" hidden aria-live="polite">
+            <figure class="login-gate-qr-box">
+              <img id="gateQrImage" alt="QR для входа" />
+            </figure>
+            <p class="login-gate-qr-timer" id="gateQrTimer">1:53</p>
+            <button class="login-gate-refresh" id="gateQrRefreshBtn" type="button" aria-label="Обновить QR-код">
+              <svg aria-hidden="true"><use href="#i-reset"></use></svg>
+            </button>
+            <p class="login-gate-qr-help">
+              Отсканируйте <span>QR-код</span> с помощью камеры смартфона, чтобы войти в аккаунт
+            </p>
+            <p class="login-gate-qr-status" id="gateQrStatus">Готовим QR-код...</p>
+          </article>
+        </div>
+
+        <article class="login-profile-loading" id="gateProfileLoading" hidden>
+          <div class="login-profile-avatar" id="gateLoadingAvatar">A</div>
+          <h2 id="gateLoadingName">Александр</h2>
+          <div class="login-profile-spinner" aria-hidden="true"></div>
+          <p id="gateLoadingText">Входим в аккаунт</p>
+        </article>
+      </div>
     </section>
 
     <main class="app-shell" id="appShell" hidden>
@@ -1419,6 +1468,17 @@
               <button class="settings-action-btn" type="submit">Сохранить профиль</button>
             </form>
 
+            <article class="settings-card settings-yandex-card">
+              <div class="settings-yandex-head">
+                <span class="yandex-mark" aria-hidden="true">Я</span>
+                <span class="settings-list-copy">
+                  <strong>Яндекс ID</strong>
+                  <small id="settingsYandexStatus">Аккаунт не связан</small>
+                </span>
+              </div>
+              <button class="settings-ghost-btn" id="settingsYandexLinkBtn" type="button">Связать аккаунт</button>
+            </article>
+
             <article class="settings-card">
               <h3>Настройки приложения</h3>
               <div class="settings-list">
@@ -1747,7 +1807,18 @@
     </div>
 
     <section class="loading-overlay" id="loadingOverlay" hidden aria-live="polite" aria-label="Загрузка">
+      <div class="polotno-wordmark loading-logo" aria-label="Polotno">
+        <span class="polotno-mark" aria-hidden="true">
+          <span class="polotno-mark-part is-red"></span>
+          <span class="polotno-mark-part is-blue"></span>
+          <span class="polotno-mark-part is-navy"></span>
+          <span class="polotno-mark-part is-green"></span>
+        </span>
+        <span>Polotno</span>
+      </div>
       <div class="loading-card">
+        <div class="login-profile-avatar" id="loadingAvatar">A</div>
+        <h2 id="loadingProfileName">Александр</h2>
         <div class="loading-spinner" aria-hidden="true"></div>
         <p id="loadingText">Загрузка...</p>
       </div>
