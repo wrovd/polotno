@@ -181,15 +181,7 @@
     <section class="login-gate" id="loginGate" hidden>
       <div class="login-gate-bg" aria-hidden="true"></div>
       <div class="login-gate-stage">
-        <div class="polotno-wordmark login-gate-logo" aria-label="Polotno">
-          <span class="polotno-mark" aria-hidden="true">
-            <span class="polotno-mark-part is-red"></span>
-            <span class="polotno-mark-part is-blue"></span>
-            <span class="polotno-mark-part is-navy"></span>
-            <span class="polotno-mark-part is-green"></span>
-          </span>
-          <span>Polotno</span>
-        </div>
+        <img class="login-gate-logo" src="./assets/login/polotno-wordmark.svg" alt="Polotno" />
 
         <div class="login-gate-layout">
           <article class="login-gate-card">
@@ -197,13 +189,13 @@
               <h2>Вход в систему</h2>
 
               <label class="login-gate-input">
-                <span class="login-gate-input-icon" aria-hidden="true"><svg><use href="#i-mail"></use></svg></span>
+                <img class="login-gate-input-icon" src="./assets/login/mail.svg" alt="" aria-hidden="true" />
                 <span class="visually-hidden">Электронная почта</span>
                 <input id="gateLoginEmail" type="email" placeholder="Электронная почта" autocomplete="email" required />
               </label>
 
               <label class="login-gate-input">
-                <span class="login-gate-input-icon" aria-hidden="true"><svg><use href="#i-lock"></use></svg></span>
+                <img class="login-gate-input-icon" src="./assets/login/lock.svg" alt="" aria-hidden="true" />
                 <span class="visually-hidden">Пароль</span>
                 <input id="gateLoginPassword" type="password" placeholder="Пароль" autocomplete="current-password" required minlength="6" />
               </label>
@@ -213,11 +205,15 @@
               <div class="login-gate-methods">
                 <button class="login-gate-method login-gate-phone" id="gateOpenQrLoginBtn" type="button">
                   <span>С помощью смартфона</span>
-                  <span class="login-gate-method-icon" aria-hidden="true"><svg><use href="#i-qr"></use></svg></span>
+                  <span class="login-gate-method-icon" aria-hidden="true">
+                    <img src="./assets/login/qr.svg" alt="" />
+                  </span>
                 </button>
                 <button class="login-gate-method login-gate-yandex" id="gateYandexLoginBtn" type="button">
-                  <span>Александр<br />Красников</span>
-                  <span class="yandex-mark" aria-hidden="true">Я</span>
+                  <span>Через<br />Яндекс ID</span>
+                  <span class="yandex-mark login-gate-yandex-mark" aria-hidden="true">
+                    <img src="./assets/login/yandex.png" alt="" />
+                  </span>
                 </button>
               </div>
 
@@ -232,7 +228,7 @@
             </figure>
             <p class="login-gate-qr-timer" id="gateQrTimer">1:53</p>
             <button class="login-gate-refresh" id="gateQrRefreshBtn" type="button" aria-label="Обновить QR-код">
-              <svg aria-hidden="true"><use href="#i-reset"></use></svg>
+              <img src="./assets/login/refresh.svg" alt="" aria-hidden="true" />
             </button>
             <p class="login-gate-qr-help">
               Отсканируйте <span>QR-код</span> с помощью камеры смартфона, чтобы войти в аккаунт
@@ -1807,19 +1803,11 @@
     </div>
 
     <section class="loading-overlay" id="loadingOverlay" hidden aria-live="polite" aria-label="Загрузка">
-      <div class="polotno-wordmark loading-logo" aria-label="Polotno">
-        <span class="polotno-mark" aria-hidden="true">
-          <span class="polotno-mark-part is-red"></span>
-          <span class="polotno-mark-part is-blue"></span>
-          <span class="polotno-mark-part is-navy"></span>
-          <span class="polotno-mark-part is-green"></span>
-        </span>
-        <span>Polotno</span>
-      </div>
+      <img class="loading-logo" src="./assets/login/polotno-wordmark.svg" alt="Polotno" />
       <div class="loading-card">
-        <div class="login-profile-avatar" id="loadingAvatar">A</div>
+        <div class="login-profile-avatar" id="loadingAvatar">А</div>
         <h2 id="loadingProfileName">Александр</h2>
-        <div class="loading-spinner" aria-hidden="true"></div>
+        <img class="loading-spinner" src="./assets/login/spinner.svg" alt="" aria-hidden="true" />
         <p id="loadingText">Загрузка...</p>
       </div>
     </section>

@@ -847,11 +847,12 @@ function showToast(message) {
 function setLoadingOverlay(visible, message = "Загрузка...") {
   if (!refs.loadingOverlay || !refs.loadingText) return;
   refs.loadingOverlay.hidden = !visible;
+  refs.loginGate?.classList.toggle("is-loading-profile", Boolean(visible && !isAuthenticated()));
   refs.loadingText.textContent = message;
   const displayName = composeUserDisplayName(state.user) || String(state.user?.name || state.user?.email || "Александр").trim();
   const firstName = displayName.split(/\s+/).filter(Boolean)[0] || displayName || "Александр";
   if (refs.loadingProfileName) refs.loadingProfileName.textContent = firstName;
-  if (refs.loadingAvatar) refs.loadingAvatar.textContent = initialFromName(firstName);
+  if (refs.loadingAvatar) refs.loadingAvatar.textContent = initialFromName(firstName || "Александр");
 }
 
 function setButtonLoading(button, isLoading) {
@@ -9836,6 +9837,6 @@ if (isAuthenticated()) {
   setTimeout(() => refs.gateLoginEmail?.focus(), 60);
 }
 
-if (!localStorage.getItem(ONBOARDING_KEY)) {
+if (isAuthenticated() && !localStorage.getItem(ONBOARDING_KEY)) {
   openOnboarding();
 }
