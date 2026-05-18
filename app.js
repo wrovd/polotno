@@ -140,6 +140,7 @@ const state = {
     device: "Устройство неизвестно",
     ip: "IP не определен",
   },
+  passwordResetRequest: null,
 };
 
 const ONBOARDING_KEY = "polotno_onboarding_seen_v1";
@@ -225,6 +226,7 @@ const refs = {
   gateLoginEmail: document.getElementById("gateLoginEmail"),
   gateLoginPassword: document.getElementById("gateLoginPassword"),
   gateLoginSubmitBtn: document.getElementById("gateLoginSubmitBtn"),
+  gateForgotPasswordBtn: document.getElementById("gateForgotPasswordBtn"),
   gateOpenQrLoginBtn: document.getElementById("gateOpenQrLoginBtn"),
   gateYandexLoginBtn: document.getElementById("gateYandexLoginBtn"),
   gateQrPanel: document.getElementById("gateQrPanel"),
@@ -732,6 +734,14 @@ const refs = {
   logoutBackdrop: document.getElementById("logoutBackdrop"),
   cancelLogoutBtn: document.getElementById("cancelLogoutBtn"),
   confirmLogoutBtn: document.getElementById("confirmLogoutBtn"),
+  passwordResetModal: document.getElementById("passwordResetModal"),
+  passwordResetBackdrop: document.getElementById("passwordResetBackdrop"),
+  closePasswordResetModalBtn: document.getElementById("closePasswordResetModalBtn"),
+  passwordResetForm: document.getElementById("passwordResetForm"),
+  passwordResetEmail: document.getElementById("passwordResetEmail"),
+  passwordResetNewPassword: document.getElementById("passwordResetNewPassword"),
+  passwordResetConfirmPassword: document.getElementById("passwordResetConfirmPassword"),
+  passwordResetSubmitBtn: document.getElementById("passwordResetSubmitBtn"),
   loadingOverlay: document.getElementById("loadingOverlay"),
   loadingText: document.getElementById("loadingText"),
   loadingAvatar: document.getElementById("loadingAvatar"),
@@ -1402,6 +1412,11 @@ function markHomeBrowserNotified(eventKey) {
 
 async function openHomeNotificationTarget(item) {
   if (!item) return;
+  if (item.type === "password-reset") {
+    openPasswordResetModal(item);
+    return;
+  }
+
   if (item.type === "chat" && item.threadId) {
     setModuleView("inventory");
     setInventoryTab("chat");
@@ -1424,6 +1439,74 @@ async function openHomeNotificationTarget(item) {
         // ignore
       }
     }
+  }
+}
+
+function openPasswordResetModal(item) {
+  const email = String(item?.email || item?.user_email || "").trim().toLowerCase();
+  const requestId = String(item?.requestId || item?.id || "").replace(/^password-reset:/, "").trim();
+  if (!email || !requestId) {
+    showToast("Не удалось открыть запрос сброса пароля");
+    hapticWarning();
+    return;
+  }
+  state.passwordResetRequest = { id: requestId, email };
+  if (refs.passwordResetEmail) refs.passwordResetEmail.value = email;
+  if (refs.passwordResetNewPassword) refs.passwordResetNewPassword.value = "";
+  if (refs.passwordResetConfirmPassword) refs.passwordResetConfirmPassword.value = "";
+  openSimpleModal(refs.passwordResetModal);
+  setTimeout(() => refs.passwordResetNewPassword?.focus(), 80);
+}
+
+function closePasswordResetModal() {
+  closeSimpleModal(refs.passwordResetModal);
+  state.passwordResetRequest = null;
+  refs.passwordResetForm?.reset();
+}
+
+async function submitPasswordResetForm(event) {
+  event.preventDefault();
+  const request = state.passwordResetRequest;
+  const email = String(request?.email || refs.passwordResetEmail?.value || "").trim().toLowerCase();
+  const password = String(refs.passwordResetNewPassword?.value || "");
+  const confirmPassword = String(refs.passwordResetConfirmPassword?.value || "");
+
+  if (!request?.id || !email) {
+    showToast("Запрос сброса пароля не выбран");
+    hapticWarning();
+    return;
+  }
+  if (password.length < 6) {
+    showToast("Пароль должен быть минимум 6 символов");
+    hapticWarning();
+    return;
+  }
+  if (password !== confirmPassword) {
+    showToast("Пароли не совпадают");
+    hapticWarning();
+    return;
+  }
+
+  try {
+    await runDbAction(
+      () =>
+        apiRequest("/api/auth?action=password-reset-complete", {
+          method: "POST",
+          body: {
+            requestId: request.id,
+            email,
+            password,
+          },
+        }),
+      { button: refs.passwordResetSubmitBtn, message: "Обновляем пароль...", showOverlay: false }
+    );
+    closePasswordResetModal();
+    showToast("Пароль обновлен");
+    hapticSuccess();
+    await refreshHomeNotifications(true).catch(() => {});
+  } catch (error) {
+    showToast(error.message || "Не удалось обновить пароль");
+    hapticWarning();
   }
 }
 
@@ -1527,6 +1610,33 @@ async function requestBrowserNotificationsPermission() {
   }
 }
 
+async function requestPasswordResetFromGate() {
+  const email = String(refs.gateLoginEmail?.value || "").trim().toLowerCase();
+  if (!email) {
+    refs.gateLoginEmail?.focus();
+    showToast("Введите почту аккаунта");
+    hapticWarning();
+    return;
+  }
+
+  try {
+    await runDbAction(
+      () =>
+        apiRequest("/api/auth?action=password-reset-request", {
+          method: "POST",
+          auth: false,
+          body: { email },
+        }),
+      { button: refs.gateForgotPasswordBtn, message: "Отправляем запрос...", showOverlay: false }
+    );
+    showToast("Запрос отправлен администратору");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message || "Не удалось отправить запрос");
+    hapticWarning();
+  }
+}
+
 function renderHomeNotificationsPopover() {
   if (!refs.homeNotificationsList) return;
   syncHomeNotificationsBrowserButton();
@@ -1538,8 +1648,8 @@ function renderHomeNotificationsPopover() {
   refs.homeNotificationsList.innerHTML = list
     .map((item) => `
       <button type="button" class="home-notification-item${item.unread ? " is-unread" : ""}" data-home-notif-id="${escapeText(item.id)}">
-        <span class="home-notification-icon ${item.type === "task" ? "is-task" : "is-chat"}">
-          ${iconSpan(item.type === "task" ? "layout-list" : "message")}
+        <span class="home-notification-icon ${item.type === "task" ? "is-task" : item.type === "password-reset" ? "is-reset" : "is-chat"}">
+          ${iconSpan(item.type === "task" ? "layout-list" : item.type === "password-reset" ? "reset" : "message")}
         </span>
         <span class="home-notification-copy">
           <span class="home-notification-title-row">
@@ -1607,13 +1717,18 @@ async function refreshHomeNotifications(force = false) {
   }
   if (!force && state.moduleView !== "home" && state.moduleView !== "inventory") return;
   const seenAtTs = new Date(getHomeNotificationsSeenAt()).getTime();
-  const [chatData, tasksData] = await Promise.all([
+  const me = String(state.user?.email || "").trim().toLowerCase();
+  const isPasswordResetAdmin = me === "sashakrasnikov2507@mail.ru";
+  const [chatData, tasksData, resetData] = await Promise.all([
     apiRequest("/api/inventory/chat-list?limit=20").catch(() => ({ threads: [] })),
     apiRequest("/api/inventory/tasks-list?limit=50").catch(() => ({ tasks: [] })),
+    isPasswordResetAdmin
+      ? apiRequest("/api/auth?action=password-reset-requests").catch(() => ({ requests: [] }))
+      : Promise.resolve({ requests: [] }),
   ]);
   const threads = Array.isArray(chatData?.threads) ? chatData.threads : [];
   const tasks = Array.isArray(tasksData?.tasks) ? tasksData.tasks : [];
-  const me = String(state.user?.email || "").trim().toLowerCase();
+  const resetRequests = Array.isArray(resetData?.requests) ? resetData.requests : [];
   const prevTaskStatus = state.homeTaskStatusSnapshot && typeof state.homeTaskStatusSnapshot === "object"
     ? state.homeTaskStatusSnapshot
     : {};
@@ -1670,9 +1785,30 @@ async function refreshHomeNotifications(force = false) {
       };
     });
 
+  const resetItems = resetRequests
+    .map((request) => {
+      const requestId = String(request.id || "");
+      const email = String(request.user_email || "").trim().toLowerCase();
+      const time = request.requested_at || new Date().toISOString();
+      const ts = new Date(time).getTime();
+      const unread = Number.isFinite(ts) && ts > seenAtTs;
+      return {
+        id: `password-reset:${requestId}`,
+        type: "password-reset",
+        title: "Запрос сброса пароля",
+        subtitle: email ? `Аккаунт: ${email}` : "Пользователь запросил новый пароль",
+        time,
+        unread,
+        requestId,
+        email,
+        browserEventKey: unread ? `password-reset:${requestId}:${time}` : "",
+      };
+    })
+    .filter((item) => item.requestId && item.email);
+
   state.homeTaskStatusSnapshot = nextTaskStatus;
 
-  const merged = [...chatItems, ...taskItems]
+  const merged = [...resetItems, ...chatItems, ...taskItems]
     .sort((a, b) => new Date(b.time || 0).getTime() - new Date(a.time || 0).getTime())
     .slice(0, 12);
 
@@ -1683,6 +1819,9 @@ async function refreshHomeNotifications(force = false) {
 
   if (!force) {
     const browserEvents = [];
+    for (const item of resetItems) {
+      if (item.browserEventKey) browserEvents.push(item);
+    }
     for (const item of chatItems) {
       if (item.browserEventKey) browserEvents.push(item);
     }
@@ -7729,6 +7868,10 @@ refs.requestLogoutBtn.addEventListener("click", () => {
 refs.cancelLogoutBtn.addEventListener("click", closeLogoutModal);
 refs.confirmLogoutBtn.addEventListener("click", performLogout);
 refs.logoutBackdrop.addEventListener("click", closeLogoutModal);
+if (refs.gateForgotPasswordBtn) refs.gateForgotPasswordBtn.addEventListener("click", requestPasswordResetFromGate);
+if (refs.closePasswordResetModalBtn) refs.closePasswordResetModalBtn.addEventListener("click", closePasswordResetModal);
+if (refs.passwordResetBackdrop) refs.passwordResetBackdrop.addEventListener("click", closePasswordResetModal);
+if (refs.passwordResetForm) refs.passwordResetForm.addEventListener("submit", submitPasswordResetForm);
 
 if (refs.gateLoginForm) refs.gateLoginForm.addEventListener("submit", async (event) => {
   event.preventDefault();

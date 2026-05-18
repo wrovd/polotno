@@ -1299,6 +1299,11 @@ h1 {
   background: #f1eaff;
 }
 
+.home-notification-icon.is-reset {
+  color: #0931f6;
+  background: rgba(9, 49, 246, 0.1);
+}
+
 .home-notification-icon .btn-icon {
   width: 20px;
   height: 20px;
@@ -3288,6 +3293,16 @@ button:active {
   line-height: 0;
   font-weight: 700;
   cursor: pointer;
+}
+
+.password-reset-card {
+  max-width: 430px;
+}
+
+#passwordResetEmail[readonly] {
+  color: #566070;
+  background: #eef2f7;
+  cursor: default;
 }
 
 .box-kiosk-primary-create {

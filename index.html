@@ -217,7 +217,7 @@
                 </button>
               </div>
 
-              <button class="login-gate-forgot" type="button">Забыли пароль?</button>
+              <button class="login-gate-forgot" id="gateForgotPasswordBtn" type="button">Забыли пароль?</button>
               <button id="gateLoginSubmitBtn" class="login-gate-submit" type="submit">Войти</button>
             </form>
           </article>
@@ -1740,6 +1740,30 @@
           <button class="glass-btn full" id="cancelLogoutBtn" type="button">Остаться</button>
           <button class="primary-btn full" id="confirmLogoutBtn" type="button">Выйти</button>
         </div>
+      </section>
+    </div>
+
+    <div class="auth-modal" id="passwordResetModal" hidden>
+      <div class="auth-backdrop" id="passwordResetBackdrop"></div>
+      <section class="auth-card password-reset-card" role="dialog" aria-modal="true" aria-label="Сброс пароля">
+        <button class="close-btn" id="closePasswordResetModalBtn" type="button" aria-label="Закрыть">×</button>
+        <form class="auth-form active" id="passwordResetForm" novalidate>
+          <h3>Сброс пароля</h3>
+          <p class="helper">Установите новый пароль для аккаунта, который запросил восстановление доступа.</p>
+          <label>
+            Аккаунт
+            <input type="email" id="passwordResetEmail" readonly />
+          </label>
+          <label>
+            Новый пароль
+            <input type="password" id="passwordResetNewPassword" placeholder="Минимум 6 символов" required minlength="6" autocomplete="new-password" />
+          </label>
+          <label>
+            Повторите пароль
+            <input type="password" id="passwordResetConfirmPassword" placeholder="Повторите пароль" required minlength="6" autocomplete="new-password" />
+          </label>
+          <button class="primary-btn full btn-with-icon" id="passwordResetSubmitBtn" type="submit"><span class="btn-icon" aria-hidden="true"><svg><use href="#i-save"></use></svg></span><span>Установить пароль</span></button>
+        </form>
       </section>
     </div>
 

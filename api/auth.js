@@ -4,6 +4,9 @@ const {
   findUserByEmail,
   listUsers,
   updateUserByEmail,
+  createPasswordResetRequest,
+  listPendingPasswordResetRequests,
+  resolvePasswordResetRequest,
   createQrLoginSession,
   findQrLoginSessionByPollKey,
   findQrLoginSessionByCode,
@@ -13,6 +16,8 @@ const {
 const { getBearerToken, hashPassword, signToken, verifyPassword, verifyToken } = require("../lib/security");
 const { send, methodNotAllowed, parseJsonBody } = require("../lib/http");
 const { getTelegramProfilePhotoDataUrl } = require("../lib/telegram");
+
+const PASSWORD_RESET_ADMIN_EMAIL = "sashakrasnikov2507@mail.ru";
 
 function actionFromReq(req) {
   return String(req.query?.action || "").trim().toLowerCase();
@@ -306,6 +311,100 @@ async function handleProfile(req, res) {
   }
 }
 
+function requirePasswordResetAdmin(req, res) {
+  const token = getBearerToken(req);
+  const auth = verifyToken(token);
+  const email = String(auth?.email || "").trim().toLowerCase();
+  if (!email) {
+    send(res, 401, { error: "Unauthorized" });
+    return null;
+  }
+  if (email !== PASSWORD_RESET_ADMIN_EMAIL) {
+    send(res, 403, { error: "Only password reset admin can manage reset requests" });
+    return null;
+  }
+  return auth;
+}
+
+function publicPasswordResetRequest(row) {
+  return {
+    id: row.id,
+    user_email: row.user_email,
+    requested_at: row.requested_at,
+    status: row.status,
+  };
+}
+
+async function handlePasswordResetRequest(req, res) {
+  if (req.method !== "POST") return methodNotAllowed(req, res, ["POST"]);
+  try {
+    const body = parseJsonBody(req);
+    const email = String(body.email || "").trim().toLowerCase();
+    if (!email) return send(res, 400, { error: "Email is required" });
+
+    const user = await findUserByEmail(email);
+    if (user) {
+      await createPasswordResetRequest({
+        id: randomToken(16),
+        user_email: email,
+        status: "pending",
+        requested_at: new Date().toISOString(),
+      });
+    }
+
+    return send(res, 200, { ok: true });
+  } catch (error) {
+    return send(res, 500, { error: error.message || "Failed to request password reset" });
+  }
+}
+
+async function handlePasswordResetRequests(req, res) {
+  if (req.method !== "GET") return methodNotAllowed(req, res, ["GET"]);
+  if (!requirePasswordResetAdmin(req, res)) return;
+  try {
+    const requests = await listPendingPasswordResetRequests(50);
+    return send(res, 200, { requests: requests.map(publicPasswordResetRequest) });
+  } catch (error) {
+    return send(res, 500, { error: error.message || "Failed to load password reset requests" });
+  }
+}
+
+async function handlePasswordResetComplete(req, res) {
+  if (req.method !== "POST") return methodNotAllowed(req, res, ["POST"]);
+  const auth = requirePasswordResetAdmin(req, res);
+  if (!auth) return;
+
+  try {
+    const body = parseJsonBody(req);
+    const requestId = String(body.requestId || body.id || "").trim();
+    const email = String(body.email || "").trim().toLowerCase();
+    const password = String(body.password || "");
+    if (!requestId || !email || !password) return send(res, 400, { error: "Request, email and password are required" });
+    if (password.length < 6) return send(res, 400, { error: "Password must be at least 6 chars" });
+
+    const user = await findUserByEmail(email);
+    if (!user) return send(res, 404, { error: "User not found" });
+
+    const pending = await listPendingPasswordResetRequests(100);
+    const request = pending.find((item) => String(item.id || "") === requestId && String(item.user_email || "").toLowerCase() === email);
+    if (!request) return send(res, 404, { error: "Password reset request not found" });
+
+    const updated = await updateUserByEmail(email, {
+      password_hash: hashPassword(password),
+    });
+    if (!updated) return send(res, 404, { error: "User not found" });
+
+    const resolved = await resolvePasswordResetRequest(requestId, auth.email);
+    if (!resolved) {
+      return send(res, 404, { error: "Password reset request not found" });
+    }
+
+    return send(res, 200, { ok: true, request: publicPasswordResetRequest(resolved) });
+  } catch (error) {
+    return send(res, 500, { error: error.message || "Failed to reset password" });
+  }
+}
+
 async function handleProfilePhoto(req, res) {
   if (req.method !== "GET") return methodNotAllowed(req, res, ["GET"]);
   const token = getBearerToken(req);
@@ -424,6 +523,9 @@ module.exports = async function handler(req, res) {
   if (action === "create-user") return handleCreateUser(req, res);
   if (action === "profile") return handleProfile(req, res);
   if (action === "profile-photo") return handleProfilePhoto(req, res);
+  if (action === "password-reset-request") return handlePasswordResetRequest(req, res);
+  if (action === "password-reset-requests") return handlePasswordResetRequests(req, res);
+  if (action === "password-reset-complete") return handlePasswordResetComplete(req, res);
   if (action === "qr-start") return handleQrStart(req, res);
   if (action === "qr-status") return handleQrStatus(req, res);
   if (action === "qr-confirm") return handleQrConfirm(req, res);
