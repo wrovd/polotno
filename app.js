@@ -1354,6 +1354,34 @@ function notificationTimeAgo(value) {
   return `${d} д`;
 }
 
+function pluralRu(value, one, few, many) {
+  const n = Math.abs(Number(value) || 0);
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+  return many;
+}
+
+function userPresenceText(user) {
+  const lastSeen = String(user?.last_seen_at || user?.last_login_at || "").trim();
+  if (!lastSeen) return "еще не заходил";
+  const ts = new Date(lastSeen).getTime();
+  if (!Number.isFinite(ts) || ts <= 0) return "еще не заходил";
+  const diffMs = Math.max(0, Date.now() - ts);
+  if (diffMs < 60 * 1000) return "был только что";
+  const minutes = Math.floor(diffMs / (60 * 1000));
+  if (minutes < 60) return `был ${minutes} ${pluralRu(minutes, "минуту", "минуты", "минут")} назад`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `был ${hours} ${pluralRu(hours, "час", "часа", "часов")} назад`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `был ${days} ${pluralRu(days, "день", "дня", "дней")} назад`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `был ${months} ${pluralRu(months, "месяц", "месяца", "месяцев")} назад`;
+  const years = Math.floor(months / 12);
+  return `был ${years} ${pluralRu(years, "год", "года", "лет")} назад`;
+}
+
 function getHomeNotificationsSeenAt() {
   const raw = localStorage.getItem(homeNotificationsSeenKey()) || "";
   const parsed = new Date(raw).getTime();
@@ -4733,12 +4761,14 @@ function renderAdminUsers(users = state.adminUsers) {
     const item = document.createElement("article");
     item.className = "history-item";
     const displayName = composeUserDisplayName(user) || user.email;
+    const presence = userPresenceText(user);
     item.innerHTML = `
       <div class="settings-user-line">
         <span class="settings-user-avatar">${initialFromName(displayName)}</span>
         <span class="settings-list-copy">
           <strong>${escapeText(displayName)}</strong>
           <small>${escapeText(user.email || "")}</small>
+          <small class="settings-user-presence">${escapeText(presence)}</small>
         </span>
         <span class="settings-user-role">${escapeText(user.role || "staff")}</span>
       </div>

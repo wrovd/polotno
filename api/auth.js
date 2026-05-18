@@ -4,6 +4,7 @@ const {
   findUserByEmail,
   listUsers,
   updateUserByEmail,
+  touchUserActivity,
   createPasswordResetRequest,
   listPendingPasswordResetRequests,
   resolvePasswordResetRequest,
@@ -61,6 +62,8 @@ function publicUser(user) {
     reminder_item_ids: normalizeReminderItemIds(user.reminder_item_ids || ""),
     reminder_interval_minutes: normalizeReminderInterval(user.reminder_interval_minutes, "0"),
     reminder_last_sent_at: String(user.reminder_last_sent_at || ""),
+    last_login_at: String(user.last_login_at || ""),
+    last_seen_at: String(user.last_seen_at || ""),
   };
 }
 
@@ -185,9 +188,11 @@ async function handleLogin(req, res) {
       return send(res, 401, { error: "Invalid credentials" });
     }
 
+    const activeUser = await touchUserActivity(user.email, { login: true });
+
     return send(res, 200, {
-      token: tokenForUser(user),
-      user: publicUser(user),
+      token: tokenForUser(activeUser || user),
+      user: publicUser(activeUser || user),
     });
   } catch (error) {
     return send(res, 500, { error: error.message || "Login failed" });
@@ -258,6 +263,7 @@ async function handleProfile(req, res) {
   const token = getBearerToken(req);
   const auth = verifyToken(token);
   if (!auth?.email) return send(res, 401, { error: "Unauthorized" });
+  touchUserActivity(auth.email).catch(() => {});
 
   try {
     const current = await findUserByEmail(auth.email);
@@ -319,6 +325,7 @@ function requirePasswordResetAdmin(req, res) {
     send(res, 401, { error: "Unauthorized" });
     return null;
   }
+  touchUserActivity(email).catch(() => {});
   if (email !== PASSWORD_RESET_ADMIN_EMAIL) {
     send(res, 403, { error: "Only password reset admin can manage reset requests" });
     return null;
@@ -477,12 +484,13 @@ async function handleQrStatus(req, res) {
     if (!consumed) {
       return send(res, 200, { ok: true, status: "consumed" });
     }
+    const activeUser = await touchUserActivity(user.email, { login: true });
 
     return send(res, 200, {
       ok: true,
       status: "confirmed",
-      token: tokenForUser(user),
-      user: publicUser(user),
+      token: tokenForUser(activeUser || user),
+      user: publicUser(activeUser || user),
     });
   } catch (error) {
     return send(res, 500, { error: error.message || "Failed to check QR login status" });

@@ -7842,6 +7842,11 @@ button.is-loading::after {
   color: #535a69;
 }
 
+.settings-user-presence {
+  color: #3579f7;
+  font-weight: 700;
+}
+
 .settings-admin-history-filters {
   grid-template-columns: minmax(0, 1fr) auto;
 }

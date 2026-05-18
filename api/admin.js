@@ -32,6 +32,8 @@ async function handleUsers(req, res) {
         role: user.role || "staff",
         telegram_chat_id: user.telegram_chat_id || "",
         low_stock_notifications: String(user.low_stock_notifications || "1"),
+        last_login_at: String(user.last_login_at || ""),
+        last_seen_at: String(user.last_seen_at || ""),
       })),
     });
   } catch (error) {
