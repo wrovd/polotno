@@ -135,6 +135,11 @@ const state = {
     expiresAt: "",
     mode: "modal",
   },
+  qrLoginConfirm: {
+    code: "",
+    device: "Windows 11, Россия",
+    ip: "192.168.1.21",
+  },
 };
 
 const ONBOARDING_KEY = "polotno_onboarding_seen_v1";
@@ -707,6 +712,11 @@ const refs = {
   modalScannerVideo: document.getElementById("modalScannerVideo"),
   modalScannerCanvas: document.getElementById("modalScannerCanvas"),
   modalScanStatus: document.getElementById("modalScanStatus"),
+  qrLoginConfirmScreen: document.getElementById("qrLoginConfirmScreen"),
+  qrLoginConfirmDevice: document.getElementById("qrLoginConfirmDevice"),
+  qrLoginConfirmIp: document.getElementById("qrLoginConfirmIp"),
+  cancelQrLoginConfirmBtn: document.getElementById("cancelQrLoginConfirmBtn"),
+  approveQrLoginConfirmBtn: document.getElementById("approveQrLoginConfirmBtn"),
   editModal: document.getElementById("editModal"),
   editBackdrop: document.getElementById("editBackdrop"),
   closeEditBtn: document.getElementById("closeEditBtn"),
@@ -2259,6 +2269,82 @@ function closeScanModal() {
   document.body.style.overflow = "";
   if (state.scanContext === "auth-qr-confirm") state.scanContext = "inventory";
   updateMobileScanFab();
+}
+
+function readQrLoginConfirmMeta(rawValue) {
+  const fallback = {
+    device: "Windows 11, Россия",
+    ip: "192.168.1.21",
+  };
+  try {
+    const payload = JSON.parse(String(rawValue || "").trim());
+    return {
+      device: String(payload.device || payload.deviceName || fallback.device).trim() || fallback.device,
+      ip: String(payload.ip || payload.ipAddress || fallback.ip).trim() || fallback.ip,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function openQrLoginConfirmScreen(rawValue) {
+  const code = extractQrLoginCode(rawValue);
+  if (!code) return false;
+
+  if (!state.token || !state.user?.email) {
+    setScanStatus("Сначала войдите в аккаунт на телефоне.");
+    showToast("Сначала войдите в аккаунт на телефоне");
+    hapticWarning();
+    return true;
+  }
+
+  const meta = readQrLoginConfirmMeta(rawValue);
+  state.qrLoginConfirm.code = code;
+  state.qrLoginConfirm.device = meta.device;
+  state.qrLoginConfirm.ip = meta.ip;
+  if (refs.qrLoginConfirmDevice) refs.qrLoginConfirmDevice.textContent = meta.device;
+  if (refs.qrLoginConfirmIp) refs.qrLoginConfirmIp.textContent = meta.ip;
+
+  closeScanModal();
+  if (refs.qrLoginConfirmScreen) refs.qrLoginConfirmScreen.hidden = false;
+  document.body.style.overflow = "hidden";
+  hapticSelection();
+  return true;
+}
+
+function closeQrLoginConfirmScreen() {
+  if (refs.qrLoginConfirmScreen) refs.qrLoginConfirmScreen.hidden = true;
+  state.qrLoginConfirm.code = "";
+  state.qrLoginConfirm.device = "Windows 11, Россия";
+  state.qrLoginConfirm.ip = "192.168.1.21";
+  document.body.style.overflow = "";
+  updateMobileScanFab();
+  hapticSelection();
+}
+
+async function approveQrLoginConfirmScreen() {
+  const code = String(state.qrLoginConfirm.code || "").trim();
+  if (!code) {
+    closeQrLoginConfirmScreen();
+    return;
+  }
+
+  try {
+    await runDbAction(
+      () =>
+        apiRequest("/api/auth?action=qr-confirm", {
+          method: "POST",
+          body: { code },
+        }),
+      { button: refs.approveQrLoginConfirmBtn, message: "Подтверждаем вход...", showOverlay: false }
+    );
+    closeQrLoginConfirmScreen();
+    showToast("Вход подтвержден. Вернитесь на ПК");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message || "Не удалось подтвердить вход");
+    hapticWarning();
+  }
 }
 
 function applyPrintAccess() {
@@ -6789,6 +6875,17 @@ function extractQrLoginCode(rawValue) {
   return "";
 }
 
+function isQrLoginScanValue(rawValue) {
+  const text = String(rawValue || "").trim();
+  if (!text) return false;
+  try {
+    const payload = JSON.parse(text);
+    return payload && String(payload.type || "") === "polotno_qr_login";
+  } catch {
+    return /polotno/i.test(text) && /[?&]code=([A-Za-z0-9_-]+)/i.test(text);
+  }
+}
+
 async function processAuthQrConfirmScanValue(rawValue) {
   if (!state.token || !state.user?.email) {
     setScanStatus("Сначала войдите в аккаунт на телефоне.");
@@ -6803,15 +6900,7 @@ async function processAuthQrConfirmScanValue(rawValue) {
     return false;
   }
 
-  setScanStatus("Подтверждаем вход на ПК...", { busy: true });
-  await apiRequest("/api/auth?action=qr-confirm", {
-    method: "POST",
-    body: { code },
-  });
-  closeScanModal();
-  showToast("Вход подтвержден. Вернитесь на ПК");
-  hapticSuccess();
-  return true;
+  return openQrLoginConfirmScreen(rawValue);
 }
 
 async function processFilmScanValue(rawValue) {
@@ -6895,6 +6984,11 @@ async function processScanValue(rawValue) {
   }
   state.lastScanValue = rawValue;
   state.lastScanAt = now;
+
+  if (isQrLoginScanValue(rawValue)) {
+    openQrLoginConfirmScreen(rawValue);
+    return;
+  }
 
   if (state.scanContext === "auth-qr-confirm") {
     await processAuthQrConfirmScanValue(rawValue);
@@ -9674,6 +9768,8 @@ refs.stopScannerBtn.addEventListener("click", () => {
 
 if (refs.closeScanModalBtn) refs.closeScanModalBtn.addEventListener("click", closeScanModal);
 if (refs.scanModalBackdrop) refs.scanModalBackdrop.addEventListener("click", closeScanModal);
+if (refs.cancelQrLoginConfirmBtn) refs.cancelQrLoginConfirmBtn.addEventListener("click", closeQrLoginConfirmScreen);
+if (refs.approveQrLoginConfirmBtn) refs.approveQrLoginConfirmBtn.addEventListener("click", approveQrLoginConfirmScreen);
 if (refs.closeFilmFoundBtn) refs.closeFilmFoundBtn.addEventListener("click", closeFilmFoundModal);
 if (refs.filmFoundBackdrop) refs.filmFoundBackdrop.addEventListener("click", closeFilmFoundModal);
 if (refs.closeFilmAddBtn) refs.closeFilmAddBtn.addEventListener("click", closeFilmAddModal);
