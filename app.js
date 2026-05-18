@@ -137,8 +137,8 @@ const state = {
   },
   qrLoginConfirm: {
     code: "",
-    device: "Windows 11, Россия",
-    ip: "192.168.1.21",
+    device: "Устройство неизвестно",
+    ip: "IP не определен",
   },
 };
 
@@ -2273,13 +2273,15 @@ function closeScanModal() {
 
 function readQrLoginConfirmMeta(rawValue) {
   const fallback = {
-    device: "Windows 11, Россия",
-    ip: "192.168.1.21",
+    device: "Устройство неизвестно",
+    ip: "IP не определен",
   };
   try {
     const payload = JSON.parse(String(rawValue || "").trim());
+    const device = String(payload.device || payload.deviceName || "").trim();
+    const country = String(payload.country || "").trim();
     return {
-      device: String(payload.device || payload.deviceName || fallback.device).trim() || fallback.device,
+      device: device && country && !device.includes(country) ? `${device}, ${country}` : device || fallback.device,
       ip: String(payload.ip || payload.ipAddress || fallback.ip).trim() || fallback.ip,
     };
   } catch {
@@ -2315,8 +2317,8 @@ function openQrLoginConfirmScreen(rawValue) {
 function closeQrLoginConfirmScreen() {
   if (refs.qrLoginConfirmScreen) refs.qrLoginConfirmScreen.hidden = true;
   state.qrLoginConfirm.code = "";
-  state.qrLoginConfirm.device = "Windows 11, Россия";
-  state.qrLoginConfirm.ip = "192.168.1.21";
+  state.qrLoginConfirm.device = "Устройство неизвестно";
+  state.qrLoginConfirm.ip = "IP не определен";
   document.body.style.overflow = "";
   updateMobileScanFab();
   hapticSelection();

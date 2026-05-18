@@ -77,11 +77,85 @@ function randomToken(size = 24) {
   return crypto.randomBytes(size).toString("base64url");
 }
 
-function qrPayloadByCode(code) {
+function firstHeaderValue(req, names) {
+  for (const name of names) {
+    const value = req.headers?.[name];
+    if (Array.isArray(value) && value.length) return String(value[0] || "").trim();
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+function clientIpFromReq(req) {
+  const forwarded = firstHeaderValue(req, ["x-forwarded-for", "x-real-ip", "client-ip"]);
+  const ip = forwarded.split(",").map((part) => part.trim()).find(Boolean) || "";
+  return ip || String(req.socket?.remoteAddress || "").replace(/^::ffff:/, "").trim();
+}
+
+function countryFromReq(req) {
+  const code = firstHeaderValue(req, ["x-vercel-ip-country", "cf-ipcountry", "x-country-code"]);
+  if (!code || code.toUpperCase() === "XX") return "Страна неизвестна";
+  try {
+    return new Intl.DisplayNames(["ru"], { type: "region" }).of(code.toUpperCase()) || code.toUpperCase();
+  } catch {
+    return code.toUpperCase();
+  }
+}
+
+function cleanClientHint(value) {
+  return String(value || "").replace(/^"|"$/g, "").trim();
+}
+
+function deviceFromReq(req) {
+  const platformHint = cleanClientHint(firstHeaderValue(req, ["sec-ch-ua-platform"]));
+  const platformVersion = cleanClientHint(firstHeaderValue(req, ["sec-ch-ua-platform-version"]));
+  if (/Windows/i.test(platformHint)) {
+    const major = Number(platformVersion.split(".")[0] || 0);
+    if (major >= 13) return "Windows 11";
+    return "Windows";
+  }
+  if (/macOS/i.test(platformHint)) return "macOS";
+  if (/iOS/i.test(platformHint)) return "iOS";
+  if (/Android/i.test(platformHint)) return "Android";
+  if (/Linux/i.test(platformHint)) return "Linux";
+
+  return deviceFromUserAgent(firstHeaderValue(req, ["user-agent"]));
+}
+
+function deviceFromUserAgent(userAgent) {
+  const ua = String(userAgent || "");
+  if (/Windows NT 10\.0/i.test(ua)) return "Windows";
+  if (/Windows NT 6\.3/i.test(ua)) return "Windows 8.1";
+  if (/Windows NT 6\.2/i.test(ua)) return "Windows 8";
+  if (/Windows NT 6\.1/i.test(ua)) return "Windows 7";
+  if (/iPhone/i.test(ua)) return "iPhone";
+  if (/iPad/i.test(ua)) return "iPad";
+  if (/Android/i.test(ua)) return /Mobile/i.test(ua) ? "Android" : "Android-планшет";
+  if (/Mac OS X/i.test(ua)) return "macOS";
+  if (/Linux/i.test(ua)) return "Linux";
+  return "Устройство неизвестно";
+}
+
+function qrClientMetaFromReq(req) {
+  const device = deviceFromReq(req);
+  const country = countryFromReq(req);
+  const ip = clientIpFromReq(req);
+  return {
+    device,
+    country,
+    deviceLabel: `${device}, ${country}`,
+    ip: ip || "IP не определен",
+  };
+}
+
+function qrPayloadByCode(code, clientMeta = {}) {
   return JSON.stringify({
     type: "polotno_qr_login",
     v: 1,
     code,
+    device: clientMeta.deviceLabel || clientMeta.device || "Устройство неизвестно",
+    country: clientMeta.country || "Страна неизвестна",
+    ip: clientMeta.ip || "IP не определен",
   });
 }
 
@@ -259,6 +333,7 @@ async function handleQrStart(req, res) {
     const pollKey = randomToken(28);
     const ttlMs = 2 * 60 * 1000;
     const expiresAt = new Date(Date.now() + ttlMs).toISOString();
+    const clientMeta = qrClientMetaFromReq(req);
 
     await createQrLoginSession({
       id: sessionId,
@@ -274,7 +349,7 @@ async function handleQrStart(req, res) {
       ok: true,
       pollKey,
       expiresAt,
-      qrPayload: qrPayloadByCode(loginCode),
+      qrPayload: qrPayloadByCode(loginCode, clientMeta),
     });
   } catch (error) {
     return send(res, 500, { error: error.message || "Failed to create QR login session" });
