@@ -64,7 +64,7 @@ async function handleGroups(req, res) {
       return send(res, 200, { groups });
     }
 
-    const access = requireRole(auth, ["admin"]);
+    const access = requireRole(auth, ["admin", "staff"]);
     if (!access.ok) return send(res, access.code, { error: access.error });
 
     const body = parseJsonBody(req);
@@ -128,7 +128,7 @@ async function handleHistory(req, res) {
 async function handleUpsert(req, res) {
   if (req.method !== "POST") return methodNotAllowed(req, res, ["POST"]);
   const auth = requireAuth(req);
-  const access = requireRole(auth, ["admin"]);
+  const access = requireRole(auth, ["admin", "staff"]);
   if (!access.ok) return send(res, access.code, { error: access.error });
 
   try {
@@ -194,7 +194,7 @@ async function handleUpsert(req, res) {
 async function handleDelete(req, res) {
   if (req.method !== "POST") return methodNotAllowed(req, res, ["POST"]);
   const auth = requireAuth(req);
-  const access = requireRole(auth, ["admin"]);
+  const access = requireRole(auth, ["admin", "staff"]);
   if (!access.ok) return send(res, access.code, { error: access.error });
 
   try {
@@ -286,7 +286,7 @@ async function handleConsume(req, res) {
 async function handleAdjust(req, res) {
   if (req.method !== "POST") return methodNotAllowed(req, res, ["POST"]);
   const auth = requireAuth(req);
-  const access = requireRole(auth, ["admin"]);
+  const access = requireRole(auth, ["admin", "staff"]);
   if (!access.ok) return send(res, access.code, { error: access.error });
 
   try {

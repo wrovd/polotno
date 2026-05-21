@@ -7813,6 +7813,11 @@ button.is-loading::after {
   background: #f5f6f8;
 }
 
+.settings-user-card {
+  display: grid;
+  gap: 12px;
+}
+
 .settings-user-line {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -7847,8 +7852,103 @@ button.is-loading::after {
   font-weight: 700;
 }
 
+.settings-user-actions {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) auto;
+  align-items: end;
+  gap: 10px;
+  padding-left: 42px;
+}
+
+.settings-role-control {
+  display: grid;
+  gap: 6px;
+  color: #697184;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.settings-role-control select {
+  height: 40px;
+  border: 1px solid #d8dde8;
+  border-radius: 12px;
+  background: #fff;
+  color: #202431;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 0 12px;
+}
+
+.settings-user-delete-btn {
+  height: 40px;
+  border: 0;
+  border-radius: 12px;
+  background: #fff1f1;
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.settings-role-control select:disabled,
+.settings-user-delete-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.user-delete-card {
+  max-width: 430px;
+}
+
+.user-delete-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0 18px;
+  padding: 14px;
+  border: 1px solid #eceef3;
+  border-radius: 16px;
+  background: #f5f6f8;
+}
+
+.user-delete-preview span:last-child {
+  display: grid;
+  gap: 2px;
+}
+
+.user-delete-preview small {
+  color: #8a92a3;
+}
+
+.danger-btn {
+  background: #dc2626;
+  color: #fff;
+}
+
 .settings-admin-history-filters {
   grid-template-columns: minmax(0, 1fr) auto;
+}
+
+@media (max-width: 680px) {
+  .settings-user-line {
+    grid-template-columns: auto 1fr;
+  }
+
+  .settings-user-line .settings-user-role {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .settings-user-actions {
+    grid-template-columns: 1fr;
+    padding-left: 0;
+  }
+
+  .settings-user-delete-btn,
+  .settings-role-control select {
+    width: 100%;
+  }
 }
 
 @media (max-width: 940px) {

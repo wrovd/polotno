@@ -1767,6 +1767,26 @@
       </section>
     </div>
 
+    <div class="auth-modal" id="userDeleteModal" hidden>
+      <div class="auth-backdrop" id="userDeleteBackdrop"></div>
+      <section class="auth-card user-delete-card" role="dialog" aria-modal="true" aria-label="Удаление аккаунта">
+        <button class="close-btn" id="closeUserDeleteModalBtn" type="button" aria-label="Закрыть">×</button>
+        <h3>Удалить аккаунт?</h3>
+        <p class="helper" id="userDeleteText">Аккаунт будет полностью удален из системы.</p>
+        <div class="user-delete-preview">
+          <span class="settings-user-avatar" id="userDeleteAvatar">?</span>
+          <span>
+            <strong id="userDeleteName">Пользователь</strong>
+            <small id="userDeleteEmail">user@example.com</small>
+          </span>
+        </div>
+        <div class="hero-actions">
+          <button class="glass-btn full" id="cancelUserDeleteBtn" type="button">Оставить</button>
+          <button class="primary-btn full danger-btn" id="confirmUserDeleteBtn" type="button">Удалить</button>
+        </div>
+      </section>
+    </div>
+
     <section class="onboarding" id="onboarding" hidden>
       <div class="onboarding-backdrop"></div>
       <div class="onboarding-card">

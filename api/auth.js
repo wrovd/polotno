@@ -216,7 +216,8 @@ async function handleCreateUser(req, res) {
     const hasUsers = users.length > 0;
     const token = getBearerToken(req);
     const authUser = verifyToken(token);
-    const isAdminByRole = authUser?.role === "admin";
+    const currentAuthUser = authUser?.email ? await findUserByEmail(authUser.email) : null;
+    const isAdminByRole = String(currentAuthUser?.role || "").toLowerCase() === "admin";
     const isAdminByKey = Boolean(process.env.ADMIN_KEY) && adminKey === process.env.ADMIN_KEY;
 
     if (hasUsers && !isAdminByRole && !isAdminByKey) {

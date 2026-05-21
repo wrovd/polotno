@@ -141,6 +141,7 @@ const state = {
     ip: "IP не определен",
   },
   passwordResetRequest: null,
+  pendingDeleteUserEmail: "",
 };
 
 const ONBOARDING_KEY = "polotno_onboarding_seen_v1";
@@ -742,6 +743,15 @@ const refs = {
   passwordResetNewPassword: document.getElementById("passwordResetNewPassword"),
   passwordResetConfirmPassword: document.getElementById("passwordResetConfirmPassword"),
   passwordResetSubmitBtn: document.getElementById("passwordResetSubmitBtn"),
+  userDeleteModal: document.getElementById("userDeleteModal"),
+  userDeleteBackdrop: document.getElementById("userDeleteBackdrop"),
+  closeUserDeleteModalBtn: document.getElementById("closeUserDeleteModalBtn"),
+  userDeleteText: document.getElementById("userDeleteText"),
+  userDeleteAvatar: document.getElementById("userDeleteAvatar"),
+  userDeleteName: document.getElementById("userDeleteName"),
+  userDeleteEmail: document.getElementById("userDeleteEmail"),
+  cancelUserDeleteBtn: document.getElementById("cancelUserDeleteBtn"),
+  confirmUserDeleteBtn: document.getElementById("confirmUserDeleteBtn"),
   loadingOverlay: document.getElementById("loadingOverlay"),
   loadingText: document.getElementById("loadingText"),
   loadingAvatar: document.getElementById("loadingAvatar"),
@@ -2526,12 +2536,8 @@ function applyPrintAccess() {
 
 function applyRoleAccess() {
   const canManageUsers = canAdmin();
-  document.querySelectorAll(".admin-only").forEach((node) => {
-    node.classList.toggle("is-hidden", !canManageUsers);
-  });
   refs.registerTab.classList.toggle("is-hidden", !canManageUsers);
   refs.authTabs.classList.toggle("admin-disabled", !canManageUsers);
-  refs.adjustPanel.classList.toggle("is-hidden", !canManageUsers);
   if (refs.adminPanel) {
     refs.adminPanel.classList.toggle("is-hidden", !canManageUsers);
   }
@@ -2548,13 +2554,12 @@ function applyRoleAccess() {
     refs.quickFilmIngestPanel.classList.add("is-hidden");
   }
 
-  refs.stockManagePanel.classList.toggle("is-hidden", !canManageUsers);
-  refs.itemName.disabled = !canManageUsers;
-  refs.itemGroup.disabled = !canManageUsers;
-  refs.itemQty.disabled = !canManageUsers;
-  refs.itemThreshold.disabled = !canManageUsers;
-  refs.itemNotes.disabled = !canManageUsers;
-  refs.groupNameInput.disabled = !canManageUsers;
+  refs.itemName.disabled = false;
+  refs.itemGroup.disabled = false;
+  refs.itemQty.disabled = false;
+  refs.itemThreshold.disabled = false;
+  refs.itemNotes.disabled = false;
+  refs.groupNameInput.disabled = false;
 
   if (!canManageUsers && state.authTab === "register") {
     setAuthTab("login");
@@ -2572,9 +2577,8 @@ function applyRoleAccess() {
     return;
   }
 
-  refs.roleHint.classList.remove("is-hidden");
-  refs.roleHint.textContent =
-    "Роль: staff. Доступны просмотр, история и списание (-1). Функции администратора (создание, редактирование, удаление, корректировка) скрыты.";
+  refs.roleHint.classList.add("is-hidden");
+  refs.roleHint.textContent = "";
 }
 
 function openOnboarding() {
@@ -4759,9 +4763,12 @@ function renderAdminUsers(users = state.adminUsers) {
 
   page.items.forEach((user) => {
     const item = document.createElement("article");
-    item.className = "history-item";
+    item.className = "history-item settings-user-card";
     const displayName = composeUserDisplayName(user) || user.email;
     const presence = userPresenceText(user);
+    const email = String(user.email || "").trim().toLowerCase();
+    const role = String(user.role || "staff").trim().toLowerCase() === "admin" ? "admin" : "staff";
+    const isCurrentUser = email === String(state.user?.email || "").trim().toLowerCase();
     item.innerHTML = `
       <div class="settings-user-line">
         <span class="settings-user-avatar">${initialFromName(displayName)}</span>
@@ -4770,7 +4777,19 @@ function renderAdminUsers(users = state.adminUsers) {
           <small>${escapeText(user.email || "")}</small>
           <small class="settings-user-presence">${escapeText(presence)}</small>
         </span>
-        <span class="settings-user-role">${escapeText(user.role || "staff")}</span>
+        <span class="settings-user-role">${escapeText(role)}</span>
+      </div>
+      <div class="settings-user-actions">
+        <label class="settings-role-control">
+          <span>Роль</span>
+          <select data-admin-user-role="${escapeText(email)}" ${isCurrentUser ? "disabled" : ""}>
+            <option value="staff" ${role === "staff" ? "selected" : ""}>staff</option>
+            <option value="admin" ${role === "admin" ? "selected" : ""}>admin</option>
+          </select>
+        </label>
+        <button class="settings-user-delete-btn" type="button" data-admin-user-delete="${escapeText(email)}" ${isCurrentUser ? "disabled" : ""}>
+          Удалить аккаунт
+        </button>
       </div>
     `;
     refs.adminUsersList.appendChild(item);
@@ -4812,6 +4831,92 @@ async function loadAdminUsers() {
   state.adminUsers = data.users || [];
   state.pages.adminUsers = 1;
   renderAdminUsers(state.adminUsers);
+}
+
+async function changeAdminUserRole(email, role, control = null) {
+  const nextEmail = String(email || "").trim().toLowerCase();
+  const nextRole = String(role || "").trim().toLowerCase();
+  if (!nextEmail || !["admin", "staff"].includes(nextRole)) return;
+  const previous = state.adminUsers.find((user) => String(user.email || "").trim().toLowerCase() === nextEmail)?.role || "staff";
+
+  try {
+    if (control instanceof HTMLSelectElement) control.disabled = true;
+    const data = await apiRequest("/api/admin/user-role", {
+      method: "POST",
+      body: { email: nextEmail, role: nextRole },
+    });
+    const updated = data.user || null;
+    if (updated) {
+      state.adminUsers = state.adminUsers.map((user) => (
+        String(user.email || "").trim().toLowerCase() === nextEmail ? { ...user, ...updated } : user
+      ));
+      renderAdminUsers(state.adminUsers);
+    } else {
+      await loadAdminUsers();
+    }
+    showToast(`Роль обновлена: ${nextRole}`);
+    hapticSuccess();
+  } catch (error) {
+    if (control instanceof HTMLSelectElement) control.value = previous;
+    showToast(error.message || "Не удалось изменить роль");
+    hapticWarning();
+  } finally {
+    if (control instanceof HTMLSelectElement) control.disabled = false;
+  }
+}
+
+function openUserDeleteModal(email) {
+  const nextEmail = String(email || "").trim().toLowerCase();
+  const user = state.adminUsers.find((row) => String(row.email || "").trim().toLowerCase() === nextEmail);
+  if (!user) {
+    showToast("Пользователь не найден");
+    hapticWarning();
+    return;
+  }
+  const displayName = composeUserDisplayName(user) || user.email;
+  state.pendingDeleteUserEmail = nextEmail;
+  if (refs.userDeleteAvatar) refs.userDeleteAvatar.textContent = initialFromName(displayName);
+  if (refs.userDeleteName) refs.userDeleteName.textContent = displayName;
+  if (refs.userDeleteEmail) refs.userDeleteEmail.textContent = nextEmail;
+  if (refs.userDeleteText) refs.userDeleteText.textContent = "Аккаунт будет полностью удален из системы. История прошлых действий останется как аудит.";
+  openSimpleModal(refs.userDeleteModal);
+  hapticSelection();
+}
+
+function closeUserDeleteModal() {
+  state.pendingDeleteUserEmail = "";
+  closeSimpleModal(refs.userDeleteModal);
+}
+
+async function confirmUserDelete() {
+  const email = String(state.pendingDeleteUserEmail || "").trim().toLowerCase();
+  if (!email) {
+    closeUserDeleteModal();
+    return;
+  }
+  try {
+    await runDbAction(
+      () =>
+        apiRequest("/api/admin/user-delete", {
+          method: "POST",
+          body: { email },
+        }),
+      { button: refs.confirmUserDeleteBtn, message: "Удаляем аккаунт...", showOverlay: false }
+    );
+    state.adminUsers = state.adminUsers.filter((user) => String(user.email || "").trim().toLowerCase() !== email);
+    renderAdminUsers(state.adminUsers);
+    if (String(refs.adminHistoryUser?.value || "").trim().toLowerCase() === email) {
+      refs.adminHistoryUser.value = "";
+      state.adminHistory = [];
+      renderAdminHistory(state.adminHistory);
+    }
+    closeUserDeleteModal();
+    showToast("Аккаунт удален");
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message || "Не удалось удалить аккаунт");
+    hapticWarning();
+  }
 }
 
 async function loadAdminHistoryByUser() {
@@ -7902,6 +8007,10 @@ if (refs.gateForgotPasswordBtn) refs.gateForgotPasswordBtn.addEventListener("cli
 if (refs.closePasswordResetModalBtn) refs.closePasswordResetModalBtn.addEventListener("click", closePasswordResetModal);
 if (refs.passwordResetBackdrop) refs.passwordResetBackdrop.addEventListener("click", closePasswordResetModal);
 if (refs.passwordResetForm) refs.passwordResetForm.addEventListener("submit", submitPasswordResetForm);
+if (refs.closeUserDeleteModalBtn) refs.closeUserDeleteModalBtn.addEventListener("click", closeUserDeleteModal);
+if (refs.userDeleteBackdrop) refs.userDeleteBackdrop.addEventListener("click", closeUserDeleteModal);
+if (refs.cancelUserDeleteBtn) refs.cancelUserDeleteBtn.addEventListener("click", closeUserDeleteModal);
+if (refs.confirmUserDeleteBtn) refs.confirmUserDeleteBtn.addEventListener("click", confirmUserDelete);
 
 if (refs.gateLoginForm) refs.gateLoginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -8046,6 +8155,24 @@ if (refs.adminHistoryLoadBtn) refs.adminHistoryLoadBtn.addEventListener("click",
     showToast(error.message);
     hapticWarning();
   }
+});
+
+if (refs.adminUsersList) refs.adminUsersList.addEventListener("change", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLSelectElement)) return;
+  const email = String(target.getAttribute("data-admin-user-role") || "").trim().toLowerCase();
+  if (!email) return;
+  await changeAdminUserRole(email, target.value, target);
+});
+
+if (refs.adminUsersList) refs.adminUsersList.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const button = target.closest("button[data-admin-user-delete]");
+  if (!(button instanceof HTMLButtonElement)) return;
+  const email = String(button.getAttribute("data-admin-user-delete") || "").trim().toLowerCase();
+  if (!email) return;
+  openUserDeleteModal(email);
 });
 
 if (refs.adminAnnounceForm) refs.adminAnnounceForm.addEventListener("submit", async (event) => {
