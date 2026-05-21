@@ -187,11 +187,13 @@ function syncAuthGate() {
 }
 
 async function loadAuthorizedWorkspaceData() {
-  await loadItems();
-  await loadHistory();
-  await loadFilms();
-  await loadBoxSearchData();
-  await loadChatData();
+  await Promise.all([
+    loadItems(),
+    loadHistory(),
+    loadFilms(),
+    loadBoxSearchData(),
+    loadChatData(),
+  ]);
   await loadTasks();
 }
 
