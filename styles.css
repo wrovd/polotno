@@ -12937,3 +12937,169 @@ button.is-loading::after {
   letter-spacing: -0.02em;
   color: var(--text);
 }
+
+/* ============================================================
+   v5 — Интерактив графика активности (наведение)
+   ============================================================ */
+#homeView.home-v4 .hc-plot {
+  position: relative;
+  cursor: crosshair;
+}
+
+.hc-cursor {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
+  background: var(--line-strong);
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.hc-hoverdot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2.5px solid var(--primary);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 3;
+  box-shadow: 0 1px 4px rgba(20, 20, 20, 0.25);
+}
+
+.hc-endpoint {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--primary);
+  border: 2px solid #fff;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.hc-tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 14px));
+  background: var(--primary);
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 11px;
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 4;
+  box-shadow: var(--shadow-pop);
+}
+
+.hc-tooltip strong {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.hc-tooltip span {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* ============================================================
+   REDESIGN v6 — Списки склада: строка статистики + сетка карточек
+   ============================================================ */
+
+/* Строка статистики */
+#inventoryView.inv-v4 .inv-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+#inventoryView.inv-v4 .inv-stat {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: 14px 16px;
+  display: grid;
+  gap: 3px;
+}
+
+#inventoryView.inv-v4 .inv-stat strong {
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+#inventoryView.inv-v4 .inv-stat span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+#inventoryView.inv-v4 .inv-stat.is-warn strong {
+  color: #b56a16;
+}
+
+#inventoryView.inv-v4 .inv-stat.is-danger strong {
+  color: var(--danger);
+}
+
+/* Плотная сетка карточек на десктопе */
+#inventoryView.inv-v4 .inventory-ios-list,
+#inventoryView.inv-v4 .films-cards-list {
+  gap: 12px;
+  align-items: start;
+}
+
+@media (min-width: 760px) {
+  #inventoryView.inv-v4 .inventory-ios-list,
+  #inventoryView.inv-v4 .films-cards-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1500px) {
+  #inventoryView.inv-v4 .inventory-ios-list,
+  #inventoryView.inv-v4 .films-cards-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Карточки в сетке: ровная высота контента */
+#inventoryView.inv-v4 .consumable-card,
+#inventoryView.inv-v4 .film-card {
+  height: 100%;
+}
+
+@media (max-width: 560px) {
+  #inventoryView.inv-v4 .inv-stats {
+    gap: 8px;
+  }
+  #inventoryView.inv-v4 .inv-stat {
+    padding: 12px;
+  }
+  #inventoryView.inv-v4 .inv-stat strong {
+    font-size: 20px;
+  }
+}
+
+/* Поиск — список отслеживаемых коробок сеткой на десктопе */
+@media (min-width: 760px) {
+  #inventoryView.inv-v4 #boxTrackedList {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    align-items: start;
+  }
+  #inventoryView.inv-v4 #boxTrackedList .box-tracked-card {
+    margin-bottom: 0;
+    height: 100%;
+  }
+}

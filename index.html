@@ -594,6 +594,21 @@
               <div class="inventory-chip-row inventory-chip-params" id="iosFilterParams"></div>
             </div>
 
+            <div class="inv-stats" id="mainStats">
+              <div class="inv-stat">
+                <strong id="mainStatTotal">0</strong>
+                <span>Всего позиций</span>
+              </div>
+              <div class="inv-stat is-warn">
+                <strong id="mainStatLow">0</strong>
+                <span>Ниже лимита</span>
+              </div>
+              <div class="inv-stat is-danger">
+                <strong id="mainStatOut">0</strong>
+                <span>Нет в наличии</span>
+              </div>
+            </div>
+
             <section class="inventory-inline-filters is-hidden" id="mainFiltersPanelTop">
               <div class="inventory-compact-filters">
                 <select id="mainGroupFilterTop" class="is-hidden" aria-hidden="true">
@@ -859,6 +874,21 @@
             <div class="films-segmented">
               <button class="films-seg-btn active" id="filmsGroupWithBtn" type="button">С ячейками</button>
               <button class="films-seg-btn" id="filmsGroupWithoutBtn" type="button">Без ячеек</button>
+            </div>
+
+            <div class="inv-stats" id="filmsStats">
+              <div class="inv-stat">
+                <strong id="filmsStatTotal">0</strong>
+                <span>Всего плёнок</span>
+              </div>
+              <div class="inv-stat">
+                <strong id="filmsStatCells">0</strong>
+                <span>С ячейками</span>
+              </div>
+              <div class="inv-stat">
+                <strong id="filmsStatNoCells">0</strong>
+                <span>Без ячеек</span>
+              </div>
             </div>
 
             <section class="films-hidden-tools admin-only is-hidden" id="quickFilmIngestPanel">

@@ -1434,7 +1434,7 @@ function renderHomeChart() {
     .join("");
   const plot = empty
     ? ""
-    : `<path d="${area}" fill="url(#hcFill)" /><path d="${line}" class="hc-line" /><circle cx="${lastPt[0].toFixed(1)}" cy="${lastPt[1].toFixed(1)}" r="4.5" class="hc-dot" />`;
+    : `<path d="${area}" fill="url(#hcFill)" /><path d="${line}" class="hc-line" />`;
   const svg = `
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" class="hc-svg" role="img" aria-label="Активность склада за ${days} дней">
       <defs>
@@ -1449,9 +1449,66 @@ function renderHomeChart() {
   const axis = series
     .map((s, i) => (i % 2 === 0 || i === days - 1 ? `<span>${s.date.getDate()}</span>` : `<span class="is-spacer"></span>`))
     .join("");
+  const hoverLayer = empty
+    ? ""
+    : `<div class="hc-cursor" hidden></div><div class="hc-hoverdot" hidden></div><div class="hc-endpoint"></div><div class="hc-tooltip" hidden></div>`;
   host.innerHTML = `
-    <div class="hc-plot">${svg}${empty ? '<p class="hc-empty">Пока нет движений за период</p>' : ""}</div>
+    <div class="hc-plot">${svg}${empty ? '<p class="hc-empty">Пока нет движений за период</p>' : hoverLayer}</div>
     <div class="hc-axis">${axis}</div>`;
+
+  if (empty) return;
+  const plotEl = host.querySelector(".hc-plot");
+  const cursorEl = host.querySelector(".hc-cursor");
+  const dotEl = host.querySelector(".hc-hoverdot");
+  const endEl = host.querySelector(".hc-endpoint");
+  const tipEl = host.querySelector(".hc-tooltip");
+  const months = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
+  const ptPx = (i, rect) => ({
+    x: (pts[i][0] / width) * rect.width,
+    y: (pts[i][1] / height) * rect.height,
+  });
+  // Статичная конечная точка
+  const placeEnd = () => {
+    const rect = plotEl.getBoundingClientRect();
+    if (!rect.width) return;
+    const p = ptPx(pts.length - 1, rect);
+    endEl.style.left = `${p.x}px`;
+    endEl.style.top = `${p.y}px`;
+  };
+  placeEnd();
+  if (typeof ResizeObserver !== "undefined") {
+    const ro = new ResizeObserver(placeEnd);
+    ro.observe(plotEl);
+  }
+  const showAt = (clientX) => {
+    const rect = plotEl.getBoundingClientRect();
+    if (!rect.width) return;
+    let frac = (clientX - rect.left) / rect.width;
+    frac = Math.max(0, Math.min(1, frac));
+    const idx = Math.round(frac * (series.length - 1));
+    const p = ptPx(idx, rect);
+    cursorEl.style.left = `${p.x}px`;
+    dotEl.style.left = `${p.x}px`;
+    dotEl.style.top = `${p.y}px`;
+    const s = series[idx];
+    const count = s.count;
+    tipEl.innerHTML = `<strong>${count}</strong> ${pluralRu(count, "движение", "движения", "движений")}<span>${s.date.getDate()} ${months[s.date.getMonth()]}</span>`;
+    const half = tipEl.offsetWidth / 2 || 0;
+    const left = Math.max(half + 2, Math.min(rect.width - half - 2, p.x));
+    tipEl.style.left = `${left}px`;
+    tipEl.style.top = `${p.y}px`;
+    cursorEl.hidden = false;
+    dotEl.hidden = false;
+    tipEl.hidden = false;
+  };
+  const hide = () => {
+    cursorEl.hidden = true;
+    dotEl.hidden = true;
+    tipEl.hidden = true;
+  };
+  plotEl.addEventListener("pointermove", (e) => showAt(e.clientX));
+  plotEl.addEventListener("pointerdown", (e) => showAt(e.clientX));
+  plotEl.addEventListener("pointerleave", hide);
 }
 
 function renderHomeLowStock() {
@@ -2906,8 +2963,23 @@ async function printLabels(items) {
   }, 260);
 }
 
+function renderMainStats() {
+  const items = Array.isArray(state.items) ? state.items : [];
+  const total = items.length;
+  const low = items.filter((it) => Number(it.qty || 0) <= Number(it.threshold || 0)).length;
+  const out = items.filter((it) => Number(it.qty || 0) <= 0).length;
+  const setStat = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(value);
+  };
+  setStat("mainStatTotal", total);
+  setStat("mainStatLow", low);
+  setStat("mainStatOut", out);
+}
+
 function renderTable(list = state.items) {
   applyPrintAccess();
+  renderMainStats();
   const hasItems = list.length > 0;
   const page = hasItems ? paginateList(list, "items") : null;
   const itemsForView = page ? page.items : [];
@@ -3076,7 +3148,20 @@ function filteredFilms() {
   return grouped.filter((film) => film.cells.length > 0);
 }
 
+function renderFilmsStats() {
+  const all = groupedFilms(state.films);
+  const withCells = all.filter((f) => Array.isArray(f.cells) && f.cells.length > 0).length;
+  const setStat = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(value);
+  };
+  setStat("filmsStatTotal", all.length);
+  setStat("filmsStatCells", withCells);
+  setStat("filmsStatNoCells", all.length - withCells);
+}
+
 function renderFilmsTable(list = filteredFilms()) {
+  renderFilmsStats();
   if (!refs.filmsCardsList && !refs.filmsTableBody) return;
   if (refs.filmsGroupWithBtn && refs.filmsGroupWithoutBtn) {
     refs.filmsGroupWithBtn.classList.toggle("active", state.filmsGroup === "with");
