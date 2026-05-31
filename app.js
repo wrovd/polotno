@@ -1350,6 +1350,171 @@ function renderHomeSummary() {
   if (refs.homeSummaryFilms) refs.homeSummaryFilms.textContent = String(filmsCount);
   if (refs.homeSummaryDeleted) refs.homeSummaryDeleted.textContent = `${deletedCount} удалено`;
   if (refs.homeSummaryBoxes) refs.homeSummaryBoxes.textContent = String(boxesCount);
+  renderHomeDashboard();
+}
+
+function homeEscHtml(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function getHomeMovementSeries(days) {
+  const series = [];
+  const now = new Date();
+  const hist = Array.isArray(state.history) ? state.history : [];
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const day = new Date(now);
+    day.setHours(0, 0, 0, 0);
+    day.setDate(day.getDate() - i);
+    const next = new Date(day);
+    next.setDate(next.getDate() + 1);
+    const from = day.getTime();
+    const to = next.getTime();
+    const count = hist.filter((row) => {
+      const t = new Date(row.created_at || 0).getTime();
+      return Number.isFinite(t) && t >= from && t < to;
+    }).length;
+    series.push({ date: day, count });
+  }
+  return series;
+}
+
+function buildHomeChartPaths(values, width, height, pad) {
+  const n = values.length;
+  const max = Math.max(1, ...values);
+  const innerW = width - pad * 2;
+  const innerH = height - pad * 2;
+  const xFor = (i) => pad + (n <= 1 ? innerW / 2 : (innerW * i) / (n - 1));
+  const yFor = (v) => pad + innerH - (innerH * v) / max;
+  const pts = values.map((v, i) => [xFor(i), yFor(v)]);
+  let line = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i += 1) {
+    const p0 = pts[i - 1] || pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] || p2;
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6;
+    const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6;
+    const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    line += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  const baseY = (pad + innerH).toFixed(1);
+  const area = `${line} L ${pts[n - 1][0].toFixed(1)} ${baseY} L ${pts[0][0].toFixed(1)} ${baseY} Z`;
+  return { line, area, pts, max };
+}
+
+function renderHomeChart() {
+  const host = document.getElementById("homeChart");
+  if (!host) return;
+  const days = 14;
+  const series = getHomeMovementSeries(days);
+  const values = series.map((s) => s.count);
+  const total = values.reduce((a, b) => a + b, 0);
+  const peak = Math.max(0, ...values);
+  const movesKpi = document.getElementById("homeKpiMoves");
+  if (movesKpi) movesKpi.textContent = String(total);
+  const movesPeak = document.getElementById("homeKpiMovesPeak");
+  if (movesPeak) movesPeak.textContent = `пик ${peak} за день`;
+
+  const width = 720;
+  const height = 240;
+  const pad = 18;
+  const { line, area, pts } = buildHomeChartPaths(values, width, height, pad);
+  const lastPt = pts[pts.length - 1];
+  const empty = total === 0;
+  const grid = [0, 1, 2, 3, 4]
+    .map((i) => {
+      const y = (pad + ((height - pad * 2) * i) / 4).toFixed(1);
+      return `<line x1="${pad}" y1="${y}" x2="${width - pad}" y2="${y}" class="hc-grid" />`;
+    })
+    .join("");
+  const plot = empty
+    ? ""
+    : `<path d="${area}" fill="url(#hcFill)" /><path d="${line}" class="hc-line" /><circle cx="${lastPt[0].toFixed(1)}" cy="${lastPt[1].toFixed(1)}" r="4.5" class="hc-dot" />`;
+  const svg = `
+    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" class="hc-svg" role="img" aria-label="Активность склада за ${days} дней">
+      <defs>
+        <linearGradient id="hcFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="rgba(20,20,20,0.18)" />
+          <stop offset="100%" stop-color="rgba(20,20,20,0)" />
+        </linearGradient>
+      </defs>
+      ${grid}
+      ${plot}
+    </svg>`;
+  const axis = series
+    .map((s, i) => (i % 2 === 0 || i === days - 1 ? `<span>${s.date.getDate()}</span>` : `<span class="is-spacer"></span>`))
+    .join("");
+  host.innerHTML = `
+    <div class="hc-plot">${svg}${empty ? '<p class="hc-empty">Пока нет движений за период</p>' : ""}</div>
+    <div class="hc-axis">${axis}</div>`;
+}
+
+function renderHomeLowStock() {
+  const host = document.getElementById("homeLowList");
+  if (!host) return;
+  const items = Array.isArray(state.items) ? state.items : [];
+  const low = items
+    .filter((it) => Number(it.qty || 0) <= Number(it.threshold || 0))
+    .sort(
+      (a, b) =>
+        Number(a.qty || 0) - Number(a.threshold || 0) - (Number(b.qty || 0) - Number(b.threshold || 0))
+    )
+    .slice(0, 5);
+  if (!low.length) {
+    host.innerHTML = '<p class="home-panel-empty">Все запасы в норме</p>';
+    return;
+  }
+  host.innerHTML = low
+    .map((it) => {
+      const qty = Number(it.qty || 0);
+      const cls = qty <= 0 ? "is-danger" : "is-warn";
+      return `<div class="home-li">
+          <div class="home-li-main">
+            <strong>${homeEscHtml(it.name || it.item_id || "—")}</strong>
+            <small>лимит ${Number(it.threshold || 0)}</small>
+          </div>
+          <span class="home-li-badge ${cls}">${qty} шт</span>
+        </div>`;
+    })
+    .join("");
+}
+
+function renderHomeRecent() {
+  const host = document.getElementById("homeRecentList");
+  if (!host) return;
+  const hist = (Array.isArray(state.history) ? state.history : [])
+    .slice()
+    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+    .slice(0, 6);
+  if (!hist.length) {
+    host.innerHTML = '<p class="home-panel-empty">Действий пока нет</p>';
+    return;
+  }
+  host.innerHTML = hist
+    .map((row) => {
+      const delta = Number(row.delta || 0);
+      const sign = delta > 0 ? "+" : "";
+      const cls = delta < 0 ? "is-neg" : "is-pos";
+      return `<div class="home-li">
+          <div class="home-li-main">
+            <strong>${homeEscHtml(row.name || row.item_id || "—")}</strong>
+            <small>${homeEscHtml(formatHistoryDate(row.created_at) || "")}</small>
+          </div>
+          <span class="home-li-delta ${cls}">${sign}${delta}</span>
+        </div>`;
+    })
+    .join("");
+}
+
+function renderHomeDashboard() {
+  renderHomeChart();
+  renderHomeLowStock();
+  renderHomeRecent();
 }
 
 function notificationTimeAgo(value) {
@@ -7725,7 +7890,7 @@ if (refs.qrLoginBackdrop) refs.qrLoginBackdrop.addEventListener("click", closeQr
 refs.loginTab.addEventListener("click", () => setAuthTab("login"));
 refs.registerTab.addEventListener("click", () => setAuthTab("register"));
 
-refs.openInventoryTile.addEventListener("click", () => {
+if (refs.openInventoryTile) refs.openInventoryTile.addEventListener("click", () => {
   setModuleView("inventory");
   setInventoryTab("main");
   setTimeout(() => refs.searchInput.focus(), 120);
