@@ -5618,9 +5618,12 @@ function rowValue(row = {}, aliases = []) {
   return undefined;
 }
 
-function isApplyYes(value) {
+function isApplyEnabled(value) {
   const text = String(value ?? "").trim().toLowerCase();
-  return ["1", "true", "yes", "y", "да", "д", "ок", "ok", "применить"].includes(text);
+  if (!text) return false;
+  if (["0", "false", "no", "n", "нет", "не", "skip", "пропустить"].includes(text)) return false;
+  if (["1", "true", "yes", "y", "да", "д", "ок", "ok", "применить"].includes(text)) return true;
+  return true;
 }
 
 function normalizeFilmImportRow(row = {}) {
@@ -5642,7 +5645,7 @@ function normalizeFilmImportRow(row = {}) {
     cellNo: String(cellRaw ?? "").trim(),
     oldBarcodes: hasOldBarcodes ? oldBarcodes : undefined,
     hasOldBarcodes,
-    apply: applyRaw === undefined ? true : isApplyYes(applyRaw),
+    apply: applyRaw === undefined ? true : isApplyEnabled(applyRaw),
   };
 }
 
@@ -5654,6 +5657,32 @@ function filmsDatabaseExportRows() {
     [columns[2]]: String(film.count ?? 0),
     [columns[3]]: film.oldBarcodesText || "",
   }));
+}
+
+function tabularRowsToObjects(rows) {
+  const sourceRows = Array.isArray(rows) ? rows : [];
+  const headerNeedles = new Set([
+    "артикул",
+    "артикул пленки",
+    "штрихкод в базе",
+    "новый штрихкод",
+    "штрихкод пленки",
+    "прошлые штрихкоды",
+  ]);
+  const headerIndex = sourceRows.findIndex((row) =>
+    (row || []).some((cell) => headerNeedles.has(String(cell || "").replace(/^\uFEFF/, "").trim().toLowerCase()))
+  );
+  if (headerIndex < 0) return [];
+
+  const headers = (sourceRows[headerIndex] || []).map((header) => String(header || "").replace(/^\uFEFF/, "").trim());
+  return sourceRows.slice(headerIndex + 1).map((row) => {
+    const out = {};
+    headers.forEach((header, idx) => {
+      if (!header) return;
+      out[header] = String(row?.[idx] ?? "").trim();
+    });
+    return out;
+  });
 }
 
 async function exportFilmsDatabaseExcel() {
@@ -5688,8 +5717,8 @@ async function parseFilmsImportFile(file) {
     const wb = window.XLSX.read(buffer, { type: "array" });
     const firstSheet = wb.Sheets[wb.SheetNames[0]];
     if (!firstSheet) return [];
-    const rows = window.XLSX.utils.sheet_to_json(firstSheet, { defval: "", raw: false });
-    return rows.map((row, idx) => ({ ...normalizeFilmImportRow(row), _line: idx + 2 }));
+    const rows = window.XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "", raw: false });
+    return tabularRowsToObjects(rows).map((row, idx) => ({ ...normalizeFilmImportRow(row), _line: idx + 2 }));
   }
 
   const text = await file.text();
@@ -5723,6 +5752,10 @@ async function importFilmsExcel(file) {
     }
     validRows.push(row);
   });
+
+  if (!validRows.length) {
+    throw new Error("Файл прочитан, но нет строк для применения. Проверьте колонки: Артикул, Новый штрихкод, Применить = Да.");
+  }
 
   let success = 0;
   const importErrors = [...validationErrors];
