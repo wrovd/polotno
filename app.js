@@ -5599,7 +5599,7 @@ function csvRowsToObjects(rows) {
 }
 
 function filmDatabaseColumns() {
-  return ["Артикул пленки", "Штрихкод пленки", "Количество", "Прошлые штрихкоды"];
+  return ["Артикул", "Артикул пленки", "Штрихкод пленки", "Количество", "Прошлые штрихкоды"];
 }
 
 function rowValue(row = {}, aliases = []) {
@@ -5617,7 +5617,7 @@ function rowValue(row = {}, aliases = []) {
 }
 
 function normalizeFilmImportRow(row = {}) {
-  const nameRaw = rowValue(row, ["Артикул пленки", "Наименование товара", "Артикул", "name"]);
+  const nameRaw = rowValue(row, ["Артикул", "Артикул пленки", "Наименование товара", "name"]);
   const barcodeRaw = rowValue(row, ["Штрихкод пленки", "Штрикод пленки", "Штрихкод", "barcode"]);
   const quantityRaw = rowValue(row, ["Количество", "Колличетсво", "qty", "quantity"]);
   const cellRaw = rowValue(row, ["Номер ячейки", "cell_no", "cellNo"]);
@@ -5638,9 +5638,10 @@ function filmsDatabaseExportRows() {
   const columns = filmDatabaseColumns();
   return groupedFilms(state.films).map((film) => ({
     [columns[0]]: film.name,
-    [columns[1]]: film.barcode,
-    [columns[2]]: String(film.count ?? 0),
-    [columns[3]]: film.oldBarcodesText || "",
+    [columns[1]]: film.name,
+    [columns[2]]: film.barcode,
+    [columns[3]]: String(film.count ?? 0),
+    [columns[4]]: film.oldBarcodesText || "",
   }));
 }
 
@@ -5654,7 +5655,7 @@ async function exportFilmsDatabaseExcel() {
 
   if (window.XLSX?.utils?.book_new) {
     const ws = window.XLSX.utils.json_to_sheet(rows, { header: columns });
-    ws["!cols"] = [{ wch: 34 }, { wch: 24 }, { wch: 14 }, { wch: 38 }];
+    ws["!cols"] = [{ wch: 24 }, { wch: 34 }, { wch: 24 }, { wch: 14 }, { wch: 38 }];
     const wb = window.XLSX.utils.book_new();
     window.XLSX.utils.book_append_sheet(wb, ws, "Склад пленок");
     window.XLSX.writeFile(wb, `polotno-films-base-${stamp}.xlsx`);
