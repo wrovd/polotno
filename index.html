@@ -864,12 +864,16 @@
               <button class="films-chip" id="importFilmsExcelBtn" type="button">
                 <span class="btn-icon" aria-hidden="true"><svg><use href="#i-upload"></use></svg></span><span>Загрузить Excel</span>
               </button>
+              <button class="films-chip" id="updateFilmsDataBtn" type="button">
+                <span class="btn-icon" aria-hidden="true"><svg><use href="#i-reset"></use></svg></span><span>Обновить данные</span>
+              </button>
               <button class="is-hidden" id="resetFilmsFiltersBtn" type="button">Сбросить</button>
             </div>
 
             <input id="filmsBarcodeFilter" type="search" class="is-hidden" placeholder="Фильтр по штрихкоду" autocomplete="off" />
             <input id="filmsCellFilter" type="search" class="is-hidden" placeholder="Фильтр по ячейке" autocomplete="off" />
             <input id="importFilmsFile" type="file" accept=".xlsx,.xls,.csv" hidden />
+            <input id="updateFilmsDataFile" type="file" accept=".xlsx,.xls,.csv" hidden />
 
             <div class="films-segmented">
               <button class="films-seg-btn active" id="filmsGroupWithBtn" type="button">С ячейками</button>

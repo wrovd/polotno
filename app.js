@@ -424,6 +424,8 @@ const refs = {
   downloadFilmsTemplateBtn: document.getElementById("downloadFilmsTemplateBtn"),
   importFilmsExcelBtn: document.getElementById("importFilmsExcelBtn"),
   importFilmsFile: document.getElementById("importFilmsFile"),
+  updateFilmsDataBtn: document.getElementById("updateFilmsDataBtn"),
+  updateFilmsDataFile: document.getElementById("updateFilmsDataFile"),
   filmForm: document.getElementById("filmForm"),
   filmSinglePanel: document.getElementById("filmSinglePanel"),
   filmName: document.getElementById("filmName"),
@@ -5599,7 +5601,7 @@ function csvRowsToObjects(rows) {
 }
 
 function filmDatabaseColumns() {
-  return ["Артикул", "Артикул пленки", "Штрихкод пленки", "Количество", "Прошлые штрихкоды"];
+  return ["Артикул", "Штрихкод пленки", "Количество", "Прошлые штрихкоды"];
 }
 
 function rowValue(row = {}, aliases = []) {
@@ -5616,21 +5618,31 @@ function rowValue(row = {}, aliases = []) {
   return undefined;
 }
 
+function isApplyYes(value) {
+  const text = String(value ?? "").trim().toLowerCase();
+  return ["1", "true", "yes", "y", "да", "д", "ок", "ok", "применить"].includes(text);
+}
+
 function normalizeFilmImportRow(row = {}) {
   const nameRaw = rowValue(row, ["Артикул", "Артикул пленки", "Наименование товара", "name"]);
+  const currentBarcodeRaw = rowValue(row, ["Штрихкод в базе", "Старый штрихкод", "Текущий штрихкод"]);
+  const newBarcodeRaw = rowValue(row, ["Новый штрихкод", "Новый штрихкод пленки"]);
   const barcodeRaw = rowValue(row, ["Штрихкод пленки", "Штрикод пленки", "Штрихкод", "barcode"]);
   const quantityRaw = rowValue(row, ["Количество", "Колличетсво", "qty", "quantity"]);
   const cellRaw = rowValue(row, ["Номер ячейки", "cell_no", "cellNo"]);
   const oldRaw = rowValue(row, ["Прошлые штрихкоды", "Старые штрихкоды", "old_barcodes", "oldBarcodes"]);
-  const barcode = String(barcodeRaw ?? "").trim();
-  const hasOldBarcodes = oldRaw !== undefined;
+  const applyRaw = rowValue(row, ["Применить", "Обновить", "apply"]);
+  const barcode = String((newBarcodeRaw !== undefined ? newBarcodeRaw : barcodeRaw) ?? "").trim();
+  const oldBarcodes = normalizeOldBarcodesText([currentBarcodeRaw, oldRaw].filter((value) => value !== undefined).join(", "), barcode);
+  const hasOldBarcodes = currentBarcodeRaw !== undefined || oldRaw !== undefined;
   return {
     name: String(nameRaw ?? "").trim(),
     barcode,
     quantity: String(quantityRaw ?? "").trim(),
     cellNo: String(cellRaw ?? "").trim(),
-    oldBarcodes: hasOldBarcodes ? normalizeOldBarcodesText(oldRaw, barcode) : undefined,
+    oldBarcodes: hasOldBarcodes ? oldBarcodes : undefined,
     hasOldBarcodes,
+    apply: applyRaw === undefined ? true : isApplyYes(applyRaw),
   };
 }
 
@@ -5638,10 +5650,9 @@ function filmsDatabaseExportRows() {
   const columns = filmDatabaseColumns();
   return groupedFilms(state.films).map((film) => ({
     [columns[0]]: film.name,
-    [columns[1]]: film.name,
-    [columns[2]]: film.barcode,
-    [columns[3]]: String(film.count ?? 0),
-    [columns[4]]: film.oldBarcodesText || "",
+    [columns[1]]: film.barcode,
+    [columns[2]]: String(film.count ?? 0),
+    [columns[3]]: film.oldBarcodesText || "",
   }));
 }
 
@@ -5655,7 +5666,7 @@ async function exportFilmsDatabaseExcel() {
 
   if (window.XLSX?.utils?.book_new) {
     const ws = window.XLSX.utils.json_to_sheet(rows, { header: columns });
-    ws["!cols"] = [{ wch: 24 }, { wch: 34 }, { wch: 24 }, { wch: 14 }, { wch: 38 }];
+    ws["!cols"] = [{ wch: 24 }, { wch: 24 }, { wch: 14 }, { wch: 38 }];
     const wb = window.XLSX.utils.book_new();
     window.XLSX.utils.book_append_sheet(wb, ws, "Склад пленок");
     window.XLSX.writeFile(wb, `polotno-films-base-${stamp}.xlsx`);
@@ -5677,7 +5688,7 @@ async function parseFilmsImportFile(file) {
     const wb = window.XLSX.read(buffer, { type: "array" });
     const firstSheet = wb.Sheets[wb.SheetNames[0]];
     if (!firstSheet) return [];
-    const rows = window.XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+    const rows = window.XLSX.utils.sheet_to_json(firstSheet, { defval: "", raw: false });
     return rows.map((row, idx) => ({ ...normalizeFilmImportRow(row), _line: idx + 2 }));
   }
 
@@ -5701,6 +5712,7 @@ async function importFilmsExcel(file) {
     const line = row._line || 0;
     const empty = !row.name && !row.barcode && !row.cellNo && !row.oldBarcodes;
     if (empty) return;
+    if (!row.apply) return;
     if (!row.name) {
       validationErrors.push(`Строка ${line}: пустой артикул пленки`);
       return;
@@ -9055,6 +9067,25 @@ if (refs.importFilmsFile) refs.importFilmsFile.addEventListener("change", async 
   if (!file) return;
   try {
     await runDbAction(() => importFilmsExcel(file), { message: "Импортируем пленки..." });
+    hapticSuccess();
+  } catch (error) {
+    showToast(error.message);
+    hapticWarning();
+  }
+});
+if (refs.updateFilmsDataBtn && refs.updateFilmsDataFile) refs.updateFilmsDataBtn.addEventListener("click", () => {
+  if (!canDesktopPrint()) {
+    showToast("Обновление доступно только на ПК");
+    return;
+  }
+  refs.updateFilmsDataFile.value = "";
+  refs.updateFilmsDataFile.click();
+});
+if (refs.updateFilmsDataFile) refs.updateFilmsDataFile.addEventListener("change", async () => {
+  const file = refs.updateFilmsDataFile.files?.[0];
+  if (!file) return;
+  try {
+    await runDbAction(() => importFilmsExcel(file), { message: "Обновляем данные пленок..." });
     hapticSuccess();
   } catch (error) {
     showToast(error.message);
