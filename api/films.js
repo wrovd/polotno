@@ -3,6 +3,7 @@ const { send, methodNotAllowed, parseJsonBody } = require("../lib/http");
 const {
   listFilms,
   upsertFilm,
+  updateFilmBaseByBarcode,
   deleteFilmByBarcodeCell,
   findFilmsByBarcode,
   appendMovement,
@@ -14,16 +15,32 @@ function actionFromReq(req) {
 }
 
 function normalizeFilmInput(raw = {}) {
+  const hasOldBarcodes =
+    Object.prototype.hasOwnProperty.call(raw, "oldBarcodes") ||
+    Object.prototype.hasOwnProperty.call(raw, "old_barcodes");
   return {
     name: String(raw.name || "").trim(),
     barcode: String(raw.barcode || "").trim(),
     cell_no: String(raw.cellNo || raw.cell_no || "").trim(),
+    old_barcodes: hasOldBarcodes ? String(raw.oldBarcodes ?? raw.old_barcodes ?? "").trim() : "",
+    _hasOldBarcodes: hasOldBarcodes,
     updated_by: String(raw.updatedBy || raw.updated_by || "").trim(),
   };
 }
 
 function filmMovementId({ barcode, cellNo }) {
   return `FILM:${String(barcode || "").trim()}@${String(cellNo || "").trim()}`;
+}
+
+function filmSavePayload(row, updatedBy) {
+  const payload = {
+    name: row.name,
+    barcode: row.barcode,
+    cell_no: row.cell_no,
+    updated_by: updatedBy,
+  };
+  if (row._hasOldBarcodes) payload.old_barcodes = row.old_barcodes;
+  return payload;
 }
 
 module.exports = async function handler(req, res) {
@@ -77,11 +94,12 @@ module.exports = async function handler(req, res) {
       const body = parseJsonBody(req);
       const normalized = normalizeFilmInput(body);
       const existingRows = await findFilmsByBarcode(normalized.barcode);
-      const existed = existingRows.some((row) => String(row.cell_no || "").trim() === normalized.cell_no);
-      const saved = await upsertFilm({
-        ...normalized,
-        updated_by: auth.user.email,
-      });
+      const existed = existingRows.some(
+        (row) =>
+          String(row.barcode || "").trim() === normalized.barcode &&
+          String(row.cell_no || "").trim() === normalized.cell_no
+      );
+      const saved = await upsertFilm(filmSavePayload(normalized, auth.user.email));
       await appendMovement({
         item_id: filmMovementId({ barcode: normalized.barcode, cellNo: normalized.cell_no }),
         delta: 0,
@@ -119,6 +137,59 @@ module.exports = async function handler(req, res) {
     }
   }
 
+  if (method === "POST" && action === "bulk-base-update") {
+    try {
+      const body = parseJsonBody(req);
+      const rows = Array.isArray(body.rows) ? body.rows : [];
+      if (!rows.length) return send(res, 400, { error: "rows are required" });
+
+      let success = 0;
+      const errors = [];
+
+      for (let i = 0; i < rows.length; i += 1) {
+        const line = i + 2;
+        const row = normalizeFilmInput(rows[i]);
+        if (!row.name) {
+          errors.push({ line, error: "Пустой артикул пленки" });
+          continue;
+        }
+        if (!row.barcode) {
+          errors.push({ line, error: "Пустой штрихкод пленки" });
+          continue;
+        }
+
+        try {
+          await updateFilmBaseByBarcode({
+            ...filmSavePayload(row, auth.user.email),
+            old_barcodes: row.old_barcodes,
+          });
+          await appendMovement({
+            item_id: filmMovementId({ barcode: row.barcode, cellNo: "BASE" }),
+            delta: 0,
+            reason: "film_base_update",
+            user_email: auth.user.email,
+            created_at: new Date().toISOString(),
+          });
+          success += 1;
+        } catch (error) {
+          errors.push({ line, error: error.message || "Не удалось обновить строку" });
+        }
+      }
+
+      return send(res, 200, {
+        ok: true,
+        report: {
+          total: rows.length,
+          success,
+          failed: errors.length,
+          errors,
+        },
+      });
+    } catch (error) {
+      return send(res, 500, { error: error.message || "Failed to update films base" });
+    }
+  }
+
   if (method === "POST" && action === "bulk-upsert") {
     try {
       const body = parseJsonBody(req);
@@ -142,11 +213,12 @@ module.exports = async function handler(req, res) {
 
         try {
           const existingRows = await findFilmsByBarcode(row.barcode);
-          const existed = existingRows.some((x) => String(x.cell_no || "").trim() === row.cell_no);
-          await upsertFilm({
-            ...row,
-            updated_by: auth.user.email,
-          });
+          const existed = existingRows.some(
+            (x) =>
+              String(x.barcode || "").trim() === row.barcode &&
+              String(x.cell_no || "").trim() === row.cell_no
+          );
+          await upsertFilm(filmSavePayload(row, auth.user.email));
           await appendMovement({
             item_id: filmMovementId({ barcode: row.barcode, cellNo: row.cell_no }),
             delta: 0,

@@ -4482,6 +4482,11 @@ button:active {
   color: #8e8e93;
 }
 
+.film-card-oldcodes {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
 .film-card-cells {
   margin-top: 8px;
   display: flex;

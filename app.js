@@ -3105,11 +3105,15 @@ function groupedFilms(source = state.films) {
         name: String(film.name || "").trim(),
         barcode,
         cells: [],
+        oldBarcodes: [],
         count: 0,
         unassignedCount: 0,
       });
     }
     const group = map.get(barcode);
+    oldBarcodeTokens(film.old_barcodes).forEach((oldBarcode) => {
+      if (oldBarcode !== barcode && !group.oldBarcodes.includes(oldBarcode)) group.oldBarcodes.push(oldBarcode);
+    });
     group.count += 1;
     const cell = String(film.cell_no || "").trim();
     if (cell) {
@@ -3123,6 +3127,8 @@ function groupedFilms(source = state.films) {
     .map((group) => ({
       ...group,
       cells: [...group.cells].sort((a, b) => a.localeCompare(b, "ru")),
+      oldBarcodes: [...group.oldBarcodes].sort((a, b) => a.localeCompare(b, "ru")),
+      oldBarcodesText: [...group.oldBarcodes].sort((a, b) => a.localeCompare(b, "ru")).join(", "),
     }))
     .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "ru"));
 }
@@ -3131,14 +3137,20 @@ function filteredFilms() {
   const { search, barcode, cell } = state.filmsFilters;
   const grouped = groupedFilms(state.films).filter((film) => {
     const cellsText = film.cells.join(" ").toLowerCase();
+    const oldBarcodesText = String(film.oldBarcodesText || "").toLowerCase();
     if (search) {
       const matchSearch =
         String(film.name || "").toLowerCase().includes(search) ||
         String(film.barcode || "").toLowerCase().includes(search) ||
+        oldBarcodesText.includes(search) ||
         cellsText.includes(search);
       if (!matchSearch) return false;
     }
-    if (barcode && !String(film.barcode || "").toLowerCase().includes(barcode)) return false;
+    if (
+      barcode &&
+      !String(film.barcode || "").toLowerCase().includes(barcode) &&
+      !oldBarcodesText.includes(barcode)
+    ) return false;
     if (cell && !cellsText.includes(cell)) return false;
     return true;
   });
@@ -3190,20 +3202,26 @@ function renderFilmsTable(list = filteredFilms()) {
     if (refs.filmsCardsList) {
       const card = document.createElement("article");
       card.className = "film-card";
+      const safeName = escapeHtml(film.name);
+      const safeBarcode = escapeHtml(film.barcode);
+      const oldLine = film.oldBarcodesText
+        ? `<p class="film-card-meta film-card-oldcodes">Прошлые: ${escapeHtml(film.oldBarcodesText)}</p>`
+        : "";
       card.innerHTML = `
-        <div class="film-card-avatar">${initialFromName(film.name)}</div>
+        <div class="film-card-avatar">${escapeHtml(initialFromName(film.name))}</div>
         <div class="film-card-main">
-          <p class="film-card-name">${film.name}</p>
-          <p class="film-card-meta">${film.barcode} • Ячеек: ${film.cells.length} • Ед.: ${film.count}</p>
+          <p class="film-card-name">${safeName}</p>
+          <p class="film-card-meta">${safeBarcode} • Ячеек: ${film.cells.length} • Ед.: ${film.count}</p>
+          ${oldLine}
           <div class="film-card-cells">${
             film.cells.length
-              ? film.cells.map((c) => `<span class="film-cell-chip">${c}</span>`).join("")
+              ? film.cells.map((c) => `<span class="film-cell-chip">${escapeHtml(c)}</span>`).join("")
               : '<span class="muted">Без ячейки</span>'
           }</div>
         </div>
         <div class="film-card-actions">
-          <button title="Добавить такую же пленку" class="film-action-btn" data-film-action="clone" data-film-barcode="${film.barcode}" type="button">${iconSpan("plus")}<span>Добавить</span></button>
-          <button title="Удалить из ячейки" class="film-action-btn is-danger ${film.cells.length ? "" : "is-hidden"}" data-film-action="delete" data-film-barcode="${film.barcode}" type="button">${iconSpan("trash")}<span>Удалить</span></button>
+          <button title="Добавить такую же пленку" class="film-action-btn" data-film-action="clone" data-film-barcode="${safeBarcode}" type="button">${iconSpan("plus")}<span>Добавить</span></button>
+          <button title="Удалить из ячейки" class="film-action-btn is-danger ${film.cells.length ? "" : "is-hidden"}" data-film-action="delete" data-film-barcode="${safeBarcode}" type="button">${iconSpan("trash")}<span>Удалить</span></button>
         </div>
       `;
       refs.filmsCardsList.appendChild(card);
@@ -5412,6 +5430,27 @@ function csvEscape(value) {
   return text;
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function oldBarcodeTokens(value) {
+  return String(value || "")
+    .split(/[\s,;]+/)
+    .map((code) => code.trim())
+    .filter(Boolean);
+}
+
+function normalizeOldBarcodesText(value, currentBarcode = "") {
+  const current = String(currentBarcode || "").trim();
+  return [...new Set(oldBarcodeTokens(value).filter((code) => code !== current))].join(", ");
+}
+
 function withUtf8Bom(text) {
   const source = String(text ?? "");
   return source.startsWith("\uFEFF") ? source : `\uFEFF${source}`;
@@ -5559,38 +5598,73 @@ function csvRowsToObjects(rows) {
   });
 }
 
-function filmExcelColumns() {
-  return ["Наименование товара", "Штрихкод", "Номер ячейки"];
+function filmDatabaseColumns() {
+  return ["Артикул пленки", "Штрихкод пленки", "Количество", "Прошлые штрихкоды"];
+}
+
+function rowValue(row = {}, aliases = []) {
+  const exact = row || {};
+  const lowerMap = {};
+  Object.keys(exact).forEach((key) => {
+    lowerMap[String(key || "").trim().toLowerCase()] = exact[key];
+  });
+  for (const alias of aliases) {
+    if (Object.prototype.hasOwnProperty.call(exact, alias)) return exact[alias];
+    const lower = String(alias || "").trim().toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(lowerMap, lower)) return lowerMap[lower];
+  }
+  return undefined;
 }
 
 function normalizeFilmImportRow(row = {}) {
+  const nameRaw = rowValue(row, ["Артикул пленки", "Наименование товара", "Артикул", "name"]);
+  const barcodeRaw = rowValue(row, ["Штрихкод пленки", "Штрикод пленки", "Штрихкод", "barcode"]);
+  const quantityRaw = rowValue(row, ["Количество", "Колличетсво", "qty", "quantity"]);
+  const cellRaw = rowValue(row, ["Номер ячейки", "cell_no", "cellNo"]);
+  const oldRaw = rowValue(row, ["Прошлые штрихкоды", "Старые штрихкоды", "old_barcodes", "oldBarcodes"]);
+  const barcode = String(barcodeRaw ?? "").trim();
+  const hasOldBarcodes = oldRaw !== undefined;
   return {
-    name: String(row["Наименование товара"] ?? row["наименование товара"] ?? row.name ?? "").trim(),
-    barcode: String(row["Штрихкод"] ?? row["штрихкод"] ?? row.barcode ?? "").trim(),
-    cellNo: String(row["Номер ячейки"] ?? row["номер ячейки"] ?? row.cell_no ?? row.cellNo ?? "").trim(),
+    name: String(nameRaw ?? "").trim(),
+    barcode,
+    quantity: String(quantityRaw ?? "").trim(),
+    cellNo: String(cellRaw ?? "").trim(),
+    oldBarcodes: hasOldBarcodes ? normalizeOldBarcodesText(oldRaw, barcode) : undefined,
+    hasOldBarcodes,
   };
 }
 
-async function downloadFilmsTemplate() {
-  const columns = filmExcelColumns();
-  const sampleRows = [
-    { "Наименование товара": "Матовая пленка A4", "Штрихкод": "1234567890123", "Номер ячейки": "A-12" },
-    { "Наименование товара": "Глянцевая пленка A3", "Штрихкод": "1234567890999", "Номер ячейки": "B-03" },
-  ];
+function filmsDatabaseExportRows() {
+  const columns = filmDatabaseColumns();
+  return groupedFilms(state.films).map((film) => ({
+    [columns[0]]: film.name,
+    [columns[1]]: film.barcode,
+    [columns[2]]: String(film.count ?? 0),
+    [columns[3]]: film.oldBarcodesText || "",
+  }));
+}
+
+async function exportFilmsDatabaseExcel() {
+  if (!state.token) throw new Error("Требуется вход в систему");
+  if (!state.films.length) throw new Error("Нет пленок для выгрузки");
+
+  const columns = filmDatabaseColumns();
+  const rows = filmsDatabaseExportRows();
+  const stamp = new Date().toISOString().slice(0, 10);
 
   if (window.XLSX?.utils?.book_new) {
-    const ws = window.XLSX.utils.json_to_sheet(sampleRows, { header: columns });
-    ws["!cols"] = [{ wch: 32 }, { wch: 20 }, { wch: 16 }];
+    const ws = window.XLSX.utils.json_to_sheet(rows, { header: columns });
+    ws["!cols"] = [{ wch: 34 }, { wch: 24 }, { wch: 14 }, { wch: 38 }];
     const wb = window.XLSX.utils.book_new();
-    window.XLSX.utils.book_append_sheet(wb, ws, "Films");
-    window.XLSX.writeFile(wb, "polotno-films-template.xlsx");
-    showToast("Шаблон Excel скачан");
+    window.XLSX.utils.book_append_sheet(wb, ws, "Склад пленок");
+    window.XLSX.writeFile(wb, `polotno-films-base-${stamp}.xlsx`);
+    showToast("Выгрузка базы пленок готова");
     return;
   }
 
-  const csv = [columns.join(","), ...sampleRows.map((r) => columns.map((c) => csvEscape(r[c])).join(","))].join("\n");
-  const ok = await downloadCsvWithFallback("polotno-films-template.csv", csv);
-  if (ok) showToast("Шаблон CSV скачан");
+  const csv = [columns.join(","), ...rows.map((r) => columns.map((c) => csvEscape(r[c])).join(","))].join("\n");
+  const ok = await downloadCsvWithFallback(`polotno-films-base-${stamp}.csv`, csv);
+  if (ok) showToast("Выгрузка базы пленок готова");
 }
 
 async function parseFilmsImportFile(file) {
@@ -5603,13 +5677,13 @@ async function parseFilmsImportFile(file) {
     const firstSheet = wb.Sheets[wb.SheetNames[0]];
     if (!firstSheet) return [];
     const rows = window.XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
-    return rows.map(normalizeFilmImportRow);
+    return rows.map((row, idx) => ({ ...normalizeFilmImportRow(row), _line: idx + 2 }));
   }
 
   const text = await file.text();
   const rows = parseCsv(text);
   const objects = csvRowsToObjects(rows);
-  return objects.map(normalizeFilmImportRow);
+  return objects.map((row, idx) => ({ ...normalizeFilmImportRow(row), _line: idx + 2 }));
 }
 
 async function importFilmsExcel(file) {
@@ -5622,14 +5696,16 @@ async function importFilmsExcel(file) {
   const validRows = [];
   const validationErrors = [];
 
-  rows.forEach((row, idx) => {
-    const line = idx + 2;
+  rows.forEach((row) => {
+    const line = row._line || 0;
+    const empty = !row.name && !row.barcode && !row.cellNo && !row.oldBarcodes;
+    if (empty) return;
     if (!row.name) {
-      validationErrors.push(`Строка ${line}: пустое наименование товара`);
+      validationErrors.push(`Строка ${line}: пустой артикул пленки`);
       return;
     }
     if (!row.barcode) {
-      validationErrors.push(`Строка ${line}: пустой штрихкод`);
+      validationErrors.push(`Строка ${line}: пустой штрихкод пленки`);
       return;
     }
     validRows.push(row);
@@ -5638,25 +5714,19 @@ async function importFilmsExcel(file) {
   let success = 0;
   const importErrors = [...validationErrors];
 
-  if (validRows.length) {
-    const payloadRows = validRows.map((row, idx) => ({
-      name: row.name,
-      barcode: row.barcode,
-      cellNo: row.cellNo,
-      _line: idx + 2,
-    }));
-
+  async function sendFilmImportChunks(action, payloadRows) {
     const CHUNK_SIZE = 60;
     for (let start = 0; start < payloadRows.length; start += CHUNK_SIZE) {
       const chunk = payloadRows.slice(start, start + CHUNK_SIZE);
       try {
-        const data = await apiRequest("/api/films?action=bulk-upsert", {
+        const data = await apiRequest(`/api/films?action=${action}`, {
           method: "POST",
           body: {
             rows: chunk.map((row) => ({
               name: row.name,
               barcode: row.barcode,
               cellNo: row.cellNo,
+              ...(row.hasOldBarcodes ? { oldBarcodes: row.oldBarcodes || "" } : {}),
             })),
           },
         });
@@ -5675,9 +5745,17 @@ async function importFilmsExcel(file) {
     }
   }
 
+  if (validRows.length) {
+    const rowsWithCells = validRows.filter((row) => row.cellNo);
+    const rowsForBase = validRows.filter((row) => !row.cellNo);
+
+    if (rowsWithCells.length) await sendFilmImportChunks("bulk-upsert", rowsWithCells);
+    if (rowsForBase.length) await sendFilmImportChunks("bulk-base-update", rowsForBase);
+  }
+
   await loadFilms();
   const failed = importErrors.length;
-  showToast(`Импорт пленок: успешно ${success}, с ошибками ${failed}`);
+  showToast(`Обновление базы: успешно ${success}, с ошибками ${failed}`);
   if (failed) {
     const preview = importErrors.slice(0, 6).join("\n");
     window.alert(`Отчет импорта:\nУспешно: ${success}\nОшибок: ${failed}\n\n${preview}${failed > 6 ? "\n..." : ""}`);
@@ -8957,7 +9035,7 @@ if (refs.filmsGroupWithoutBtn) refs.filmsGroupWithoutBtn.addEventListener("click
 });
 if (refs.downloadFilmsTemplateBtn) refs.downloadFilmsTemplateBtn.addEventListener("click", async () => {
   try {
-    await downloadFilmsTemplate();
+    await exportFilmsDatabaseExcel();
   } catch (error) {
     showToast(error.message);
     hapticWarning();
